@@ -6,9 +6,9 @@ Performing image rendering/saving in a second instance of Unity, allowing the fi
 
 Run two instances of Unity in parallel. The “main” instance is responsible for physical calculations, and the “secondary” instance is responsible for rendering images. This entails:
 
-- Picking/developing a format/method capable of saving and loading the state of a scene in unity. (A good option is to use Pixar's USD, due to its growing popularity) (See [Milestone 2](#milestone-2)).
-- Setting up a communication channel to transfer scene state between two Unity instances (possibly using TCP/IP) (See [Milestone 3](#milestone-3)).
-- Rendering and saving to disk an image via one instance, that reflects the physical state of a scene from another instance (See [Milestone 4](#milestone-4)).
+- Picking/developing a format/method capable of saving and loading the state of a scene in unity. (A good option is to use Pixar's USD, due to its growing popularity) (See [Milestone 2](#milestone-2--identify-method-for-describing-scene-state)).
+- Setting up a communication channel to transfer scene state between two Unity instances (possibly using TCP/IP) (See [Milestone 3](#milestone-3--implement-this-method-to-transfer-scenes-between-unity-instances)).
+- Rendering and saving to disk an image via one instance, that reflects the physical state of a scene from another instance (See [Milestone 4](#milestone-4--render-an-image-from-one-unity-instance-using-another-instance)).
 
 ## Progress
 
