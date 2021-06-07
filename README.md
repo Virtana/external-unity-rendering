@@ -34,8 +34,9 @@ Find/develop a method of communicating and loading the state of a scene in Unity
 
 Current options include:
 
-- Pixar USD
-- Khronos Group glFX
+- ~~Pixar USD~~
+- ~~Khronos Group glFX~~
+- Manually overriding current state
 
 ### Milestone 3 : Implement this method to transfer scenes between Unity instances
 
