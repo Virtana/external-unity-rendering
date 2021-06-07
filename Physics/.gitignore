@@ -12,8 +12,7 @@
 /[Bb]uild/
 /[Bb]uilds/
 /[Ll]ogs/
-# User settings may be useful in some circumstances
-#/[Uu]ser[Ss]ettings/
+/[Uu]ser[Ss]ettings/
 
 # MemoryCaptures can get excessive in size.
 # They also could contain extremely sensitive data
