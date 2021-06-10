@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 #if UNITY_EDITOR
@@ -55,14 +56,14 @@ namespace SceneStateExporter
         {
             Debug.Log("Beginning Export.");
             // possibly implement a pause engine state here
-
+            // add validation for file path
+            // add a bool or something for transmission
 
             // get all current items in scene except the exporter
             Scene currentScene = SceneManager.GetActiveScene();
             List<GameObject> exportObjects = new List<GameObject>();
             currentScene.GetRootGameObjects(exportObjects);
             exportObjects.RemoveAll((obj) => gameObject == obj);
-
 
             if (exportObjects == null || exportObjects.Count == 0)
             {
@@ -81,11 +82,9 @@ namespace SceneStateExporter
             scene.AssignSceneRoot(currentState);
 
             Debug.Log("Serializing...");
-            var state = JsonConvert.SerializeObject(scene);
-            Debug.Log(state);
 
-            // add validation
-            System.IO.File.WriteAllText(saveFilePath, state);
+            var state = JsonConvert.SerializeObject(scene);
+            File.WriteAllText(saveFilePath, state);
 
             // put items back in place
             foreach (var gObj in exportObjects)
