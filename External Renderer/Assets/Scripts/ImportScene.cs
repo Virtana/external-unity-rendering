@@ -14,7 +14,7 @@ namespace SceneStateExporter
         private static GameObject importer;
         public string saveFilePath = @"D:\Virtana\obj.json";
 
-        public static void Export()
+        public static void Import()
         {
             if (importer == null)
             {
@@ -28,7 +28,7 @@ namespace SceneStateExporter
         // add function to grab active gameobjects
         void Awake()
         {
-            Debug.Log("Exporter Awake");
+            Debug.Log("Importer Awake");
             importer = gameObject;
         }
 
@@ -82,10 +82,10 @@ namespace SceneStateExporter
 
             EditorGUILayout.HelpBox("Click Import Now to Import now.", MessageType.None);
 
-            ImportScene currentExporter = target as ImportScene;
+            ImportScene currentImporter = target as ImportScene;
             if (GUILayout.Button("Import Now"))
             {
-                currentExporter.ImportCurrentScene();
+                currentImporter.ImportCurrentScene();
             }
         }
     }
@@ -93,7 +93,7 @@ namespace SceneStateExporter
 
     public class Importer
     {
-        //[RuntimeInitializeOnLoadMethod]
+        [RuntimeInitializeOnLoadMethod]
         public static void InitializeImporter()
         {
             Debug.Log("Triggered Importer Generation");

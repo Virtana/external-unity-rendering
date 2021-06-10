@@ -28,9 +28,6 @@ namespace SceneStateExporter
     }
 #endif
 
-    // compile freeze
-    //;=;
-
     public class ExportScene : MonoBehaviour
     {
         private static GameObject exporter;
@@ -99,7 +96,7 @@ namespace SceneStateExporter
 
     public class Exporter
     {
-        [RuntimeInitializeOnLoadMethod]
+        //[RuntimeInitializeOnLoadMethod]
         public static void InitializeExporter()
         {
             Debug.Log("Triggered Exporter Generation");
