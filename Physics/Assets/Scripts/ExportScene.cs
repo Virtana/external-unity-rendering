@@ -28,9 +28,6 @@ namespace SceneStateExporter
     }
 #endif
 
-    // compile freeze
-    //;=;
-
     public class ExportScene : MonoBehaviour
     {
         private static GameObject exporter;
@@ -80,19 +77,21 @@ namespace SceneStateExporter
 
             Debug.Log("Exporting...");
             var currentState = ObjectState.GenerateState(transform);
+            var scene = new SceneState();
+            scene.AssignSceneRoot(currentState);
 
             Debug.Log("Serializing...");
-            var state = JsonConvert.SerializeObject(currentState);
+            var state = JsonConvert.SerializeObject(scene);
             Debug.Log(state);
 
             // add validation
             System.IO.File.WriteAllText(saveFilePath, state);
 
             // put items back in place
-            //foreach (var gObj in exportObjects)
-            //{
-            //    gObj.transform.parent = null;
-            //}
+            foreach (var gObj in exportObjects)
+            {
+                gObj.transform.parent = null;
+            }
             Debug.LogFormat("Saved state to {0}!", saveFilePath);
         }
     }

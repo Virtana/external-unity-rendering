@@ -70,4 +70,42 @@ namespace SceneStateExporter
             return currentObject;
         }
     }
+
+    [Serializable]
+    public class SceneState
+    {
+        public DateTime exportDate;
+        public ObjectState sceneRoot;
+
+        public SceneState()
+        {
+            exportDate = DateTime.Now;
+            sceneRoot = new ObjectState();
+        }
+
+        public void AssignSceneRoot(ObjectState root)
+        {
+            sceneRoot = root;
+        }
+    }
+
+    public class ImportSceneException : Exception
+    {
+        // add more for more cases
+        public ImportSceneException()
+        {
+            Debug.LogError("Invalid Hierarchy - Missing child.");
+        }
+
+        public ImportSceneException(string message)
+            : base(string.Format(
+                "Scene State File child count mismatch for : {0}", message))
+        {
+        }
+        public ImportSceneException(string message, Exception inner)
+            : base(string.Format(
+                "Scene State File child count mismatch for : {0}", message), inner)
+        {
+        }
+    }
 }
