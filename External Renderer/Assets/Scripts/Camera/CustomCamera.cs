@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class CustomCamera : MonoBehaviour
 {
@@ -71,7 +72,6 @@ public class CustomCamera : MonoBehaviour
         }
     }
 
-
     public void SaveCamera()
     {
         cam = this.GetComponent<Camera>();
@@ -86,7 +86,6 @@ public class CustomCamera : MonoBehaviour
             this.GetComponent<CustomCamera>().enabled = false;
         }
     }
-
 
     public void Screenshot(string folder, Vector2Int screenshotSize = default(Vector2Int))
     {
@@ -115,4 +114,30 @@ public class CustomCamera : MonoBehaviour
             Debug.Log("No Screenshot Coroutine is active.");
         }   
     }
+
+    [RuntimeInitializeOnLoadMethod]
+    public static void AttachToCamera()
+    {
+        Scene currentScene = SceneManager.GetActiveScene();
+        List<GameObject> rootObjects = new List<GameObject>();
+        currentScene.GetRootGameObjects(rootObjects);
+        
+        foreach (GameObject game in rootObjects)
+        {
+            // if there is a camera in the children
+            Camera cam = game.GetComponentInChildren<Camera>();
+            if (cam != null)
+            {
+                // add this behaviour
+                cam.gameObject.AddComponent<CustomCamera>();
+
+                // TODO Add a reference to this gameobject 
+                // in the importer
+                return;
+            }
+        }
+
+        // if there are no camera's something is wrong
+        Debug.LogError("Missing Camera!");
+    }    
 }

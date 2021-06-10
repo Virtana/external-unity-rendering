@@ -14,6 +14,10 @@ namespace SceneStateExporter
         private static GameObject importer;
         public string saveFilePath = @"D:\Virtana\obj.json";
 
+        // Represents when the scene was exported.
+        // if null, then no import has occured
+        public DateTime? exportTimestamp;
+
         public static void Import()
         {
             if (importer == null)
@@ -58,10 +62,11 @@ namespace SceneStateExporter
             Debug.Log(json);
 
             Debug.Log("Deserializing...");
-            var state = JsonConvert.DeserializeObject<ObjectState>(json);
+            var state = JsonConvert.DeserializeObject<SceneState>(json);
 
             Debug.Log("Importing...");
-            state.UpdateTransform(transform);
+            state.sceneRoot.UpdateTransform(transform);
+            exportTimestamp = state.exportDate;
 
             // put items back in place
             foreach (var gObj in importObjects)
@@ -101,26 +106,6 @@ namespace SceneStateExporter
             GameObject root = new GameObject("Importer-" + Guid.NewGuid());
 
             root.AddComponent<ImportScene>();
-        }
-    }
-
-    public class ImportSceneException : Exception
-    {
-        // add more for more cases
-        public ImportSceneException()
-        {
-            Debug.LogError("Invalid Hierarchy - Missing child.");
-        }
-
-        public ImportSceneException(string message)
-            : base(string.Format(
-                "Scene State File child count mismatch for : {0}", message))
-        {
-        }
-        public ImportSceneException(string message, Exception inner)
-            : base(string.Format(
-                "Scene State File child count mismatch for : {0}", message), inner)
-        {
         }
     }
 }
