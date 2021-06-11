@@ -15,11 +15,13 @@ namespace SceneStateExporter
             public Vector3 scale;
         }
 
+        public string name;
         public tform objectTransform;
         public List<ObjectState> children;
 
         public ObjectState(Transform transform)
         {
+            name = transform.name;
             objectTransform.position = transform.position;
             objectTransform.rotation = transform.rotation;
             objectTransform.scale = transform.localScale;
@@ -36,10 +38,11 @@ namespace SceneStateExporter
                 scale = Vector3.zero
             };
             children = new List<ObjectState>();
+            name = "";
         }
 
         public void UpdateTransform(in Transform transform)
-        {
+        {            
             // update transforms
             transform.position = objectTransform.position;
             transform.rotation = objectTransform.rotation;
@@ -48,6 +51,8 @@ namespace SceneStateExporter
             // check if number of children align
             if (transform.childCount != children.Count)
             {
+                Debug.LogFormat("Expected: {0} Actual: {1}", transform.childCount, children.Count);
+                Debug.LogFormat("Children: {0}", JsonConvert.SerializeObject(children));
                 throw new ImportSceneException(transform.name);
             }
 
@@ -55,6 +60,20 @@ namespace SceneStateExporter
             foreach (Transform child in transform)
             {
                 children[i++].UpdateTransform(child);
+            }
+        }
+
+        public void UnpackData(in Transform transform)
+        {
+            // update transforms
+            transform.position = objectTransform.position;
+            transform.rotation = objectTransform.rotation;
+            transform.localScale = objectTransform.scale;
+
+            ///incomplete
+            foreach (var child in children)
+            {
+                var childTransform = transform.Find(child.name);
             }
         }
 
