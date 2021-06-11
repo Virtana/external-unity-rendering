@@ -9,32 +9,32 @@ using UnityEditor;
 
 namespace SceneStateExporter
 {
+#if UNITY_EDITOR
+    [CustomEditor(typeof(ImportScene))]
+    public class QuickEditorImport : Editor
+    {
+        public override void OnInspectorGUI()
+        {
+            DrawDefaultInspector();
+
+            EditorGUILayout.HelpBox("Click Import Now to Import now.", MessageType.None);
+
+            ImportScene currentImporter = target as ImportScene;
+            if (GUILayout.Button("Import Now"))
+            {
+                currentImporter.ImportCurrentScene();
+            }
+        }
+    }
+#endif
+
     public class ImportScene : MonoBehaviour
     {
-        private static ImportScene importer = null;
-        public string saveFilePath = @"D:\Virtana\obj.json";
+        public string ImportFilePath = @"D:\Virtana\obj.json";
 
         // Represents when the scene was exported.
         // if null, then no import has occured
-        public DateTime? exportTimestamp;
-
-        public static void Import()
-        {
-            if (importer == null)
-            {
-                Debug.LogError("No importer found.");
-                return;
-            }
-
-            importer.ImportCurrentScene();
-        }
-
-        // add function to grab active gameobjects
-        void Awake()
-        {
-            Debug.Log("Importer Awake");
-            importer = this;
-        }
+        public DateTime? ExportTimestamp;
 
         public void ImportCurrentScene()
         {
@@ -59,59 +59,48 @@ namespace SceneStateExporter
                 Debug.Log(gObj.name + " " + gObj.transform.childCount);
             }
 
-            string json = System.IO.File.ReadAllText(saveFilePath);
-            //Debug.Log(json);
+            string json = System.IO.File.ReadAllText(ImportFilePath);
 
             Debug.Log("Deserializing...");
             var state = JsonConvert.DeserializeObject<SceneState>(json);
-
-            Debug.Log("Importing...");
             state.sceneRoot.UnpackData(transform);
-            exportTimestamp = state.exportDate;
+            ExportTimestamp = state.exportDate;
 
             // put items back in place
             foreach (var gObj in importObjects)
             {
                 gObj.transform.parent = null;
             }
-            Debug.LogFormat("Saved state to {0}!", saveFilePath);
+            Debug.LogFormat("Imported state from {0}! It was generated at {1}", 
+                ImportFilePath, ExportTimestamp);
 
-            CustomCamera.Screenshot(@"D:\Virtana\Planning", new Vector2Int(1920,1080));
+            FindObjectOfType<CustomCamera>()
+                .RenderImage(@"D:\Virtana\Planning", new Vector2Int(1920,1080));
         }
     }
 
-#if UNITY_EDITOR
-    [CustomEditor(typeof(ImportScene))]
-    public class QuickEditorImport : Editor
+    public partial class ObjectState
     {
-        public override void OnInspectorGUI()
+        public void UnpackData(Transform transform)
         {
-            DrawDefaultInspector();
+            // update transforms
+            transform.position = ObjectTransform.Position;
+            transform.rotation = ObjectTransform.Rotation;
+            transform.localScale = ObjectTransform.Scale;
 
-            EditorGUILayout.HelpBox("Click Import Now to Import now.", MessageType.None);
-
-            ImportScene currentImporter = target as ImportScene;
-            if (GUILayout.Button("Import Now"))
+            foreach (var child in Children)
             {
-                currentImporter.ImportCurrentScene();
+                var childTransform = transform.Find(child.Name);
+                if (childTransform == null)
+                {
+                    Debug.LogWarningFormat("Child {0} missing from {1}.",
+                        child.Name, transform.name);
+                }
+                else
+                {
+                    child.UnpackData(childTransform);
+                }
             }
-        }
-    }
-#endif
-
-    public class Importer
-    {
-        [RuntimeInitializeOnLoadMethod]
-        public static void InitializeImporter()
-        {
-            Debug.Log("Triggered Importer Generation");
-            // Generate Uniquely Named Object
-            GameObject root = new GameObject("Importer-" + Guid.NewGuid());
-
-            root.AddComponent<ImportScene>();
-
-            // temporary setting. Immediately import and then render
-            ImportScene.Import();
         }
     }
 }
