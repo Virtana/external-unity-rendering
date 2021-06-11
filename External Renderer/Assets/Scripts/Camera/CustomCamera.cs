@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 
 public class CustomCamera : MonoBehaviour
 {
-    private Camera cam;
+    private static Camera cam;
     private Coroutine _screenshotCoroutine;
 
     private string generateScreenshotPath(string folder)
@@ -87,15 +87,15 @@ public class CustomCamera : MonoBehaviour
         }
     }
 
-    public void Screenshot(string folder, Vector2Int screenshotSize = default(Vector2Int))
+    public static void Screenshot(string folder, Vector2Int screenshotSize = default(Vector2Int))
     {
-        if (screenshotSize.x > 300 && screenshotSize.y > 300)
+        if (screenshotSize.x < 300 || screenshotSize.y < 300)
         {
             // Set default size
             screenshotSize = new Vector2Int(Screen.width, Screen.height);
         }
 
-        takeScreenshot(folder, screenshotSize);
+        cam.gameObject.GetComponent<CustomCamera>().takeScreenshot(folder, screenshotSize);
     }
 
     public void TakeContinuousScreenshots(string folder, 

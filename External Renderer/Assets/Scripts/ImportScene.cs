@@ -11,7 +11,7 @@ namespace SceneStateExporter
 {
     public class ImportScene : MonoBehaviour
     {
-        private static GameObject importer;
+        private static ImportScene importer = null;
         public string saveFilePath = @"D:\Virtana\obj.json";
 
         // Represents when the scene was exported.
@@ -26,14 +26,14 @@ namespace SceneStateExporter
                 return;
             }
 
-            importer.GetComponent<ImportScene>().ImportCurrentScene();
+            importer.ImportCurrentScene();
         }
 
         // add function to grab active gameobjects
         void Awake()
         {
             Debug.Log("Importer Awake");
-            importer = gameObject;
+            importer = this;
         }
 
         public void ImportCurrentScene()
@@ -56,16 +56,17 @@ namespace SceneStateExporter
             foreach (var gObj in importObjects)
             {
                 gObj.transform.SetParent(transform, true);
+                Debug.Log(gObj.name + " " + gObj.transform.childCount);
             }
 
             string json = System.IO.File.ReadAllText(saveFilePath);
-            Debug.Log(json);
+            //Debug.Log(json);
 
             Debug.Log("Deserializing...");
             var state = JsonConvert.DeserializeObject<SceneState>(json);
 
             Debug.Log("Importing...");
-            state.sceneRoot.UpdateTransform(transform);
+            state.sceneRoot.UnpackData(transform);
             exportTimestamp = state.exportDate;
 
             // put items back in place
@@ -74,6 +75,8 @@ namespace SceneStateExporter
                 gObj.transform.parent = null;
             }
             Debug.LogFormat("Saved state to {0}!", saveFilePath);
+
+            CustomCamera.Screenshot(@"D:\Virtana\Planning", new Vector2Int(1920,1080));
         }
     }
 
@@ -106,6 +109,9 @@ namespace SceneStateExporter
             GameObject root = new GameObject("Importer-" + Guid.NewGuid());
 
             root.AddComponent<ImportScene>();
+
+            // temporary setting. Immediately import and then render
+            ImportScene.Import();
         }
     }
 }
