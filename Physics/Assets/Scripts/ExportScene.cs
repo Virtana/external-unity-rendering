@@ -1,5 +1,4 @@
 ﻿using Newtonsoft.Json;
-using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -31,33 +30,21 @@ namespace SceneStateExporter
 
     public class ExportScene : MonoBehaviour
     {
-        private static GameObject exporter;
-        public string saveFilePath = @"D:\Virtana\obj.json";
+        // For Testing only. When Transmission method is developed
+        // this will be removed.
+        public string ExportPath = @"D:\Virtana\obj.json";
 
-        public static void Export()
-        {
-            if (exporter == null)
-            {
-                Debug.LogError("No exporter found.");
-                return;
-            }
+        // TODO for exporter
+        // 1. Ensure System state freezes here.
+        // 2. Add validation for file path.
+        // 3. Add a check for transmission vs. Save to file
+        // 4. Add way to change folder and ensure uniquely generated
+        //    file names.
 
-            exporter.GetComponent<ExportScene>().ExportCurrentScene();
-        }
-
-        // add function to grab active gameobjects
-        void Awake()
-        {
-            Debug.Log("Exporter Awake");
-            exporter = gameObject;
-        }
-
+        // Function subject to change
         public void ExportCurrentScene()
         {
             Debug.Log("Beginning Export.");
-            // possibly implement a pause engine state here
-            // add validation for file path
-            // add a bool or something for transmission
 
             // get all current items in scene except the exporter
             Scene currentScene = SceneManager.GetActiveScene();
@@ -71,40 +58,57 @@ namespace SceneStateExporter
                 return;
             }
 
-            foreach (var gObj in exportObjects)
+            foreach (GameObject exportObject in exportObjects)
             {
-                gObj.transform.SetParent(transform, true);
+                exportObject.transform.SetParent(transform, true);
             }
 
             Debug.Log("Exporting...");
-            var currentState = ObjectState.GenerateState(transform);
-            var scene = new SceneState();
-            scene.AssignSceneRoot(currentState);
-
-            Debug.Log("Serializing...");
-
-            var state = JsonConvert.SerializeObject(scene);
-            File.WriteAllText(saveFilePath, state);
-
-            // put items back in place
-            foreach (var gObj in exportObjects)
+            SceneState scene = new SceneState(transform);
+            string state = JsonConvert.SerializeObject(scene);
+            File.WriteAllText(ExportPath, state);
+            Debug.LogFormat("Saved state to {0}!", ExportPath);
+            
+            foreach (GameObject exportObject in exportObjects)
             {
-                gObj.transform.parent = null;
+                exportObject.transform.parent = null;
             }
-            Debug.LogFormat("Saved state to {0}!", saveFilePath);
         }
     }
 
-    public class Exporter
+    // Extends Export ObjectState Construction
+    public partial class ObjectState
     {
-        [RuntimeInitializeOnLoadMethod]
-        public static void InitializeExporter()
+        /// <summary>
+        /// Create an ObjectState representing the GameObject using its 
+        /// transform.
+        /// </summary>
+        /// <param name="transform">The transform of the gameObject.</param>
+        public ObjectState(Transform transform)
         {
-            Debug.Log("Triggered Exporter Generation");
-            // Generate Uniquely Named Object
-            GameObject root = new GameObject("Exporter-" + Guid.NewGuid());
+            Name = transform.name;
+            ObjectTransform = new TransformState(transform);
+            Children = new List<ObjectState>();
 
-            root.AddComponent<ExportScene>();
+            foreach (Transform childTransform in transform)
+            {
+                Children.Add(new ObjectState(childTransform));
+            }
+        }
+    }
+
+    // Extends SceneState Adding Export Object Construction
+    public partial class SceneState
+    {
+        /// <summary>
+        /// Create a new SceneState and create a new ObjectState using 
+        /// <paramref name="transform"/> and assign it as the scene root.
+        /// </summary>
+        /// <param name="transform">The Transform of the root 
+        /// GameObject.</param>
+        public SceneState(Transform transform)
+            : this(new ObjectState(transform))
+        {
         }
     }
 }
