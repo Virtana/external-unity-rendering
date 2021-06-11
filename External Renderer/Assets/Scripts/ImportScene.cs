@@ -56,7 +56,6 @@ namespace SceneStateExporter
             foreach (var gObj in importObjects)
             {
                 gObj.transform.SetParent(transform, true);
-                Debug.Log(gObj.name + " " + gObj.transform.childCount);
             }
 
             string json = System.IO.File.ReadAllText(ImportFilePath);
