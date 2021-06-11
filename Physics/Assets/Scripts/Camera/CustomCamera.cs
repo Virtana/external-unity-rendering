@@ -21,7 +21,7 @@ public class CustomCamera : MonoBehaviour
         SaveCamera();
         if (_camera == null)
         {
-            this.GetComponent<CustomCamera>().enabled = false;
+            GetComponent<CustomCamera>().enabled = false;
         }
     }
 
