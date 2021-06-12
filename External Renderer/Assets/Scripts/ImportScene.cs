@@ -31,6 +31,7 @@ namespace SceneStateExporter
     public class ImportScene : MonoBehaviour
     {
         public string ImportFilePath = @"D:\Virtana\obj.json";
+        public string ImageSaveFolder = @"D:\Virtana\Planning";
 
         // Represents when the scene was exported.
         // if null, then no import has occured
@@ -74,7 +75,7 @@ namespace SceneStateExporter
                 ImportFilePath, ExportTimestamp);
 
             FindObjectOfType<CustomCamera>()
-                .RenderImage(@"D:\Virtana\Planning", new Vector2Int(1920,1080));
+                .RenderImage(ImageSaveFolder, new Vector2Int(1920,1080));
         }
     }
 
