@@ -13,11 +13,11 @@ Run two instances of Unity in parallel. The “main” instance is responsible f
 ## Progress
 
 1. [X] Milestone 1 : Make a custom camera.
-2. [ ] Milestone 2 : Identify options for saving/communicating scene state.
+2. [X] Milestone 2 : Identify options for saving/communicating scene state.
 3. [ ] Milestone 3 : Implement the chosen option.  
-    1. [ ] Save the scene to file.
-    2. [ ] Load the saved file in Unity.
-    3. [ ] Compare the original scene to the loaded scene
+    1. [X] Save the scene to file.
+    2. [X] Load the saved file in Unity.
+    3. [X] Compare the original scene to the loaded scene
     4. [ ] Programmatically communicate the scene.
 4. [ ] Milestone 4 : Using the communication method developed in Milestone 3, use the camera from Milestone 1 to render an image.
 5. [ ] Milestone 5 : Increase the scalability of the design.
@@ -36,7 +36,8 @@ Current options include:
 
 - ~~Pixar USD~~
 - ~~Khronos Group glFX~~
-- Manually overriding current state
+- Custom JSON + Unity Scene
+    - Current method has a custom class representing the Scene state, which is serialized to and from JSON, using [Newtonsoft.JSON for Unity](https://github.com/jilleJr/Newtonsoft.Json-for-Unity) and [Unity Converters for Newtonsoft.JSON](https://github.com/jilleJr/Newtonsoft.Json-for-Unity.Converters)
 
 ### Milestone 3 : Implement this method to transfer scenes between Unity instances
 
@@ -62,8 +63,15 @@ Transfer the state of a scene from one instance to another while they are both r
 
 This milestone involves the method implemented in Milestone 3, as well as the camera/scene constructed in Milestone 1. Communicate the state of one Unity instance to another, and render/save an image reflecting this state in the other instance.
 
-### Milestone 5 : Upgrade the design to be more scalable
+### Milestone 5 : Upgrade the design
 
-Options include (but are not limited to):
+Design improvements may include (but are not limited to):
 
-- Docker + [Kubernetes](https://kubernetes.io/) or [AWS Elastic Beanstalk](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/create_deploy_docker_ecs.html)
+- Run multiple physics and renderer instances, and deploy them using either:
+    - [Docker](https://www.docker.com/) + [Kubernetes](https://kubernetes.io/) or
+    - [AWS Elastic Beanstalk](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/create_deploy_docker_ecs.html)
+
+- Extending the SceneState and ObjectState classes (which are used to store the scene info) by:
+    - Adding support for Components
+    - Adding Components and GameObjects that don't exist
+    - Rendering on Multiple Cameras (possibly in a multithreaded manner)
