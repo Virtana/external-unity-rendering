@@ -21,7 +21,7 @@ public class CustomCamera : MonoBehaviour
         SaveCamera();
         if (_camera == null)
         {
-            this.GetComponent<CustomCamera>().enabled = false;
+            enabled = false;
         }
     }
 
@@ -52,12 +52,12 @@ public class CustomCamera : MonoBehaviour
         {
             // This will throw an exception if the
             // folder is invalid
-            var dir = new DirectoryInfo(folder);
-            if (!dir.Exists)
+            DirectoryInfo directory = new DirectoryInfo(folder);
+            if (!directory.Exists)
             {
-                dir.Create();
+                directory.Create();
             }
-            folder = dir.FullName + Path.DirectorySeparatorChar;
+            folder = directory.FullName + Path.DirectorySeparatorChar;
         }
         catch (System.Exception e)
         {
@@ -85,7 +85,7 @@ public class CustomCamera : MonoBehaviour
             new Vector2Int(int.MaxValue, int.MaxValue));
 
         _camera.enabled = false;
-        var renderTexture = new RenderTexture(renderSize.x, renderSize.y, 24);
+        RenderTexture renderTexture = new RenderTexture(renderSize.x, renderSize.y, 24);
         _camera.targetTexture = renderTexture;
 
         // Render the camera's view.
@@ -93,7 +93,7 @@ public class CustomCamera : MonoBehaviour
         RenderTexture.active = renderTexture;
 
         // Make a new texture and read the active Render Texture into it.
-        var image = new Texture2D(renderSize.x, renderSize.y, TextureFormat.RGB24, false);
+        Texture2D image = new Texture2D(renderSize.x, renderSize.y, TextureFormat.RGB24, false);
         image.ReadPixels(new Rect(0, 0, renderSize.x, renderSize.y), 0, 0);
         image.Apply();
 
@@ -108,7 +108,7 @@ public class CustomCamera : MonoBehaviour
         byte[] png = ImageConversion.EncodeToPNG(image);
 
         // create a filename for the render
-        var filename = GenerateRenderPath(folder);
+        string filename = GenerateRenderPath(folder);
 
         File.Open(filename, FileMode.OpenOrCreate).Close();
         File.WriteAllBytes(filename, png);
@@ -154,7 +154,8 @@ public class CustomCamera : MonoBehaviour
         if (_rendererCoroutine != null)
         {
             StopCoroutine(_rendererCoroutine);
-        } else
+        } 
+        else
         {
             Debug.Log("No Screenshot Coroutine is active.");
         }   
