@@ -21,7 +21,7 @@ public class CustomCamera : MonoBehaviour
         SaveCamera();
         if (_camera == null)
         {
-            GetComponent<CustomCamera>().enabled = false;
+            enabled = false;
         }
     }
 
@@ -154,7 +154,8 @@ public class CustomCamera : MonoBehaviour
         if (_rendererCoroutine != null)
         {
             StopCoroutine(_rendererCoroutine);
-        } else
+        } 
+        else
         {
             Debug.Log("No Screenshot Coroutine is active.");
         }   
