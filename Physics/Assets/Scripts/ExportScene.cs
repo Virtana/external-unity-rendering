@@ -30,25 +30,21 @@ namespace SceneStateExporter
 
     public class ExportScene : MonoBehaviour
     {
-        // For Testing only. When Transmission method is developed
-        // this will be removed.
-        [Obsolete("FileWriting is no longer handled by this exporter.")]
+        // For Testing only. To be moved to editor only/debugging options
         public string ExportPath = @"D:\Virtana\obj.json";
 
         // TODO for exporter
-        // 1. Ensure System state freezes here.
+        // 1. Ensure System state freezes here (if not singlethreaded).
         // 2. Add filewriting as debug options.
         // 3. Add a check for transmission vs. Save to file
         // 4. Add way to change folder and ensure uniquely generated
         //    file names.
+        // 5. Add response handling from sender.
 
         // Function subject to change
         public void ExportCurrentScene()
         {
             Debug.Log("Beginning Export.");
-
-            // let sender initialize
-            Sender sender = new Sender();
 
             // get all current items in scene except the exporter
             Scene currentScene = SceneManager.GetActiveScene();
@@ -71,9 +67,7 @@ namespace SceneStateExporter
             SceneState scene = new SceneState(transform);
             string state = JsonConvert.SerializeObject(scene, Formatting.Indented);
 
-            // Replacing with TCP/IP
-            // File.WriteAllText(ExportPath, state);
-            // File.WriteAllText(@"C:\Users\aidan\Downloads\receiver\exp.json", state);
+            Sender sender = new Sender();
             sender.Send(state);
 
             Debug.Log($"State transmission succeeded at { DateTime.Now.ToString() }");

@@ -2,6 +2,7 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using UnityEngine;
 
 namespace SceneStateExporter
 {
@@ -29,10 +30,14 @@ namespace SceneStateExporter
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.ToString());
+                Debug.LogError(e.ToString());
             }
         }
 
+        // TODO: investigate how to handle send issues
+        // Investigate what happens if byte array is too small
+        // switch byte array to more IList<ArraySegment<byte>> 
+        // and using socket error code
         public void Send(string data) {
             byte[] bytes = new byte[1024];
             // Connect the socket to the remote endpoint. Catch any errors.
@@ -41,21 +46,26 @@ namespace SceneStateExporter
                 // Connect to Remote EndPoint
                 _sender.Connect(_remoteEndPoint);
 
-                Console.WriteLine("Socket connected to {0}",
+                Debug.LogFormat("Socket connected to {0}",
                     _sender.RemoteEndPoint.ToString());
 
                 // Encode the data string into a byte array.
-                byte[] msg = Encoding.ASCII.GetBytes($"{data}\0");
+                byte[] msg = Encoding.ASCII.GetBytes($"{data}");
 
                 // Send the data through the socket.
                 int bytesSent = _sender.Send(msg);
 
+                // HACK disconnect then reconnect to signal end of transmission
+                _sender.Shutdown(SocketShutdown.Both);
+                _sender.Disconnect(true);
+                _sender.Connect(_remoteEndPoint);
+
                 // Receive the response from the remote device.
+                // may be problematic after disconnect
                 int bytesRec = _sender.Receive(bytes);
-                if (Encoding.ASCII.GetString(bytes, 0, bytesRec)
-                    != "1")
+                if (Encoding.ASCII.GetString(bytes, 0, bytesRec) != "1")
                 {
-                    Console.WriteLine("an error occured.");
+                    Debug.LogError("an error occured.");
                 }
 
                 // Release the socket.
@@ -65,15 +75,15 @@ namespace SceneStateExporter
             }
             catch (ArgumentNullException ane)
             {
-                Console.WriteLine("ArgumentNullException : {0}", ane.ToString());
+                Debug.LogErrorFormat("ArgumentNullException : {0}", ane.ToString());
             }
             catch (SocketException se)
             {
-                Console.WriteLine("SocketException : {0}", se.ToString());
+                Debug.LogErrorFormat("SocketException : {0}", se.ToString());
             }
             catch (Exception e)
             {
-                Console.WriteLine("Unexpected exception : {0}", e.ToString());
+                Debug.LogErrorFormat("Unexpected exception : {0}", e.ToString());
             }
         }
     }

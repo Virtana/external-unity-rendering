@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 #if UNITY_EDITOR
@@ -30,20 +31,40 @@ namespace SceneStateExporter
 
     public class ImportScene : MonoBehaviour
     {
+        // make editor only / debugging options
         public string ImportFilePath = @"D:\Virtana\obj.json";
         public string ImageSaveFolder = @"D:\Virtana\Planning";
+        // editor function
+        public void ImportCurrentScene()
+        {
+            ImportCurrentScene(System.IO.File.ReadAllText(ImportFilePath));
+        }
 
         // Represents when the scene was exported.
         // if null, then no import has occured
         public DateTime? ExportTimestamp;
 
-        // TODO: 
-        // possibly implement a pause engine state here
+        private void Awake()
+        {
+            Receiver client = new Receiver();
+
+#warning Client.RecieveMessage blocks the current thread.
+            client.RecieveMessage(ImportCurrentScene); 
+        }
+
+        // TODO:
+        // implement a pause engine state here
+        // ^ May not be necessary as this is singlethreaded and blocking
+        // may be a concern if jobs are used.
         // add debug mode with file (and automatic filename checking)
         // check if file exists
         // try some sort of better error handling + make a CustomSerialisation
         // settings to Log the error and later ping a server
-        public void ImportCurrentScene()
+        // communicate failstate to server
+        // add sending the image path or include in state object
+        // ^ or implement saving ing Application.persistentDataPath
+
+        public void ImportCurrentScene(string json)
         {
             Debug.Log("Beginning Import.");
             
@@ -62,15 +83,13 @@ namespace SceneStateExporter
                 importObject.transform.SetParent(transform, true);
             }
 
-            string json = System.IO.File.ReadAllText(ImportFilePath);
-
             Debug.Log("Deserializing...");
 
             SceneState state = JsonConvert.DeserializeObject<SceneState>(json);
  
             if (state == null)
             {
-                Debug.LogError("Failed to serialize!");
+                Debug.LogError("Failed to deserialize!");
                 return;
             }
 
@@ -85,8 +104,14 @@ namespace SceneStateExporter
             Debug.LogFormat("Imported state from {0}! It was generated at {1}", 
                 ImportFilePath, ExportTimestamp);
 
-            FindObjectOfType<CustomCamera>()
-                .RenderImage(ImageSaveFolder, new Vector2Int(1920,1080));
+            // TODO test this
+            CustomCamera[] cameras = FindObjectsOfType<CustomCamera>();
+            foreach (CustomCamera camera in cameras) {
+                camera.RenderImage(ImageSaveFolder, new Vector2Int(1920,1080));
+            }
+            
+            // FindObjectOfType<CustomCamera>()
+            //    .RenderImage(ImageSaveFolder, new Vector2Int(1920,1080));
         }
     }
 
