@@ -66,7 +66,7 @@ namespace SceneStateExporter
 
             Debug.Log("Deserializing...");
 
-            var state = JsonConvert.DeserializeObject<SceneState>(json);
+            SceneState state = JsonConvert.DeserializeObject<SceneState>(json);
  
             if (state == null)
             {
@@ -99,7 +99,7 @@ namespace SceneStateExporter
             transform.rotation = ObjectTransform.Rotation;
             transform.localScale = ObjectTransform.Scale;
 
-            foreach (var child in Children)
+            foreach (ObjectState child in Children)
             {
                 var childTransform = transform.Find(child.Name);
                 if (childTransform == null)
