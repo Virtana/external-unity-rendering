@@ -14,13 +14,13 @@ Run two instances of Unity in parallel. The “main” instance is responsible f
 
 1. [X] Milestone 1 : Make a custom camera.
 2. [X] Milestone 2 : Identify options for saving/communicating scene state.
-3. [ ] Milestone 3 : Implement the chosen option.  
+3. [X] Milestone 3 : Implement the chosen option.  
     1. [X] Save the scene to file.
     2. [X] Load the saved file in Unity.
     3. [X] Compare the original scene to the loaded scene
-    4. [ ] Programmatically communicate the scene.
-4. [ ] Milestone 4 : Using the communication method developed in Milestone 3, use the camera from Milestone 1 to render an image.
-5. [ ] Milestone 5 : Increase the scalability of the design.
+    4. [X] Programmatically communicate the scene.
+4. [X] Milestone 4 : Using the communication method developed in Milestone 3, use the camera from Milestone 1 to render an image.
+5. [ ] Milestone 5 : Upgrade the design.
 
 ## Milestones
 
