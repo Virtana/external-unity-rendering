@@ -37,13 +37,16 @@ namespace SceneStateExporter
         // if null, then no import has occured
         public DateTime? ExportTimestamp;
 
+        // TODO: 
+        // possibly implement a pause engine state here
+        // add debug mode with file (and automatic filename checking)
+        // check if file exists
+        // try some sort of better error handling + make a CustomSerialisation
+        // settings to Log the error and later ping a server
         public void ImportCurrentScene()
         {
             Debug.Log("Beginning Import.");
-            // possibly implement a pause engine state here
-
-            // check if file exists
-
+            
             // get all current items in scene
             Scene currentScene = SceneManager.GetActiveScene();
             List<GameObject> importObjects = new List<GameObject>();
@@ -54,22 +57,30 @@ namespace SceneStateExporter
                 return;
             }
 
-            foreach (var gObj in importObjects)
+            foreach (GameObject importObject in importObjects)
             {
-                gObj.transform.SetParent(transform, true);
+                importObject.transform.SetParent(transform, true);
             }
 
             string json = System.IO.File.ReadAllText(ImportFilePath);
 
             Debug.Log("Deserializing...");
+
             var state = JsonConvert.DeserializeObject<SceneState>(json);
+ 
+            if (state == null)
+            {
+                Debug.LogError("Failed to serialize!");
+                return;
+            }
+
             state.sceneRoot.UnpackData(transform);
             ExportTimestamp = state.exportDate;
 
             // put items back in place
-            foreach (var gObj in importObjects)
+            foreach (GameObject importObject in importObjects)
             {
-                gObj.transform.parent = null;
+                importObject.transform.parent = null;
             }
             Debug.LogFormat("Imported state from {0}! It was generated at {1}", 
                 ImportFilePath, ExportTimestamp);

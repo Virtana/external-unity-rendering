@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using SceneStateExporter;
@@ -11,10 +10,10 @@ public class TestingScript : MonoBehaviour
     public static void TestImports()
     {
         CustomCamera cam = FindObjectOfType<CustomCamera>();
-        cam.StartCoroutine(ImportMany(cam));
+        cam.StartCoroutine(ImportMany());
     }
 
-    static IEnumerator ImportMany(CustomCamera cam)
+    static IEnumerator ImportMany()
     {
         GameObject obj = new GameObject();
         ImportScene import = obj.AddComponent<ImportScene>();
