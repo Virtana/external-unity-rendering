@@ -46,6 +46,9 @@ namespace SceneStateExporter
         {
             Debug.Log("Beginning Export.");
 
+            // let sender initialize
+            Sender sender = new Sender();
+
             // get all current items in scene except the exporter
             Scene currentScene = SceneManager.GetActiveScene();
             List<GameObject> exportObjects = new List<GameObject>();
