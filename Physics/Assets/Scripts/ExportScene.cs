@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System.Collections.Generic;
-using System.IO;
+using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 #if UNITY_EDITOR
@@ -30,16 +30,16 @@ namespace SceneStateExporter
 
     public class ExportScene : MonoBehaviour
     {
-        // For Testing only. When Transmission method is developed
-        // this will be removed.
+        // For Testing only. To be moved to editor only/debugging options
         public string ExportPath = @"D:\Virtana\obj.json";
 
         // TODO for exporter
-        // 1. Ensure System state freezes here.
-        // 2. Add validation for file path.
+        // 1. Ensure System state freezes here (if not singlethreaded).
+        // 2. Add filewriting as debug options.
         // 3. Add a check for transmission vs. Save to file
         // 4. Add way to change folder and ensure uniquely generated
         //    file names.
+        // 5. Add response handling from sender.
 
         // Function subject to change
         public void ExportCurrentScene()
@@ -65,9 +65,12 @@ namespace SceneStateExporter
 
             Debug.Log("Exporting...");
             SceneState scene = new SceneState(transform);
-            string state = JsonConvert.SerializeObject(scene);
-            File.WriteAllText(ExportPath, state);
-            Debug.LogFormat("Saved state to {0}!", ExportPath);
+            string state = JsonConvert.SerializeObject(scene, Formatting.Indented);
+
+            Sender sender = new Sender();
+            sender.Send(state);
+
+            Debug.Log($"State transmission succeeded at { DateTime.Now.ToString() }");
             
             foreach (GameObject exportObject in exportObjects)
             {
