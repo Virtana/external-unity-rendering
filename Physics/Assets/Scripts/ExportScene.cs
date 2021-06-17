@@ -30,20 +30,14 @@ namespace SceneStateExporter
 
     public class ExportScene : MonoBehaviour
     {
-        // For Testing only. To be moved to editor only/debugging options
         public string ExportPath = @"D:\Virtana\obj.json";
-
-        // TODO for exporter
-        // 1. Ensure System state freezes here (if not singlethreaded).
-        // 2. Add filewriting as debug options.
-        // 3. Add a check for transmission vs. Save to file
-        // 4. Add way to change folder and ensure uniquely generated
-        //    file names.
-        // 5. Add response handling from sender.
 
         // Function subject to change
         public void ExportCurrentScene()
         {
+            // pauses the state of the Unity
+            Time.timeScale = 0; 
+
             Debug.Log("Beginning Export.");
 
             // let sender initialize
@@ -79,6 +73,8 @@ namespace SceneStateExporter
             {
                 exportObject.transform.parent = null;
             }
+
+            Time.timeScale = 1;
         }
     }
 

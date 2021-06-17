@@ -34,10 +34,6 @@ namespace SceneStateExporter
             }
         }
 
-        // TODO: investigate how to handle send issues
-        // Investigate what happens if byte array is too small
-        // switch byte array to more IList<ArraySegment<byte>> 
-        // and using socket error code
         public void Send(string data) {
             byte[] bytes = new byte[1024];
             // Connect the socket to the remote endpoint. Catch any errors.

@@ -1,7 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 #if UNITY_EDITOR
@@ -31,7 +30,6 @@ namespace SceneStateExporter
 
     public class ImportScene : MonoBehaviour
     {
-        // make editor only / debugging options
         public string ImportFilePath = @"D:\Virtana\obj.json";
         public string ImageSaveFolder = @"D:\Virtana\Planning";
         // editor function
@@ -46,23 +44,14 @@ namespace SceneStateExporter
 
         private void Awake()
         {
+            // Set timeScale to 0. Scene must always be static.
+            // will be updated on each import
+            Time.timeScale = 0;
             Receiver client = new Receiver();
 
 #warning Client.RecieveMessage blocks the current thread.
             client.RecieveMessage(ImportCurrentScene); 
         }
-
-        // TODO:
-        // implement a pause engine state here
-        // ^ May not be necessary as this is singlethreaded and blocking
-        // may be a concern if jobs are used.
-        // add debug mode with file (and automatic filename checking)
-        // check if file exists
-        // try some sort of better error handling + make a CustomSerialisation
-        // settings to Log the error and later ping a server
-        // communicate failstate to server
-        // add sending the image path or include in state object
-        // ^ or implement saving ing Application.persistentDataPath
 
         public void ImportCurrentScene(string json)
         {
