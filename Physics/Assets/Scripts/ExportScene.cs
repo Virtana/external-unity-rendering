@@ -3,45 +3,36 @@ using System.Collections.Generic;
 using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
+using System.IO;
+using ExternalUnityRendering.PathManagement;
 
-namespace SceneStateExporter
+namespace ExternalUnityRendering
 {
-#if UNITY_EDITOR
-    [CustomEditor(typeof(ExportScene))]
-    public class QuickEditorExport : Editor
-    {
-        public override void OnInspectorGUI()
-        {
-            DrawDefaultInspector();
-
-            EditorGUILayout.HelpBox("Click Export Now to export now.", MessageType.None);
-
-            ExportScene currentExporter = target as ExportScene;
-            if (GUILayout.Button("Export Now"))
-            {
-                currentExporter.ExportCurrentScene();
-            }
-        }
-    }
-#endif
-
     public class ExportScene : MonoBehaviour
     {
-        public string ExportPath = @"D:\Virtana\obj.json";
+        public enum ExportType
+        {
+            Transmit,
+            WriteToFile,
+            Both
+        };
+
+        [SerializeField]
+        private DirectoryManager _exportFolder;
+
+        private void WriteStateToFile(string state)
+        {
+            FileManager file = new FileManager(_exportFolder, "obj.json");
+            file.WriteToFile(state);
+        }
 
         // Function subject to change
-        public void ExportCurrentScene()
+        public void ExportCurrentScene(ExportType exportMode = ExportType.Transmit)
         {
             // pauses the state of the Unity
             Time.timeScale = 0; 
 
             Debug.Log("Beginning Export.");
-
-            // let sender initialize
-            Sender sender = new Sender();
 
             // get all current items in scene except the exporter
             Scene currentScene = SceneManager.GetActiveScene();
@@ -64,8 +55,16 @@ namespace SceneStateExporter
             SceneState scene = new SceneState(transform);
             string state = JsonConvert.SerializeObject(scene, Formatting.Indented);
 
-            Sender sender = new Sender();
-            sender.Send(state);
+            if (exportMode == ExportType.Transmit || exportMode == ExportType.Both)
+            {
+                Sender sender = new Sender();
+                sender.Send(state);
+            }
+
+            if (exportMode == ExportType.Both|| exportMode == ExportType.WriteToFile)
+            {
+                WriteStateToFile(state);
+            }
 
             Debug.Log($"State transmission succeeded at { DateTime.Now.ToString() }");
             
@@ -75,6 +74,11 @@ namespace SceneStateExporter
             }
 
             Time.timeScale = 1;
+        }
+
+        private void Start()
+        {
+            _exportFolder = new DirectoryManager();
         }
     }
 

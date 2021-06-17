@@ -4,7 +4,7 @@ using System.Net.Sockets;
 using System.Text;
 using UnityEngine;
 
-namespace SceneStateExporter
+namespace ExternalUnityRendering
 {
     public class Sender
     {

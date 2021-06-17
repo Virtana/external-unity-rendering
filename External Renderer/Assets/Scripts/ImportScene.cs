@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 using UnityEditor;
 #endif
 
-namespace SceneStateExporter
+namespace ExternalUnityRendering
 {
 #if UNITY_EDITOR
     [CustomEditor(typeof(ImportScene))]
