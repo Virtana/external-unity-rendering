@@ -5,7 +5,7 @@ using System.Net.Sockets;
 using System.Text;
 using UnityEngine;
 
-namespace ExternalUnityRendering
+namespace ExternalUnityRendering.TcpIp
 {
     public class Receiver
     {
@@ -13,9 +13,6 @@ namespace ExternalUnityRendering
         private IPAddress _ipAddress;
         private IPEndPoint _localEndPoint;
         private Socket _listener;
-
-        [Obsolete("To be replaced with Asynchronous Communication.")]
-        private readonly byte endMarker = Convert.ToByte('\0');
 
         public Receiver(int port = 11000)
         {

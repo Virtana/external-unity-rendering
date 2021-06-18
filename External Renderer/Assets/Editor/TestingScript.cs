@@ -1,30 +1,35 @@
-﻿using System.Collections;
-using UnityEngine;
+﻿using ExternalUnityRendering.CameraUtilites;
+using System.Collections;
 using UnityEditor;
-using ExternalUnityRendering;
+using UnityEngine;
 
-public class TestingScript : MonoBehaviour
+namespace ExternalUnityRendering.UnityEditor
 {
-    static public int Runs = 10;
-    [MenuItem("Testing/Import+Images")]
-    public static void TestImports()
+    public class TestingScript : MonoBehaviour
     {
-        CustomCamera cam = FindObjectOfType<CustomCamera>();
-        cam.StartCoroutine(ImportMany());
-    }
-
-    static IEnumerator ImportMany()
-    {
-        GameObject obj = new GameObject();
-        ImportScene import = obj.AddComponent<ImportScene>();
-
-        import.ImageSaveFolder = @"D:\Virtana\Planning\Import";
-
-        for (int i = 0; i < Runs; i++)
+        static public int Runs = 10;
+        [MenuItem("Testing/Import+Images")]
+        public static void TestImports()
         {
-            import.ImportFilePath = string.Format(@"D:\Virtana\Planning\obj ({0}).json", i + 1);
-            import.ImportCurrentScene();
-            yield return new WaitForSecondsRealtime(1f);
+            CustomCamera cam = FindObjectOfType<CustomCamera>();
+            cam.StartCoroutine(ImportMany());
+        }
+
+        static IEnumerator ImportMany()
+        {
+            GameObject obj = new GameObject();
+            ImportScene import = obj.AddComponent<ImportScene>();
+
+            import.RenderFolder = @"D:\Virtana\Planning\Import";
+            // TODO make sure this is legit somehow first instead of logging a bunch
+            // and doing nothing
+            // TODO ensure this is safe.
+            for (int i = 0; i < Runs; i++)
+            {
+                import.ImportFilePath = string.Format(@"D:\Virtana\Planning\Scene State ({0}).json", i + 1);
+                import.ImportCurrentScene();
+                yield return new WaitForSecondsRealtime(1f);
+            }
         }
     }
 }

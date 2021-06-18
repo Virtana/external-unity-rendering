@@ -1,10 +1,12 @@
 ﻿using System;
 using System.IO;
-using UnityEngine;
 using System.Text;
+using UnityEngine;
 
 namespace ExternalUnityRendering.PathManagement
 {
+
+    // TODO: consider making Interface or class for this and Dirmanager to inherit from
     class FileManager
     {
         private FileInfo _file;
@@ -18,11 +20,14 @@ namespace ExternalUnityRendering.PathManagement
             }
         }
 
+        // TODO: consider whether this should throw an exception
+        // HACK: if initialization fails, File is null
         public string Path
         {
             get
             {
-                return _file.FullName;
+                // HACK using null conditional until decision is made
+                return _file?.FullName;
             }
             set
             {
@@ -57,16 +62,16 @@ namespace ExternalUnityRendering.PathManagement
                 catch (ArgumentException ae)
                 {
                     Debug.LogError($"The folder <{ value }> is empty or contains "
-                        + $"invalid characters.\n{ ae.ToString() }");
+                        + $"invalid characters.\n{ ae }");
                 }
                 catch (System.Security.SecurityException se)
                 {
                     Debug.LogError("You do not have the permissions to access "
-                        + $"<{ value }>.\n{ se.ToString() }");
+                        + $"<{ value }>.\n{ se }");
                 }
                 catch (UnauthorizedAccessException uae)
                 {
-                    Debug.LogError($"Access to <{ value }> is denied.\n { uae.ToString() }");
+                    Debug.LogError($"Access to <{ value }> is denied.\n { uae }");
                 }
                 catch (PathTooLongException ptle)
                 {
@@ -84,27 +89,40 @@ namespace ExternalUnityRendering.PathManagement
                     Debug.LogError($"The file <{ value }> could not be created.\n"
                         + ioe.ToString());
                 }
-                finally
-                {
-                    if (_file == null)
-                    {
-                        FileInfo file = new FileInfo(
-                            System.IO.Path.Combine(Application.persistentDataPath,
-                            (
-                                DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss-fff-UTC-zz")
-                                + ".dat"
-                            )));
-                        file.Create().Close();
-                        _file = file;
-                        Debug.LogWarning($"Unable to create file at <{ value }>. Using "
-                            + $"auto-generated file: { _file.FullName }.");
-                    }
-                }
             }
         }
 
-        public FileManager(string folder, string name) 
-            : this (new DirectoryManager(folder), name) { }
+        public FileManager()
+        {
+            // Create a near-guaranteed unique file. See the first
+            // comment on https://stackoverflow.com/a/11938280 
+            FileInfo file = new FileInfo(
+                System.IO.Path.Combine(Application.persistentDataPath,
+                (
+                    DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss-fff-UTCzz")
+                    + $" { Guid.NewGuid() }.dat"
+                )));
+
+            file.Create().Close();
+            _file = file;
+        }
+
+        // HACK Tries to detect if path is relative (a filename) or absolute
+        public FileManager(string path) 
+        { 
+            // HACK May not be best implementation for windows, can't find .net source 
+            // for Windows implementation in .net 5
+            if (System.IO.Path.IsPathRooted(path))
+            {
+                Path = path;
+            } else
+            {
+                Path = System.IO.Path.Combine(Application.persistentDataPath, path);
+            }
+        }
+
+        public FileManager(string folder, string name)
+                    : this(new DirectoryManager(folder), name) { }
 
         public FileManager(DirectoryManager directory, string name) 
         {
@@ -120,6 +138,14 @@ namespace ExternalUnityRendering.PathManagement
             using (StreamWriter writer = new StreamWriter(stream))
             {
                 writer.WriteLine(data);
+            }
+        }
+
+        public void WriteToFile(byte[] data)
+        {
+            using (FileStream stream = _file.OpenWrite())
+            {
+                stream.Write(data, 0, data.Length);
             }
         }
 

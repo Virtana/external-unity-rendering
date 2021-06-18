@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace ExternalUnityRendering.PathManagement
 {
+    // TODO see notes in FileManager.cs. Consider same for this.
     class DirectoryManager
     {
         private DirectoryInfo _directory;
@@ -33,6 +34,7 @@ namespace ExternalUnityRendering.PathManagement
                         dir.Create();
                     }
                     _directory = dir;
+                    return;
                 }
                 catch (ArgumentNullException ane)
                 {
@@ -42,12 +44,12 @@ namespace ExternalUnityRendering.PathManagement
                 catch (ArgumentException ae)
                 {
                     Debug.LogError($"The directory <{ value }> contains invalid "
-                        + $"characters.\n{ ae.ToString() }");
+                        + $"characters.\n{ ae }");
                 }
                 catch (System.Security.SecurityException se)
                 {
                     Debug.LogError("You do not have the permissions to access "
-                        + $"<{ value }>.\n{ se.ToString() }");
+                        + $"<{ value }>.\n{ se }");
                 }
                 catch (PathTooLongException ptle)
                 {
@@ -60,13 +62,13 @@ namespace ExternalUnityRendering.PathManagement
                     Debug.LogError($"The directory <{ value }> could not be created.\n"
                         + ioe.ToString());
                 }
-                finally
+                
+                if (_directory == null)
                 {
-                    if (_directory.FullName == Application.persistentDataPath)
-                    {
-                        Debug.LogWarning(
-                            $"Defaulting to { Application.persistentDataPath}.");
-                    }
+                    // NOTE small chance of fail, but that would be a larger unity issue
+                    _directory = new DirectoryInfo(Application.persistentDataPath);
+                    Debug.LogWarning(
+                        $"Defaulting to { Application.persistentDataPath}.");
                 }
             }
         }

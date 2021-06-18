@@ -1,9 +1,12 @@
-﻿using System.Collections;
-using UnityEngine;
+﻿using ExternalUnityRendering.CameraUtilites;
+using System.Collections;
 using UnityEditor;
+using UnityEngine;
 
-namespace ExternalUnityRendering
+namespace ExternalUnityRendering.UnityEditor
 {
+    // NOTE rework the functionality of this.
+    // also add more options
     public class TesterGUI
     {
         public static int Runs = 10;
@@ -56,6 +59,8 @@ namespace ExternalUnityRendering
         private static IEnumerator ExportContinuously(int runs)
         {
             ExportScene export = Object.FindObjectOfType<ExportScene>();
+
+            // TODO add multicam support
             CustomCamera cam = Object.FindObjectOfType<CustomCamera>();
 
             if (export == null)
@@ -69,13 +74,11 @@ namespace ExternalUnityRendering
                 yield break;
             }
 
-            // TODO allow changing this.
-            //export.ExportFolder = @"D:\Virtana\Planning\";
-
+            // TODO Ensure folders are set appropriately
             for (int i = 0; i < runs; i++)
             {
                 export.ExportCurrentScene();
-                cam.RenderImage(@"D:\Virtana\Planning", new Vector2Int(1920, 1080));
+                cam.RenderImage(new Vector2Int(1920, 1080));
                 yield return new WaitForSecondsRealtime(1f);
             }
         }

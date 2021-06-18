@@ -1,10 +1,10 @@
-﻿using Newtonsoft.Json;
-using System.Collections.Generic;
+﻿using ExternalUnityRendering.PathManagement;
+using ExternalUnityRendering.TcpIp;
+using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using System.IO;
-using ExternalUnityRendering.PathManagement;
 
 namespace ExternalUnityRendering
 {
@@ -22,11 +22,13 @@ namespace ExternalUnityRendering
 
         private void WriteStateToFile(string state)
         {
-            FileManager file = new FileManager(_exportFolder, "obj.json");
+            FileManager file = new FileManager(_exportFolder, 
+                $"Physics State-{ DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss-fff-UTCzz") }.json");
             file.WriteToFile(state);
         }
 
         // Function subject to change
+        // HACK needs to be optimized for how it handles this
         public void ExportCurrentScene(ExportType exportMode = ExportType.Transmit)
         {
             // pauses the state of the Unity
@@ -61,12 +63,12 @@ namespace ExternalUnityRendering
                 sender.Send(state);
             }
 
-            if (exportMode == ExportType.Both|| exportMode == ExportType.WriteToFile)
+            if (exportMode == ExportType.Both || exportMode == ExportType.WriteToFile)
             {
                 WriteStateToFile(state);
             }
 
-            Debug.Log($"State transmission succeeded at { DateTime.Now.ToString() }");
+            Debug.Log($"Export succeeded at { DateTime.Now.ToString() }");
             
             foreach (GameObject exportObject in exportObjects)
             {

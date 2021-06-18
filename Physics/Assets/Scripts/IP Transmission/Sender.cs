@@ -4,7 +4,7 @@ using System.Net.Sockets;
 using System.Text;
 using UnityEngine;
 
-namespace ExternalUnityRendering
+namespace ExternalUnityRendering.TcpIp
 {
     public class Sender
     {

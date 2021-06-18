@@ -1,8 +1,9 @@
 ﻿using UnityEditor;
 using UnityEngine;
 
-namespace ExternalUnityRendering
+namespace ExternalUnityRendering.UnityEditor
 {
+    // TODO improve the functionality/ call
     [CustomEditor(typeof(ExportScene))]
     public class ExportGUI : Editor
     {
