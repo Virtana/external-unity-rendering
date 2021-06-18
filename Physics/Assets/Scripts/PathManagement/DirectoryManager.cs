@@ -8,6 +8,7 @@ namespace ExternalUnityRendering.PathManagement
     class DirectoryManager
     {
         private DirectoryInfo _directory;
+        private bool _createNewDirectory = false;
 
         public DirectoryInfo Directory
         {
@@ -32,6 +33,14 @@ namespace ExternalUnityRendering.PathManagement
                     if (!dir.Exists)
                     {
                         dir.Create();
+                    } else if (_createNewDirectory)
+                    {
+                        int i = 1;
+                        do
+                        {
+                            // rename as dir (1), dir (2) and so on and so forth
+                            dir = new DirectoryInfo($"{ value } ({ i++ })");
+                        } while (dir.Exists);
                     }
                     _directory = dir;
                 }
@@ -61,7 +70,7 @@ namespace ExternalUnityRendering.PathManagement
                     Debug.LogError($"The directory <{ value }> could not be created.\n"
                         + ioe.ToString());
                 }
-                
+
                 // if directory failed to be assigned, then try a new one.
                 if (_directory == null)
                 {
@@ -75,15 +84,18 @@ namespace ExternalUnityRendering.PathManagement
             }
         }
 
-        public DirectoryManager(string path)
+        public DirectoryManager(string path, bool createNew = false)
         {
+            _createNewDirectory = createNew;
             Path = path;
         }
 
         public DirectoryManager()
             : this(Application.persistentDataPath) { }
-            
-        public DirectoryManager(DirectoryManager directory, string directoryName)
-            : this(System.IO.Path.Combine(directory.Path, directoryName)) { }
+
+        public DirectoryManager(DirectoryManager directory, string directoryName, 
+            bool createNew = false)
+            : this(System.IO.Path.Combine(directory.Path, directoryName), createNew) { }
+
     }
 }
