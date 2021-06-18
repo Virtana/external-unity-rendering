@@ -82,5 +82,8 @@ namespace ExternalUnityRendering.PathManagement
 
         public DirectoryManager()
             : this(Application.persistentDataPath) { }
+            
+        public DirectoryManager(DirectoryManager directory, string directoryName)
+            : this(System.IO.Path.Combine(directory.Path, directoryName)) { }
     }
 }
