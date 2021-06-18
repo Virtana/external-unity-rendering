@@ -7,6 +7,7 @@ namespace ExternalUnityRendering.UnityEditor
 {
     // NOTE rework the functionality of this.
     // also add more options
+    // TODO add sub menus for write to file, transmit etc and some way to change RUNs
     public class TesterGUI
     {
         public static int Runs = 10;
@@ -16,8 +17,11 @@ namespace ExternalUnityRendering.UnityEditor
         [MenuItem("Exporter Testing/Explode")]
         public static void AddRigidBodiesAndExplode()
         {
-            GameObject obj = new GameObject();
-            ExportScene export = obj.AddComponent<ExportScene>();
+            GameObject exporter = new GameObject
+            {
+                name = "Exporter Object"
+            };
+            ExportScene export = exporter.AddComponent<ExportScene>();
 
             if (export == null)
             {
@@ -53,32 +57,58 @@ namespace ExternalUnityRendering.UnityEditor
                     ForceMode.Impulse);
             }
 
+            // HACK using export to run coroutine
             export.StartCoroutine(ExportContinuously(Runs));
         }
 
+        // 
         private static IEnumerator ExportContinuously(int runs)
         {
             ExportScene export = Object.FindObjectOfType<ExportScene>();
 
+            Camera[] cameras = Object.FindObjectsOfType<Camera>();
+
+            if (cameras.Length == 0)
+            {
+                // If cam is empty, then no cameras were found.
+                Debug.LogError("Missing Camera! Importer cannot render from this.");
+                yield break;
+            }
+
+            foreach (Camera camera in cameras)
+            {
+                // add this behaviour
+                if (camera.gameObject.GetComponent<CustomCamera>() == null)
+                {
+                    camera.gameObject.AddComponent<CustomCamera>();
+                }
+            }
+
             // TODO add multicam support
-            CustomCamera cam = Object.FindObjectOfType<CustomCamera>();
+            CustomCamera[] customCameras = Object.FindObjectsOfType<CustomCamera>();
 
             if (export == null)
             {
                 Debug.LogError("Missing ExportScene Component.");
                 yield break;
             }
-            else if (cam == null)
+
+            // TODO add a way to select export folder before the loop
+            export.ExportFolder = @"D:\Virtana\Planning";
+            foreach (CustomCamera cam in customCameras)
             {
-                Debug.LogError("Missing CustomCamera.");
-                yield break;
+                cam.RenderPath = @"D:\Virtana\Planning";
             }
 
             // TODO Ensure folders are set appropriately
             for (int i = 0; i < runs; i++)
             {
-                export.ExportCurrentScene();
-                cam.RenderImage(new Vector2Int(1920, 1080));
+                Debug.Log(export.ExportFolder);
+                export.ExportCurrentScene(ExportScene.ExportType.WriteToFile);
+                foreach (CustomCamera cam in customCameras)
+                {
+                    cam.RenderImage(new Vector2Int(1920, 1080));
+                }
                 yield return new WaitForSecondsRealtime(1f);
             }
         }

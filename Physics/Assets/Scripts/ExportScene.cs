@@ -11,6 +11,7 @@ namespace ExternalUnityRendering
     public class ExportScene : MonoBehaviour
     {
         // Currently being used for testing write to file functionality only
+        // May be kept or improved
         public enum ExportType
         {
             Transmit,
@@ -32,7 +33,7 @@ namespace ExternalUnityRendering
             }
         }
 
-        private void Start()
+        private void Awake()
         {
             _exportFolder = new DirectoryManager();
         }
@@ -40,12 +41,12 @@ namespace ExternalUnityRendering
         private void WriteStateToFile(string state)
         {
             FileManager file = new FileManager(_exportFolder, 
-                $"Physics State-{ DateTime.Now:yyyy-MM-dd-HH-mm-ss-fff-UTCzz}.json");
+                $"Physics State-{ DateTime.Now:yyyy-MM-dd-HH-mm-ss-UTCzz}.json", true);
             file.WriteToFile(state);
         }
 
         // HACK functionality and structure needs to be reworked
-        public void ExportCurrentScene(ExportType exportMode = ExportType.Transmit)
+        public void ExportCurrentScene(ExportType exportMode = ExportType.Transmit, bool prettyPrint = false)
         {
             // pauses the state of the Unity
             Time.timeScale = 0; 
@@ -71,7 +72,9 @@ namespace ExternalUnityRendering
 
             Debug.Log("Exporting...");
             SceneState scene = new SceneState(transform);
-            string state = JsonConvert.SerializeObject(scene, Formatting.Indented);
+
+            Formatting jsonFormat = prettyPrint ? Formatting.Indented : Formatting.None;
+            string state = JsonConvert.SerializeObject(scene, jsonFormat);
 
             if (exportMode == ExportType.Transmit || exportMode == ExportType.Both)
             {

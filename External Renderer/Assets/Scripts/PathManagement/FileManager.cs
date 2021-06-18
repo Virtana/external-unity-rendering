@@ -7,7 +7,7 @@ namespace ExternalUnityRendering.PathManagement
 {
 
     // TODO: consider making Interface or class for this and Dirmanager to inherit from
-    class FileManager
+    public class FileManager
     {
         private FileInfo _file;
 
@@ -19,6 +19,8 @@ namespace ExternalUnityRendering.PathManagement
                 return _file;
             }
         }
+
+        private bool _createNew = false;
 
         // TODO: consider whether this should throw an exception
         // HACK: if initialization fails, File is null
@@ -36,6 +38,11 @@ namespace ExternalUnityRendering.PathManagement
                     FileInfo file = new FileInfo(value);
                     if (file.Exists)
                     {
+                        if (!_createNew)
+                        {
+                            _file = file;
+                            return;
+                        }
                         int i = 1;
                         string dir = file.Directory.FullName;
                         string name = file.Name;
@@ -90,7 +97,9 @@ namespace ExternalUnityRendering.PathManagement
 
         public FileManager()
         {
-            // Create a near-guaranteed unique file. See the first
+            // HACK no exceptions rn because if it does, its likely a pathtoolong exception
+            // May need to consider how it works
+            // Create a near-guaranteed valid and unique file. See the first
             // comment on https://stackoverflow.com/a/11938280 
             FileInfo file = new FileInfo(
                 System.IO.Path.Combine(Application.persistentDataPath,
@@ -104,12 +113,15 @@ namespace ExternalUnityRendering.PathManagement
         }
 
         // HACK Tries to detect if path is relative (a filename) or absolute
-        public FileManager(string path) 
-        { 
+        public FileManager(string path, bool createNew = false) 
+        {
+            _createNew = createNew;
             // HACK May not be best implementation for windows, can't find .net source 
             // for Windows implementation in .net 5. Maybe not needed?
             if (System.IO.Path.IsPathRooted(path))
             {
+                // TODO use https://docs.microsoft.com/en-us/dotnet/api/system.io.path.getdirectoryname
+                // and get the name of the dir, parse it, and then use the path
                 Path = path;
             } else
             {
@@ -117,17 +129,18 @@ namespace ExternalUnityRendering.PathManagement
             }
         }
 
-        public FileManager(string folder, string name)
-                    : this(new DirectoryManager(folder), name) { }
-
-        public FileManager(DirectoryManager directory, string name) 
+        public FileManager(DirectoryManager directory, string name, bool createNew = false) 
         {
+            _createNew = createNew;
             Path = System.IO.Path.Combine(directory.Path, name);
         }
 
+        public FileManager(string folder, string name, bool createNew = false) 
+            : this(new DirectoryManager(folder), name, createNew) { }
+
         // OPTIONAL add generic serialization options
         // OPTIONAL retry options?
-        public void WriteToFile(string data, bool append = true)
+        public void WriteToFile(string data, bool append = false)
         {
             FileMode mode = append ? FileMode.Append : FileMode.Truncate;
 
@@ -268,6 +281,7 @@ namespace ExternalUnityRendering.PathManagement
                 // https://docs.microsoft.com/en-us/dotnet/api/system.outofmemoryexception?
                 // view=net-5.0#:~:text=This%20type%20of%20OutOfMemoryException,example%20does.
                 // says that Environment.FailFast() should be called, but unity should do that
+                // if unity doesn't do it well ¯\_(ツ)_/¯
                 Debug.LogError("Catastrophic error. Out of memory when trying to " +
                     $"read from { _file.FullName }.\n{ oome }");
                 throw; 
