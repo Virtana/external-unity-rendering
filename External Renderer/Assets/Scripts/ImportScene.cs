@@ -28,7 +28,7 @@ namespace ExternalUnityRendering
         private FileManager _importFile = null;
 
         // TODO have anything that accesses this check null or empty
-        // TODO: if exception for FileManager fail is implemented 
+        // TODO: if exception for FileManager fail is implemented
         public string ImportFilePath
         {
             get
@@ -59,8 +59,8 @@ namespace ExternalUnityRendering
             Time.timeScale = 0;
 
             // get all current items in scene
-            // if dynamic scene loading is considered, this will be 
-            // called on new 
+            // NOTE if dynamic scene loading is considered, all new root gameobjects
+            // must be added in the function separately.
             Scene currentScene = SceneManager.GetActiveScene();
             currentScene.GetRootGameObjects(_importObjects);
 
@@ -116,7 +116,7 @@ namespace ExternalUnityRendering
             // TODO test this
             CustomCamera[] cameras = FindObjectsOfType<CustomCamera>();
             foreach (CustomCamera camera in cameras) {
-                camera.ChangeRenderPath(RenderFolder);
+                camera.RenderPath = RenderFolder;
                 camera.RenderImage(new Vector2Int(1920,1080));
             }
             

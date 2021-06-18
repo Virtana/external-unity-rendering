@@ -10,25 +10,41 @@ namespace ExternalUnityRendering
 {
     public class ExportScene : MonoBehaviour
     {
+        // Currently being used for testing write to file functionality only
         public enum ExportType
         {
             Transmit,
             WriteToFile,
             Both
         };
-
-        [SerializeField]
+        
         private DirectoryManager _exportFolder;
+
+        public string ExportFolder
+        {
+            get
+            {
+                return _exportFolder.Path;
+            }
+            set
+            {
+                _exportFolder = new DirectoryManager(value);
+            }
+        }
+
+        private void Start()
+        {
+            _exportFolder = new DirectoryManager();
+        }
 
         private void WriteStateToFile(string state)
         {
             FileManager file = new FileManager(_exportFolder, 
-                $"Physics State-{ DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss-fff-UTCzz") }.json");
+                $"Physics State-{ DateTime.Now:yyyy-MM-dd-HH-mm-ss-fff-UTCzz}.json");
             file.WriteToFile(state);
         }
 
-        // Function subject to change
-        // HACK needs to be optimized for how it handles this
+        // HACK functionality and structure needs to be reworked
         public void ExportCurrentScene(ExportType exportMode = ExportType.Transmit)
         {
             // pauses the state of the Unity
@@ -68,7 +84,7 @@ namespace ExternalUnityRendering
                 WriteStateToFile(state);
             }
 
-            Debug.Log($"Export succeeded at { DateTime.Now.ToString() }");
+            Debug.Log($"Export succeeded at { DateTime.Now }");
             
             foreach (GameObject exportObject in exportObjects)
             {
@@ -76,11 +92,6 @@ namespace ExternalUnityRendering
             }
 
             Time.timeScale = 1;
-        }
-
-        private void Start()
-        {
-            _exportFolder = new DirectoryManager();
         }
     }
 

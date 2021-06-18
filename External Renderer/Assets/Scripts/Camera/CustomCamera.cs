@@ -20,6 +20,17 @@ namespace ExternalUnityRendering.CameraUtilites
         private Coroutine _rendererCoroutine;
 
         private DirectoryManager _renderPath;
+        public string RenderPath
+        {
+            get
+            {
+                return _renderPath.Path;
+            }
+            set
+            {
+                _renderPath = new DirectoryManager(value);
+            }
+        }
 
         private void Start()
         {
@@ -33,11 +44,6 @@ namespace ExternalUnityRendering.CameraUtilites
             {
                 enabled = false;
             }
-        }
-
-        public void ChangeRenderPath(string newPath)
-        {
-            _renderPath.Path = newPath;
         }
 
         /// <summary>
@@ -60,17 +66,17 @@ namespace ExternalUnityRendering.CameraUtilites
         /// <param name="data">Bytes of the image to be saved.</param>
         private void SaveRender(byte[] render)
         {
-            FileManager file = new FileManager(_renderPath, 
-                $"Render-{ DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss-fff-UTCzz") }.png");
+            FileManager file = new FileManager(_renderPath,
+                $"Render-{ DateTime.Now:yyyy-MM-dd-HH-mm-ss-fff-UTCzz}.png");
             file.WriteToFile(render);
-            Debug.Log($"Saved render to { file.Path }.");
+            Debug.Log($"Saved render to { file.Path } at { DateTime.Now }.");
         }
 
         /// <summary>
         /// Renders the current view of the Camera.
         /// </summary>
         /// <param name="renderSize">The resolution of the rendered image.</param>
-        public void RenderImage(Vector2Int renderSize = default(Vector2Int))
+        public void RenderImage(Vector2Int renderSize = default)
         {
             // ensure screenshot size is at least 300x300 in size.
             renderSize.Clamp(
@@ -125,8 +131,8 @@ namespace ExternalUnityRendering.CameraUtilites
         /// </summary>
         /// <param name="delay">The interval between each render.</param>
         /// <param name="renderSize">The resolution of the rendered image.</param>
-        public void StartIntervalRendering(float delay = 2f, 
-            Vector2Int renderSize = default(Vector2Int))
+        public void StartIntervalRendering(float delay = 2f,
+            Vector2Int renderSize = default)
         {
             _rendererCoroutine =
                 StartCoroutine(RendererCoroutine(renderSize, delay));
@@ -148,6 +154,7 @@ namespace ExternalUnityRendering.CameraUtilites
             }
         }
 
+        // TODO Add multicam support.
         /// <summary>
         /// On runtime load, attach the customCamera to the first gameobject
         /// found with a camera component.

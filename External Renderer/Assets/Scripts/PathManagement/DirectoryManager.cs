@@ -34,7 +34,6 @@ namespace ExternalUnityRendering.PathManagement
                         dir.Create();
                     }
                     _directory = dir;
-                    return;
                 }
                 catch (ArgumentNullException ane)
                 {
@@ -62,10 +61,13 @@ namespace ExternalUnityRendering.PathManagement
                     Debug.LogError($"The directory <{ value }> could not be created.\n"
                         + ioe.ToString());
                 }
-                
+
+                // if directory failed to be assigned, then try a new one.
                 if (_directory == null)
                 {
-                    // NOTE small chance of fail, but that would be a larger unity issue
+                    // NOTE if this failed before, e.g. on parameterless cpnstructor
+                    // then its just trying again, but that would be a larger unity
+                    // issue
                     _directory = new DirectoryInfo(Application.persistentDataPath);
                     Debug.LogWarning(
                         $"Defaulting to { Application.persistentDataPath}.");
