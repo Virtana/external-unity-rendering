@@ -38,9 +38,6 @@ namespace ExternalUnityRendering.TcpIp
             {
                 Debug.LogError(e.ToString());
             }
-
-            Console.WriteLine("\n Press any key to continue...");
-            Console.ReadKey(true);
         }
 
         public void RecieveMessage(Action<string> dataReceivedCallback)
