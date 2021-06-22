@@ -1,49 +1,55 @@
-﻿using Newtonsoft.Json;
-using System.Collections.Generic;
+﻿using ExternalUnityRendering.PathManagement;
+using ExternalUnityRendering.TcpIp;
+using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 
-namespace SceneStateExporter
+namespace ExternalUnityRendering
 {
-#if UNITY_EDITOR
-    [CustomEditor(typeof(ExportScene))]
-    public class QuickEditorExport : Editor
-    {
-        public override void OnInspectorGUI()
-        {
-            DrawDefaultInspector();
-
-            EditorGUILayout.HelpBox("Click Export Now to export now.", MessageType.None);
-
-            ExportScene currentExporter = target as ExportScene;
-            if (GUILayout.Button("Export Now"))
-            {
-                currentExporter.ExportCurrentScene();
-            }
-        }
-    }
-#endif
-
     public class ExportScene : MonoBehaviour
     {
-        // For Testing only. To be moved to editor only/debugging options
-        public string ExportPath = @"D:\Virtana\obj.json";
-
-        // TODO for exporter
-        // 1. Ensure System state freezes here (if not singlethreaded).
-        // 2. Add filewriting as debug options.
-        // 3. Add a check for transmission vs. Save to file
-        // 4. Add way to change folder and ensure uniquely generated
-        //    file names.
-        // 5. Add response handling from sender.
-
-        // Function subject to change
-        public void ExportCurrentScene()
+        // Currently being used for testing write to file functionality only
+        public enum ExportType
         {
+            Transmit,
+            WriteToFile,
+            Both
+        };
+        
+        private DirectoryManager _exportFolder;
+
+        public string ExportFolder
+        {
+            get
+            {
+                return _exportFolder.Path;
+            }
+            set
+            {
+                _exportFolder = new DirectoryManager(value);
+            }
+        }
+
+        private void Start()
+        {
+            _exportFolder = new DirectoryManager();
+        }
+
+        private void WriteStateToFile(string state)
+        {
+            FileManager file = new FileManager(_exportFolder, 
+                $"Physics State-{ DateTime.Now:yyyy-MM-dd-HH-mm-ss-fff-UTCzz}.json");
+            file.WriteToFile(state);
+        }
+
+        // HACK functionality and structure needs to be reworked
+        public void ExportCurrentScene(ExportType exportMode = ExportType.Transmit)
+        {
+            // pauses the state of the Unity
+            Time.timeScale = 0; 
+
             Debug.Log("Beginning Export.");
 
             // get all current items in scene except the exporter
@@ -67,15 +73,25 @@ namespace SceneStateExporter
             SceneState scene = new SceneState(transform);
             string state = JsonConvert.SerializeObject(scene, Formatting.Indented);
 
-            Sender sender = new Sender();
-            sender.Send(state);
+            if (exportMode == ExportType.Transmit || exportMode == ExportType.Both)
+            {
+                Sender sender = new Sender();
+                sender.Send(state);
+            }
 
-            Debug.Log($"State transmission succeeded at { DateTime.Now.ToString() }");
+            if (exportMode == ExportType.Both || exportMode == ExportType.WriteToFile)
+            {
+                WriteStateToFile(state);
+            }
+
+            Debug.Log($"Export succeeded at { DateTime.Now }");
             
             foreach (GameObject exportObject in exportObjects)
             {
                 exportObject.transform.parent = null;
             }
+
+            Time.timeScale = 1;
         }
     }
 

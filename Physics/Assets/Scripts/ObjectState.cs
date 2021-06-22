@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace SceneStateExporter
+namespace ExternalUnityRendering
 {
     /// <summary>
     /// Class representing a GameObject in Unity.

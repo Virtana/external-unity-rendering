@@ -1,84 +1,98 @@
-﻿using Newtonsoft.Json;
+﻿using ExternalUnityRendering.CameraUtilites;
+using ExternalUnityRendering.PathManagement;
+using ExternalUnityRendering.TcpIp;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 
-namespace SceneStateExporter
+namespace ExternalUnityRendering
 {
-#if UNITY_EDITOR
-    [CustomEditor(typeof(ImportScene))]
-    public class QuickEditorImport : Editor
-    {
-        public override void OnInspectorGUI()
-        {
-            DrawDefaultInspector();
-
-            EditorGUILayout.HelpBox("Click Import Now to Import now.", MessageType.None);
-
-            ImportScene currentImporter = target as ImportScene;
-            if (GUILayout.Button("Import Now"))
-            {
-                currentImporter.ImportCurrentScene();
-            }
-        }
-    }
-#endif
-
     public class ImportScene : MonoBehaviour
     {
-        // make editor only / debugging options
-        public string ImportFilePath = @"D:\Virtana\obj.json";
-        public string ImageSaveFolder = @"D:\Virtana\Planning";
-        // editor function
-        public void ImportCurrentScene()
+        private DirectoryManager _renderFolder = new DirectoryManager();
+        public string RenderFolder
         {
-            ImportCurrentScene(System.IO.File.ReadAllText(ImportFilePath));
+            get
+            {
+                return _renderFolder.Path;
+            }
+            set
+            {
+                // Propery will handle failure
+                _renderFolder = new DirectoryManager(value);
+            }
+        }
+
+        private FileManager _importFile = null;
+
+        // TODO have anything that accesses this check null or empty
+        // TODO: if exception for FileManager fail is implemented
+        public string ImportFilePath
+        {
+            get
+            {
+                return _importFile?.Path;
+            }
+            set
+            {
+                // if the path is valid and exists, save it
+                if (System.IO.File.Exists(value))
+                {
+                    _importFile = new FileManager(value);
+                }
+            }
         }
 
         // Represents when the scene was exported.
         // if null, then no import has occured
         public DateTime? ExportTimestamp;
 
-        private void Awake()
+        // TODO add objects to this list based on if they are new in importer.
+        private List<GameObject> _importObjects = new List<GameObject>();
+
+        private void Start()
         {
+            // Set timeScale to 0. Scene must always be static.
+            // will be updated on each import
+            Time.timeScale = 0;
+
+            // get all current items in scene
+            // NOTE if dynamic scene loading is considered, all new root gameobjects
+            // must be added in the function separately.
+            Scene currentScene = SceneManager.GetActiveScene();
+            currentScene.GetRootGameObjects(_importObjects);
+
             Receiver client = new Receiver();
 
-#warning Client.RecieveMessage blocks the current thread.
-            client.RecieveMessage(ImportCurrentScene); 
+            //TODO Client.RecieveMessage blocks the current thread.
+            client.RecieveMessage(ImportCurrentScene);
         }
 
-        // TODO:
-        // implement a pause engine state here
-        // ^ May not be necessary as this is singlethreaded and blocking
-        // may be a concern if jobs are used.
-        // add debug mode with file (and automatic filename checking)
-        // check if file exists
-        // try some sort of better error handling + make a CustomSerialisation
-        // settings to Log the error and later ping a server
-        // communicate failstate to server
-        // add sending the image path or include in state object
-        // ^ or implement saving ing Application.persistentDataPath
+        public void ImportCurrentScene()
+        {
+            if (_importFile == null || string.IsNullOrEmpty(_importFile.Path))
+            {
+                Debug.LogError("Cannot Import json file. No file has been assigned.");
+                return;
+            }
+
+            string json = _importFile.ReadFile();
+            ImportCurrentScene(json);
+        }
 
         public void ImportCurrentScene(string json)
         {
             Debug.Log("Beginning Import.");
-            
-            // get all current items in scene
-            Scene currentScene = SceneManager.GetActiveScene();
-            List<GameObject> importObjects = new List<GameObject>();
-            currentScene.GetRootGameObjects(importObjects);
-            if (importObjects == null || importObjects.Count == 0)
+
+            if (_importObjects == null || _importObjects.Count == 0)
             {
                 Debug.LogWarning("Empty object List.");
                 return;
             }
 
-            foreach (GameObject importObject in importObjects)
+            foreach (GameObject importObject in _importObjects)
             {
                 importObject.transform.SetParent(transform, true);
             }
@@ -96,18 +110,14 @@ namespace SceneStateExporter
             state.sceneRoot.UnpackData(transform);
             ExportTimestamp = state.exportDate;
 
-            // put items back in place
-            foreach (GameObject importObject in importObjects)
-            {
-                importObject.transform.parent = null;
-            }
             Debug.LogFormat("Imported state from {0}! It was generated at {1}", 
                 ImportFilePath, ExportTimestamp);
 
             // TODO test this
             CustomCamera[] cameras = FindObjectsOfType<CustomCamera>();
             foreach (CustomCamera camera in cameras) {
-                camera.RenderImage(ImageSaveFolder, new Vector2Int(1920,1080));
+                camera.RenderPath = RenderFolder;
+                camera.RenderImage(new Vector2Int(1920,1080));
             }
             
             // FindObjectOfType<CustomCamera>()

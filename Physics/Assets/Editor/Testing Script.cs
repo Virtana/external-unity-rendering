@@ -1,80 +1,86 @@
-﻿using System.Collections;
-using UnityEngine;
-using SceneStateExporter;
+﻿using ExternalUnityRendering.CameraUtilites;
+using System.Collections;
 using UnityEditor;
+using UnityEngine;
 
-public class TesterGUI
+namespace ExternalUnityRendering.UnityEditor
 {
-    public static int Runs = 10;
-    public static float Radius = 30;
-    public static float Power = 100;
-    
-    [MenuItem("Exporter Testing/Explode")]
-    public static void AddRigidBodiesAndExplode()
+    // NOTE rework the functionality of this.
+    // also add more options
+    public class TesterGUI
     {
-        GameObject obj = new GameObject();
-        ExportScene export = obj.AddComponent<ExportScene>();
+        public static int Runs = 10;
+        public static float Radius = 30;
+        public static float Power = 100;
 
-        if (export == null)
+        [MenuItem("Exporter Testing/Explode")]
+        public static void AddRigidBodiesAndExplode()
         {
-            Debug.LogError("Missing exportscene Component.");
-            return;
-        }
+            GameObject obj = new GameObject();
+            ExportScene export = obj.AddComponent<ExportScene>();
 
-        Vector3 explosionPos = Vector3.zero;
-        Collider[] colliders = Physics.OverlapSphere(explosionPos, Radius);
-        foreach (Collider hit in colliders)
-        {
-            if (hit.gameObject.name == "Plane" ||
-                hit.gameObject.name.StartsWith("Quad"))
+            if (export == null)
             {
-                continue;
-            }
-            Rigidbody rb = hit.gameObject.GetComponent<Rigidbody>();
-
-            if (rb == null)
-            {
-                rb = hit.gameObject.AddComponent<Rigidbody>();
+                Debug.LogError("Missing exportscene Component.");
+                return;
             }
 
-            rb.drag = 0f;
-            rb.mass = 10;
-            rb.interpolation = RigidbodyInterpolation.Interpolate;
+            Vector3 explosionPos = Vector3.zero;
+            Collider[] colliders = Physics.OverlapSphere(explosionPos, Radius);
+            foreach (Collider hit in colliders)
+            {
+                if (hit.gameObject.name == "Plane" ||
+                    hit.gameObject.name.StartsWith("Quad"))
+                {
+                    continue;
+                }
+                Rigidbody rb = hit.gameObject.GetComponent<Rigidbody>();
 
-            rb.AddExplosionForce(Power, explosionPos, Radius, 30.0F);
-            rb.AddForce(new Vector3(
-                    UnityEngine.Random.Range(-20, 20),
-                    UnityEngine.Random.Range(-20, 20),
-                    UnityEngine.Random.Range(-20, 20)), 
-                ForceMode.Impulse);
+                if (rb == null)
+                {
+                    rb = hit.gameObject.AddComponent<Rigidbody>();
+                }
+
+                rb.drag = 0f;
+                rb.mass = 10;
+                rb.interpolation = RigidbodyInterpolation.Interpolate;
+
+                rb.AddExplosionForce(Power, explosionPos, Radius, 30.0F);
+                rb.AddForce(new Vector3(
+                        UnityEngine.Random.Range(-20, 20),
+                        UnityEngine.Random.Range(-20, 20),
+                        UnityEngine.Random.Range(-20, 20)),
+                    ForceMode.Impulse);
+            }
+
+            export.StartCoroutine(ExportContinuously(Runs));
         }
 
-        export.StartCoroutine(ExportContinuously(Runs));
-    }
-
-    private static IEnumerator ExportContinuously(int runs)
-    {
-        ExportScene export = Object.FindObjectOfType<ExportScene>();
-        CustomCamera cam = Object.FindObjectOfType<CustomCamera>();
-
-        if (export == null)
+        private static IEnumerator ExportContinuously(int runs)
         {
-            Debug.LogError("Missing ExportScene Component.");
-            yield break;
-        }
-        else if (cam == null)
-        {
-            Debug.LogError("Missing CustomCamera.");
-            yield break;
-        }
+            ExportScene export = Object.FindObjectOfType<ExportScene>();
 
+            // TODO add multicam support
+            CustomCamera cam = Object.FindObjectOfType<CustomCamera>();
 
-        for (int i = 0; i < runs; i++)
-        {
-            export.ExportPath = string.Format(@"D:\Virtana\Planning\obj ({0}).json", i+1);
-            export.ExportCurrentScene();
-            cam.RenderImage(@"D:\Virtana\Planning", new Vector2Int(1920, 1080));
-            yield return new WaitForSecondsRealtime(1f);
+            if (export == null)
+            {
+                Debug.LogError("Missing ExportScene Component.");
+                yield break;
+            }
+            else if (cam == null)
+            {
+                Debug.LogError("Missing CustomCamera.");
+                yield break;
+            }
+
+            // TODO Ensure folders are set appropriately
+            for (int i = 0; i < runs; i++)
+            {
+                export.ExportCurrentScene();
+                cam.RenderImage(new Vector2Int(1920, 1080));
+                yield return new WaitForSecondsRealtime(1f);
+            }
         }
     }
 }

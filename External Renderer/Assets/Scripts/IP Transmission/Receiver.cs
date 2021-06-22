@@ -5,7 +5,7 @@ using System.Net.Sockets;
 using System.Text;
 using UnityEngine;
 
-namespace SceneStateExporter
+namespace ExternalUnityRendering.TcpIp
 {
     public class Receiver
     {
@@ -13,9 +13,6 @@ namespace SceneStateExporter
         private IPAddress _ipAddress;
         private IPEndPoint _localEndPoint;
         private Socket _listener;
-
-        [Obsolete("To be replaced with Asynchronous Communication.")]
-        private readonly byte endMarker = Convert.ToByte('\0');
 
         public Receiver(int port = 11000)
         {
@@ -41,13 +38,8 @@ namespace SceneStateExporter
             {
                 Debug.LogError(e.ToString());
             }
-
-            Console.WriteLine("\n Press any key to continue...");
-            Console.ReadKey(true);
         }
 
-        // change callback to be a func and have it return a status
-        // possibly include > Success | Failed to Parse | Others | a catch all
         public void RecieveMessage(Action<string> dataReceivedCallback)
         {
             // byte cache for what is recieved
@@ -86,13 +78,11 @@ namespace SceneStateExporter
                     handler.Shutdown(SocketShutdown.Both);
                     handler.Close();
                 }
-                catch (Exception e) // TODO exception handling
+                catch (Exception e)
                 {
 
                     Debug.LogError(e.ToString());
                 }
-                // https://docs.microsoft.com/en-us/dotnet/api/system.io.memorystream?view=net-5.0
-                // and streamreader
             }
         }
     }
