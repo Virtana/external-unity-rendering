@@ -3,17 +3,35 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using UnityEngine;
+using System.Collections.Generic;
 
 namespace ExternalUnityRendering.TcpIp
 {
     public class Sender
     {
-        private IPHostEntry _host = Dns.GetHostEntry("localhost");
-        private IPAddress _ipAddress;
-        private IPEndPoint _remoteEndPoint;
-        private Socket _sender;
+        private readonly IPHostEntry _host;
+        private readonly IPAddress _ipAddress;
+        private readonly IPEndPoint _remoteEndPoint;
+        private readonly Socket _sender;
 
-        public Sender(int port = 11000)
+        private readonly int _chunkSize = 50;
+
+        // Helper function to chunk data for sending
+        private List<ArraySegment<byte>> ConvertToBuffer(string data)
+        {
+            byte[] dataAsBytes = Encoding.ASCII.GetBytes(data);
+
+            List<ArraySegment<byte>> buffer = new List<ArraySegment<byte>>();
+
+            for (int i = 0; i < dataAsBytes.Length; i += _chunkSize)
+            {
+                buffer.Add(new ArraySegment<byte>(dataAsBytes, i, Math.Min(_chunkSize, dataAsBytes.Length - i)));
+            }
+
+            return buffer;
+        }
+
+        public Sender(int port = 11000, string ipString = "localhost")
         {
             try
             {
@@ -21,20 +39,29 @@ namespace ExternalUnityRendering.TcpIp
                 // Get Host IP Address that is used to establish a connection
                 // In this case, we get one IP address of localhost that is IP : 127.0.0.1
                 // If a host has multiple addresses, you will get a list of addresses
+                _host = Dns.GetHostEntry(ipString);
                 _ipAddress = _host.AddressList[0];
                 _remoteEndPoint = new IPEndPoint(_ipAddress, port);
 
-                // Create a TCP/IP  socket.
+                // Create a TCP/IP socket.
                 _sender = new Socket(_ipAddress.AddressFamily,
                     SocketType.Stream, ProtocolType.Tcp);
             }
-            catch (Exception e)
+            catch (SocketException se)
             {
-                Debug.LogError(e.ToString());
+                Debug.LogError("An error occured while trying to initialise the socket. " +
+                    $"The error code is {se.SocketErrorCode}.\n{se}");
+            }
+            catch (ArgumentException ae)
+            {
+                Debug.LogError("An error occurred while trying to resolve the host. " +
+                    $"\n{ae}");
             }
         }
 
-        public void Send(string data) {
+        [Obsolete("Use SendAsync instead.")]
+        public void Send(string data)
+        {
             byte[] bytes = new byte[1024];
             // Connect the socket to the remote endpoint. Catch any errors.
             try
@@ -80,6 +107,72 @@ namespace ExternalUnityRendering.TcpIp
             catch (Exception e)
             {
                 Debug.LogErrorFormat("Unexpected exception : {0}", e.ToString());
+            }
+        }
+
+        // TODO add struct with callback for handling responses.
+        private struct SendState
+        {
+            public SocketError errorCode;
+            public Socket socket;
+            public List<ArraySegment<byte>> data;
+            public SocketFlags flags;
+        }
+
+        private void SendDataCallback(IAsyncResult result)
+        {
+            // NOTE: need to investigate what to do if result.isCompleted is false.
+            SendState state = (SendState)result.AsyncState;
+
+
+            if (state.errorCode != SocketError.Success)
+            {
+                Debug.LogError($"Socket Error: {state.errorCode}");
+                return;
+            }
+            if (!result.IsCompleted)
+            {
+                Debug.LogWarning("Transmission is not completed. Data may not be " +
+                    "handled correctly.");
+            }
+
+
+            Socket socket = state.socket;
+            socket.EndSend(result);
+            socket.Close();
+        }
+
+        public void SendAsync(string data)
+        {
+            if (_sender == null)
+            {
+                Debug.LogError("Cannot send data. No socket was assigned during initializaiton. " +
+                    "An error may have occured. Try reassigning the socket.");
+                return;
+            }
+
+            _sender.Connect(_remoteEndPoint);
+
+            SendState state = new SendState
+                {
+                    socket = _sender,
+                    data = ConvertToBuffer(data),
+                    flags = SocketFlags.None
+                };
+
+            try
+            {
+                _sender.BeginSend(state.data, state.flags, out state.errorCode, SendDataCallback, state);
+            }
+            catch (SocketException se)
+            {
+                // handle according to
+                // https://docs.microsoft.com/en-us/dotnet/api/system.net.sockets.socketerror?view=net-5.0
+                Debug.LogError($"Socket Error: {se.ErrorCode}");
+            }
+            catch (ObjectDisposedException ode)
+            {
+                Debug.LogError($"The socket has been closed.\n{ode}");
             }
         }
     }
