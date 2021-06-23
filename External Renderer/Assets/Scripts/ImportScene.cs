@@ -35,13 +35,12 @@ namespace ExternalUnityRendering
             // Set timeScale to 0. Scene must always be static.
             // will be updated on each import
             Time.timeScale = 0;
-            
+
+            Debug.Log("Awaiting Messages?");
             Receiver client = new Receiver();
 
-            //TODO Client.RecieveMessage blocks the current thread.
-            //HACK off for testing
-
-            //client.RecieveMessage(ImportCurrentScene);
+            // non blocking async function
+            client.ReceiveMessage(ImportCurrentScene);
         }
 
         // Refactored to allow for the caller to manage where the data files
@@ -72,7 +71,6 @@ namespace ExternalUnityRendering
             List<GameObject> importObjects = new List<GameObject>();
             Scene currentScene = SceneManager.GetActiveScene();
             currentScene.GetRootGameObjects(importObjects);
-            Debug.Log(importObjects.Count);
             importObjects.RemoveAll((obj) => obj == gameObject);
 
             Camera[] cameras = FindObjectsOfType<Camera>();

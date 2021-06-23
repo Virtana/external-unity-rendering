@@ -12,10 +12,19 @@ namespace ExternalUnityRendering.UnityEditor
         public override void OnInspectorGUI()
         {
             DrawDefaultInspector();
-            EditorGUILayout.HelpBox("Enter path to import json below.", MessageType.None);
-            _importFile = GUILayout.TextField(_importFile);
-            EditorGUILayout.HelpBox("Enter path to render images to below.", MessageType.None);
-            _renderFolder = GUILayout.TextField(_renderFolder);
+
+            if (GUILayout.Button("Select Import Json"))
+            {
+                _importFile = EditorUtility.OpenFilePanel("Select the file to import scene state from.",
+                    System.IO.Directory.GetCurrentDirectory(), "json");
+            }
+
+            if (GUILayout.Button("Select Render Folder"))
+            {
+                _renderFolder = EditorUtility.OpenFolderPanel("Select the folder to export the renders to.",
+                    System.IO.Directory.GetCurrentDirectory(), "");
+            }
+
             ImportScene currentImporter = target as ImportScene;
             if (GUILayout.Button("Import Now"))
             {

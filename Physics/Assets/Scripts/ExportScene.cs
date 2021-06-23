@@ -9,14 +9,15 @@ using UnityEngine.SceneManagement;
 namespace ExternalUnityRendering
 {
     public class ExportScene : MonoBehaviour
-    {
-        // Currently being used for testing write to file functionality only
-        // May be kept or improved
+    {   
+        [Flags]
         public enum ExportType
         {
-            Transmit,
-            WriteToFile,
-            Both
+            // None is intended for testing serialization errors
+            None = 0,
+            Transmit = 1,
+            WriteToFile = 2,
+            Log = 4
         };
         
         private DirectoryManager _exportFolder;
@@ -46,7 +47,8 @@ namespace ExternalUnityRendering
         }
 
         // HACK functionality and structure needs to be reworked
-        public void ExportCurrentScene(ExportType exportMode = ExportType.Transmit, bool prettyPrint = false)
+        // TODO add options for receiver
+        public void ExportCurrentScene(ExportType exportMode = ExportType.Log, bool prettyPrint = false)
         {
             // pauses the state of the Unity
             Time.timeScale = 0; 
@@ -76,13 +78,18 @@ namespace ExternalUnityRendering
             Formatting jsonFormat = prettyPrint ? Formatting.Indented : Formatting.None;
             string state = JsonConvert.SerializeObject(scene, jsonFormat);
 
-            if (exportMode == ExportType.Transmit || exportMode == ExportType.Both)
+            if ((exportMode & ExportType.Log) == ExportType.Log)
             {
-                Sender sender = new Sender();
-                sender.Send(state);
+                Debug.Log($"JSON Data = { state }");
             }
 
-            if (exportMode == ExportType.Both || exportMode == ExportType.WriteToFile)
+            if ((exportMode & ExportType.Transmit) == ExportType.Transmit)
+            {
+                Sender sender = new Sender();
+                sender.SendAsync(state);
+            }
+
+            if ((exportMode & ExportType.WriteToFile) == ExportType.WriteToFile)
             {
                 WriteStateToFile(state);
             }
