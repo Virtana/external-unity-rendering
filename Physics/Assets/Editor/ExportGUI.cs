@@ -48,7 +48,7 @@ namespace ExternalUnityRendering.UnityEditor
                         return;
                     }
                 }
-                currentExporter.ExportCurrentScene(_export, true);
+                currentExporter.ExportCurrentScene(_export);
             }
         }
     }

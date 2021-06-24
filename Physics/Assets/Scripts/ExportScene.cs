@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+
 namespace ExternalUnityRendering
 {
     public class ExportScene : MonoBehaviour
@@ -48,7 +49,8 @@ namespace ExternalUnityRendering
 
         // HACK functionality and structure needs to be reworked
         // TODO add options for receiver
-        public void ExportCurrentScene(ExportType exportMode = ExportType.Log, bool prettyPrint = false)
+        // TODO add try finally to unparent objects
+        public void ExportCurrentScene(ExportType exportMode, Vector2Int renderResolution = default, string renderDirectory = "", bool prettyPrint = false)
         {
             // pauses the state of the Unity
             Time.timeScale = 0; 
@@ -72,8 +74,10 @@ namespace ExternalUnityRendering
                 exportObject.transform.SetParent(transform, true);
             }
 
+            SceneState.CameraSettings render = new SceneState.CameraSettings(renderResolution, renderDirectory);
+
             Debug.Log("Exporting...");
-            SceneState scene = new SceneState(transform);
+            SceneState scene = new SceneState(transform, render);
 
             Formatting jsonFormat = prettyPrint ? Formatting.Indented : Formatting.None;
             string state = JsonConvert.SerializeObject(scene, jsonFormat);
@@ -102,42 +106,6 @@ namespace ExternalUnityRendering
             }
 
             Time.timeScale = 1;
-        }
-    }
-
-    // Extends Export ObjectState Construction
-    public partial class ObjectState
-    {
-        /// <summary>
-        /// Create an ObjectState representing the GameObject using its 
-        /// transform.
-        /// </summary>
-        /// <param name="transform">The transform of the gameObject.</param>
-        public ObjectState(Transform transform)
-        {
-            Name = transform.name;
-            ObjectTransform = new TransformState(transform);
-            Children = new List<ObjectState>();
-
-            foreach (Transform childTransform in transform)
-            {
-                Children.Add(new ObjectState(childTransform));
-            }
-        }
-    }
-
-    // Extends SceneState Adding Export Object Construction
-    public partial class SceneState
-    {
-        /// <summary>
-        /// Create a new SceneState and create a new ObjectState using 
-        /// <paramref name="transform"/> and assign it as the scene root.
-        /// </summary>
-        /// <param name="transform">The Transform of the root 
-        /// GameObject.</param>
-        public SceneState(Transform transform)
-            : this(new ObjectState(transform))
-        {
         }
     }
 }

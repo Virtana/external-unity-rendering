@@ -115,15 +115,16 @@ namespace ExternalUnityRendering
                 return;
             }
 
-            state.sceneRoot.UnpackData(transform);
-            ExportTimestamp = state.exportDate;
+            state.SceneRoot.UnpackData(transform);
+            ExportTimestamp = state.ExportDate;
+            SceneState.CameraSettings settings = state.RendererSettings;
 
             Debug.LogFormat($"Imported state that was generated at { ExportTimestamp }");
 
             // TODO test this
             foreach (CustomCamera camera in customCameras) {
-                camera.RenderPath = RenderFolder;
-                camera.RenderImage(new Vector2Int(1920,1080));
+                camera.RenderPath = settings.RenderDirectory;
+                camera.RenderImage(settings.RenderSize);
             }
 
             // FindObjectOfType<CustomCamera>()
@@ -134,32 +135,6 @@ namespace ExternalUnityRendering
                 importObject.transform.parent = null;
             }
             // unparent in case new objects get added
-        }
-    }
-
-    public partial class ObjectState
-    {
-        // TODO when implemented adding new objects, also remove existing missing objects
-        public void UnpackData(Transform transform)
-        {
-            // update transforms
-            transform.position = ObjectTransform.Position;
-            transform.rotation = ObjectTransform.Rotation;
-            transform.localScale = ObjectTransform.Scale;
-
-            foreach (ObjectState child in Children)
-            {
-                var childTransform = transform.Find(child.Name);
-                if (childTransform == null)
-                {
-                    Debug.LogWarningFormat("Child {0} missing from {1}.",
-                        child.Name, transform.name);
-                }
-                else
-                {
-                    child.UnpackData(childTransform);
-                }
-            }
         }
     }
 }

@@ -25,6 +25,8 @@ namespace ExternalUnityRendering.UnityEditor
         private ForceMode _forceType = ForceMode.Impulse;
         private Vector2 _minMaxForce = new Vector2(1, 10);
         private Vector2Int _renderResolution = new Vector2Int(1920, 1080);
+        private Vector2Int _rendererOutputResolution = new Vector2Int(1920, 1080);
+        private string _rendererOutputFolder = "";
 
         [MenuItem("Exporter Testing/Test Options")]
         static void Init()
@@ -125,6 +127,20 @@ namespace ExternalUnityRendering.UnityEditor
             _renderResolution = EditorGUILayout.Vector2IntField(label, _renderResolution);
             EditorGUILayout.EndToggleGroup();
 
+            EditorGUILayout.Space();
+
+            EditorGUILayout.LabelField("External Renderer Settings", EditorStyles.boldLabel);
+
+            if (GUILayout.Button("Select Render Instance Output Folder"))
+            {
+                _rendererOutputFolder = EditorUtility.OpenFolderPanel("Select the folder to export the final renders to.",
+                    _rendererOutputFolder, "");
+            }
+
+            label = new GUIContent("Renderer Output Resolution: ");
+            EditorGUIUtility.labelWidth = style.CalcSize(label).x;
+            _rendererOutputResolution = EditorGUILayout.Vector2IntField(label, _rendererOutputResolution);
+
             GUILayout.FlexibleSpace();
 
             if (GUILayout.Button("Explode and begin exporting."))
@@ -151,6 +167,13 @@ namespace ExternalUnityRendering.UnityEditor
                 if (_exportTestRenders && renderFolder.Path == Application.persistentDataPath)
                 {
                     Debug.Log("Failed to get access to the render folder.");
+                    return;
+                }
+
+                DirectoryManager renderOutputFolder = new DirectoryManager(_rendererOutputFolder);
+                if (_exportTestRenders && renderOutputFolder.Path == Application.persistentDataPath)
+                {
+                    Debug.Log("Failed to get access to the renderer ouput folder.");
                     return;
                 }
 
@@ -181,12 +204,15 @@ namespace ExternalUnityRendering.UnityEditor
                         $"{_minMaxForce.x}\n\tMax: {_minMaxForce.y}");
                 }
 
-                options.AppendLine("Render Images: " + _exportTestRenders);
+                options.AppendLine("Test Render Images: " + _exportTestRenders);
                 if (_exportTestRenders)
                 {
-                    options.AppendLine("Render Folder: " + _renderFolder);
-                    options.AppendLine($"Render Resolution: {_renderResolution.x}x{_renderResolution.y}");
+                    options.AppendLine("Test Render Folder: " + _renderFolder);
+                    options.AppendLine($"Test Render Resolution: {_renderResolution.x}x{_renderResolution.y}");
                 }
+
+                options.AppendLine("Renderer Output Folder: " + _renderFolder);
+                options.AppendLine($"Renderer Output Resolution: {_renderResolution.x}x{_renderResolution.y}");
 
                 if (EditorUtility.DisplayDialog("Confirm your choices", options.ToString(), "Yes", "No"))
                 {
@@ -197,50 +223,13 @@ namespace ExternalUnityRendering.UnityEditor
 
         private async void ExplodeAndRecord()
         {
-            Collider[] colliders = FindObjectsOfType<Collider>();
-
-            foreach (Collider hit in colliders)
-            {
-                // Handle non-convex mesh collider with non-kinematic rigidbody error
-                MeshCollider mesh = hit.gameObject.GetComponent<MeshCollider>();
-                if (mesh != null)
-                {
-                    // meshcolliders are used with items that should be static
-                    // in this test so skip for now otherwise set mesh.convex to true
-                    continue;
-                }
-
-                Rigidbody rb = hit.gameObject.GetComponent<Rigidbody>();
-
-                if (rb == null)
-                {
-                    rb = hit.gameObject.AddComponent<Rigidbody>();
-                }
-
-                rb.drag = 0f;
-                rb.mass = 10;
-                rb.interpolation = RigidbodyInterpolation.Interpolate;
-
-                if (_useExplosion)
-                {
-                    rb.AddExplosionForce(_explosionForce, _explosionOrigin,
-                        _explosionRadius, _explosionUpwardsModifier, ForceMode.Impulse);
-                }
-                else
-                {
-                    rb.AddForce(new Vector3(
-                            Random.Range(_minMaxForce.x, _minMaxForce.y),
-                            Random.Range(_minMaxForce.x, _minMaxForce.y),
-                            Random.Range(_minMaxForce.x, _minMaxForce.y)),
-                        _forceType);
-                }
-            }
-
             ExportScene export = FindObjectOfType<ExportScene>();
             if (export == null)
             {
-                GameObject gameObject = new GameObject();
-                gameObject.name = "Exporter-" + GUID.Generate();
+                GameObject gameObject = new GameObject
+                {
+                    name = "Exporter-" + GUID.Generate()
+                };
                 export = gameObject.AddComponent<ExportScene>();
             }
 
@@ -276,10 +265,47 @@ namespace ExternalUnityRendering.UnityEditor
                 cam.RenderPath = _renderFolder;
             }
 
+            Collider[] colliders = FindObjectsOfType<Collider>();
+
+            foreach (Collider hit in colliders)
+            {
+                // Handle non-convex mesh collider with non-kinematic rigidbody error
+                MeshCollider mesh = hit.gameObject.GetComponent<MeshCollider>();
+                if (mesh != null)
+                {
+                    // meshcolliders are used with items that should be static
+                    // in this test so skip for now otherwise set mesh.convex to true
+                    continue;
+                }
+
+                if (!hit.gameObject.TryGetComponent(out Rigidbody rb))
+                {
+                    rb = hit.gameObject.AddComponent<Rigidbody>();
+                }
+
+                rb.mass = 10;
+                rb.interpolation = RigidbodyInterpolation.Interpolate;
+                rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+
+                if (_useExplosion)
+                {
+                    rb.AddExplosionForce(_explosionForce, _explosionOrigin,
+                        _explosionRadius, _explosionUpwardsModifier, ForceMode.Impulse);
+                }
+                else
+                {
+                    rb.AddForce(new Vector3(
+                            Random.Range(_minMaxForce.x, _minMaxForce.y),
+                            Random.Range(_minMaxForce.x, _minMaxForce.y),
+                            Random.Range(_minMaxForce.x, _minMaxForce.y)),
+                        _forceType);
+                }
+            }
+
             // Keep running while not done and editor is running
             for (int i = 0; i < _exportCount && EditorApplication.isPlaying; i++)
             {
-                export.ExportCurrentScene(_exportType, true);
+                export.ExportCurrentScene(_exportType, _rendererOutputResolution, _rendererOutputFolder, true);
 
                 // should do nothing if customcameras empty
                 foreach (CustomCamera cam in customCameras)
