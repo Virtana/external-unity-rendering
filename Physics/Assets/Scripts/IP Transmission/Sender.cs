@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using UnityEngine;
+using System.Collections.Generic;
 
 namespace ExternalUnityRendering.TcpIp
 {
@@ -13,7 +14,6 @@ namespace ExternalUnityRendering.TcpIp
         private readonly IPEndPoint _remoteEndPoint;
         private readonly Socket _sender;
         private readonly int _maxRetries;
-
         private readonly int _chunkSize = 50;
 
         // Helper function to chunk data for sending
@@ -32,6 +32,7 @@ namespace ExternalUnityRendering.TcpIp
         }
 
         public Sender(int port = 11000, string ipString = "localhost", int maxRetries = 3)
+
         {
             try
             {
@@ -40,20 +41,29 @@ namespace ExternalUnityRendering.TcpIp
                 // Get Host IP Address that is used to establish a connection
                 // In this case, we get one IP address of localhost that is IP : 127.0.0.1
                 // If a host has multiple addresses, you will get a list of addresses
+                _host = Dns.GetHostEntry(ipString);
                 _ipAddress = _host.AddressList[0];
                 _remoteEndPoint = new IPEndPoint(_ipAddress, port);
 
-                // Create a TCP/IP  socket.
+                // Create a TCP/IP socket.
                 _sender = new Socket(_ipAddress.AddressFamily,
                     SocketType.Stream, ProtocolType.Tcp);
             }
-            catch (Exception e)
+            catch (SocketException se)
             {
-                Debug.LogError(e.ToString());
+                Debug.LogError("An error occured while trying to initialise the socket. " +
+                    $"The error code is {se.SocketErrorCode}.\n{se}");
+            }
+            catch (ArgumentException ae)
+            {
+                Debug.LogError("An error occurred while trying to resolve the host. " +
+                    $"\n{ae}");
             }
         }
 
-        public void Send(string data) {
+        [Obsolete("Use SendAsync instead.")]
+        public void Send(string data)
+        {
             byte[] bytes = new byte[1024];
             // Connect the socket to the remote endpoint. Catch any errors.
             try
@@ -127,7 +137,6 @@ namespace ExternalUnityRendering.TcpIp
                 Debug.LogWarning("Transmission is not completed. Data may not be " +
                     "handled correctly.");
             }
-
             Socket socket = state.socket;
             socket.EndSend(result);
             socket.Close();
