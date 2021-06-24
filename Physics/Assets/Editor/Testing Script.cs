@@ -1,11 +1,10 @@
 ﻿using ExternalUnityRendering.CameraUtilites;
+using ExternalUnityRendering.PathManagement;
+using System.Collections.Generic;
+using System.Text;
+using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using ExternalUnityRendering.PathManagement;
-using System.Text;
-using System.Linq;
 
 namespace ExternalUnityRendering.UnityEditor
 {
@@ -15,8 +14,8 @@ namespace ExternalUnityRendering.UnityEditor
         private int _millisecondsDelay = 1000;
         private float _explosionRadius = 1;
         private float _explosionForce = 1;
-        private string _exportFolder = "";
-        private string _renderFolder = "";
+        private string _exportFolder = System.IO.Directory.GetCurrentDirectory();
+        private string _renderFolder = System.IO.Directory.GetCurrentDirectory();
         private ExportScene.ExportType _exportType = ExportScene.ExportType.None;
         private bool _exportTestRenders = false;
         private bool _useExplosion = true;
@@ -26,17 +25,13 @@ namespace ExternalUnityRendering.UnityEditor
         private Vector2 _minMaxForce = new Vector2(1, 10);
         private Vector2Int _renderResolution = new Vector2Int(1920, 1080);
         private Vector2Int _rendererOutputResolution = new Vector2Int(1920, 1080);
-        private string _rendererOutputFolder = "";
+        private string _rendererOutputFolder = System.IO.Directory.GetCurrentDirectory();
 
         [MenuItem("Exporter Testing/Test Options")]
         static void Init()
         {
             TesterGUI window = GetWindow<TesterGUI>();
             window.Show();
-            // Assign Default folders
-            _rendererOutputFolder = System.IO.Directory.GetCurrentDirectory();
-            _renderFolder = _rendererOutputFolder; 
-            _exportFolder = _rendererOutputFolder;
         }
 
         // HACK Not very optimized. Includes lots of GUI workarounds

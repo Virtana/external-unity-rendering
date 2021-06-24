@@ -1,9 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using UnityEngine;
-using System.Collections.Generic;
 
 namespace ExternalUnityRendering.TcpIp
 {
@@ -63,7 +63,6 @@ namespace ExternalUnityRendering.TcpIp
         [Obsolete("Use SendAsync instead.")]
         public void Send(string data)
         {
-            byte[] bytes = new byte[1024];
             // Connect the socket to the remote endpoint. Catch any errors.
             try
             {
@@ -74,28 +73,12 @@ namespace ExternalUnityRendering.TcpIp
                     _sender.RemoteEndPoint.ToString());
 
                 // Encode the data string into a byte array.
-                byte[] msg = Encoding.ASCII.GetBytes($"{data}");
+                byte[] msg = Encoding.ASCII.GetBytes(data);
 
                 // Send the data through the socket.
                 int bytesSent = _sender.Send(msg);
 
-                // HACK disconnect then reconnect to signal end of transmission
-                _sender.Shutdown(SocketShutdown.Both);
-                _sender.Disconnect(true);
-                _sender.Connect(_remoteEndPoint);
-
-                // Receive the response from the remote device.
-                // may be problematic after disconnect
-                int bytesRec = _sender.Receive(bytes);
-                if (Encoding.ASCII.GetString(bytes, 0, bytesRec) != "1")
-                {
-                    Debug.LogError("an error occured.");
-                }
-
-                // Release the socket.
-                _sender.Shutdown(SocketShutdown.Both);
                 _sender.Close();
-
             }
             catch (ArgumentNullException ane)
             {
@@ -164,10 +147,10 @@ namespace ExternalUnityRendering.TcpIp
                         $"Retrying {++retryCount}/{_maxRetries}. " +
                         $"Error: {se.SocketErrorCode}. " +
                         $"Error Code: {se.ErrorCode}.");
-                    if (se.ErrorCode != 10061) // if not ConnectionRefused quit
+                    if (se.ErrorCode != 10061 || _maxRetries == retryCount) // if not ConnectionRefused quit
                     {
                         Debug.LogError("Aborting...");
-                        return;
+                        return false;
                     }
                     continue;
                 }
@@ -185,7 +168,7 @@ namespace ExternalUnityRendering.TcpIp
                     Debug.LogError("The socket has been placed in a listening state by calling " +
                         $"Listen(Int32).\n{ioe}");
                 }
-                return;
+                return false;
             }
 
             SendState state = new SendState

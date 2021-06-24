@@ -22,7 +22,6 @@ namespace ExternalUnityRendering
         };
 
         private DirectoryManager _exportFolder;
-
         public string ExportFolder
         {
             get
