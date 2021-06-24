@@ -20,14 +20,15 @@ namespace ExternalUnityRendering.PathManagement
             }
         }
 
-        private bool _createNew = false;
+        private readonly bool _createNew = false;
 
-        // NOTE if fail, file is null. caller must handle
-
+        // TODO: consider whether this should throw an exception
+        // HACK: if initialization fails, File is null
         public string Path
         {
             get
             {
+                // HACK using null conditional until decision is made
                 return _file?.FullName;
             }
             set
@@ -94,10 +95,11 @@ namespace ExternalUnityRendering.PathManagement
             }
         }
 
-        // probably make something else to have this functionality;
         public FileManager()
         {
-            // Create a near-guaranteed unique file. See the first
+            // HACK no exceptions rn because if it does, its likely a pathtoolong exception
+            // May need to consider how it works
+            // Create a near-guaranteed valid and unique file. See the first
             // comment on https://stackoverflow.com/a/11938280
             FileInfo file = new FileInfo(
                 System.IO.Path.Combine(Application.persistentDataPath,
@@ -115,11 +117,11 @@ namespace ExternalUnityRendering.PathManagement
         {
             _createNew = createNew;
             // HACK May not be best implementation for windows, can't find .net source
-            // for Windows implementation in .net 5. Maybe a special implementation is
-            // not needed?
+            // for Windows implementation in .net 5. Maybe not needed?
             if (System.IO.Path.IsPathRooted(path))
             {
-                // TODO verify folders exist
+                // TODO use https://docs.microsoft.com/en-us/dotnet/api/system.io.path.getdirectoryname
+                // and get the name of the dir, parse it, and then use the path
                 Path = path;
             } else
             {
@@ -279,6 +281,7 @@ namespace ExternalUnityRendering.PathManagement
                 // https://docs.microsoft.com/en-us/dotnet/api/system.outofmemoryexception?
                 // view=net-5.0#:~:text=This%20type%20of%20OutOfMemoryException,example%20does.
                 // says that Environment.FailFast() should be called, but unity should do that
+                // if unity doesn't do it well ¯\_(ツ)_/¯
                 Debug.LogError("Catastrophic error. Out of memory when trying to " +
                     $"read from { _file.FullName }.\n{ oome }");
                 throw;

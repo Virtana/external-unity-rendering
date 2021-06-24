@@ -8,7 +8,7 @@ namespace ExternalUnityRendering.PathManagement
     public class DirectoryManager
     {
         private DirectoryInfo _directory;
-        private bool _createNewDirectory = false;
+        private readonly bool _createNewDirectory = false;
 
         public DirectoryInfo Directory
         {

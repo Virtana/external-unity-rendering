@@ -20,7 +20,7 @@ namespace ExternalUnityRendering.PathManagement
             }
         }
 
-        private bool _createNew = false;
+        private readonly bool _createNew = false;
 
         // TODO: consider whether this should throw an exception
         // HACK: if initialization fails, File is null
