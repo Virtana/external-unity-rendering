@@ -11,23 +11,27 @@ namespace ExternalUnityRendering.UnityEditor
         [MenuItem("Testing/Import+Images")]
         public static void TestImports()
         {
-            CustomCamera cam = FindObjectOfType<CustomCamera>();
-            cam.StartCoroutine(ImportMany());
+            Debug.LogWarning("This function is incomplete. It will do nothing.");
+            return;
+            // TODO properly implement testing
         }
 
+        // NOTE: this currently does not import.
         static IEnumerator ImportMany()
         {
             GameObject obj = new GameObject();
             ImportScene import = obj.AddComponent<ImportScene>();
 
-            import.RenderFolder = @"D:\Virtana\Planning\Import";
-            // TODO make sure this is legit somehow first instead of logging a bunch
-            // and doing nothing
-            // TODO ensure this is safe.
-            for (int i = 0; i < Runs; i++)
+            // TODO add in folder choice here
+            import.RenderFolder = @"D:\Virtana\Planning\Import"; 
+
+            // TODO add a way of importing paths correctly
+            string[] paths = { };
+
+            //for (int i = 0; i < Runs; i++)
+            foreach (string path in paths)
             {
-                import.ImportFilePath = string.Format(@"D:\Virtana\Planning\Scene State ({0}).json", i + 1);
-                import.ImportCurrentScene();
+                import.ImportCurrentScene(new PathManagement.FileManager(path));
                 yield return new WaitForSecondsRealtime(1f);
             }
         }

@@ -28,13 +28,17 @@ namespace ExternalUnityRendering.CameraUtilites
             }
             set
             {
-                _renderPath = new DirectoryManager(value);
+                // TODO name all cameras according to heirarchy
+                // HACK cant tell apart cameras yet, so just let them all write to the same folder
+                _renderPath = new DirectoryManager($@"{ value }\Renders\{ this.name }");
             }
         }
 
-        private void Start()
+        private void Awake()
         {
-            _renderPath = new DirectoryManager();
+            // TODO add name parent concatenation for all cameras
+            // create a new camera directory in the subdirectory renders
+            _renderPath = new DirectoryManager($@"Renders\{ this.name }", true);
         }
 
         private void OnEnable()
@@ -46,6 +50,8 @@ namespace ExternalUnityRendering.CameraUtilites
             }
         }
 
+        // TODO Remove this and just directly call getcomponent CustomCamera is 
+        // automatically added to objects with cameras so check should not be needed
         /// <summary>
         /// Create an internal reference to the Camera component attached to
         /// this Gameobject. 
@@ -61,13 +67,15 @@ namespace ExternalUnityRendering.CameraUtilites
         }
 
         /// <summary>
-        /// Write the image in <paramref name="render"/> to the render path.
+        /// Write the image in <paramref name="render"/> to the render folder.
         /// </summary>
         /// <param name="data">Bytes of the image to be saved.</param>
         private void SaveRender(byte[] render)
         {
-            FileManager file = new FileManager(_renderPath, 
-                $"Render-{ DateTime.Now:yyyy-MM-dd-HH-mm-ss-fff-UTCzz}.png");
+            FileManager file = new FileManager(_renderPath,
+                $"Render-{ DateTime.Now:yyyy-MM-dd-HH-mm-ss-fff-UTCzz}.png", true);
+
+            // will automatically rename if name collision occurs
             file.WriteToFile(render);
             Debug.Log($"Saved render to { file.Path } at { DateTime.Now }.");
         }
@@ -78,6 +86,8 @@ namespace ExternalUnityRendering.CameraUtilites
         /// <param name="renderSize">The resolution of the rendered image.</param>
         public void RenderImage(Vector2Int renderSize = default)
         {
+            // TODO maybe figure out a way to not have crazy high values that will trigger a 
+            // out of vram error
             // ensure screenshot size is at least 300x300 in size.
             renderSize.Clamp(
                 new Vector2Int(300, 300),
@@ -110,6 +120,8 @@ namespace ExternalUnityRendering.CameraUtilites
             SaveRender(png);
         }
 
+        // TODO determine the need for this. Physics exports multiple states and
+        // importer renders on each state. Exporter probably should have this functionality.
         /// <summary>
         /// Coroutine that renders an image every 
         /// [<paramref name="delay"/>] seconds.
@@ -126,21 +138,22 @@ namespace ExternalUnityRendering.CameraUtilites
             }
         }
 
+        // TODO same as above
         /// <summary>
         /// Render the view of the camera repeatedly.
         /// </summary>
         /// <param name="delay">The interval between each render.</param>
         /// <param name="renderSize">The resolution of the rendered image.</param>
-        public void StartIntervalRendering(float delay = 2f, 
+        public void StartIntervalRendering(float delay = 2f,
             Vector2Int renderSize = default)
         {
             _rendererCoroutine =
                 StartCoroutine(RendererCoroutine(renderSize, delay));
         }
 
+        // TODO same as above
         /// <summary>
-        /// Stop rendering the view of the camera if StartIntervalRendering 
-        /// was called.
+        /// Stop rendering the view of the camera if StartIntervalRendering was called.
         /// </summary>
         public void StopIntervalRendering()
         {
@@ -154,25 +167,31 @@ namespace ExternalUnityRendering.CameraUtilites
             }
         }
 
-        // TODO Add multicam support.
         /// <summary>
-        /// On runtime load, attach the customCamera to the first gameobject
-        /// found with a camera component.
+        /// When the runtime loads, add a CustomCamera component to all camera 
+        /// gameobjects that don't already have it.
         /// </summary>
-        [RuntimeInitializeOnLoadMethod]
-        public static void AttachToCamera()
+        [Obsolete("Importer will handle attaching if necessary", true)]
+        //[RuntimeInitializeOnLoadMethod]
+        public static void AttachToCameras()
         {
-            Camera cam = FindObjectOfType<Camera>();
+            Camera[] cameras = FindObjectsOfType<Camera>();
 
-            if (cam != null)
+            if (cameras.Length == 0)
             {
-                // add this behaviour
-                cam.gameObject.AddComponent<CustomCamera>();
+                // If cam is empty, then no cameras were found.
+                Debug.LogError("Missing Camera! Importer cannot render from this.");
                 return;
             }
 
-            // If cam is null, then no cameras were found.
-            Debug.LogError("Missing Camera!");
+            foreach (Camera camera in cameras)
+            {
+                // add this behaviour
+                if (camera.gameObject.GetComponent<CustomCamera>() == null)
+                {
+                    camera.gameObject.AddComponent<CustomCamera>();
+                }
+            }
         }
     }
 }

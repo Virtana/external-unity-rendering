@@ -5,7 +5,7 @@ using UnityEngine;
 namespace ExternalUnityRendering.PathManagement
 {
     // TODO see notes in FileManager.cs. Consider same for this.
-    class DirectoryManager
+    public class DirectoryManager
     {
         private DirectoryInfo _directory;
         private bool _createNewDirectory = false;
