@@ -93,7 +93,7 @@ namespace ExternalUnityRendering.PathManagement
         public DirectoryManager()
             : this(Application.persistentDataPath) { }
 
-        public DirectoryManager(DirectoryManager directory, string directoryName, 
+        public DirectoryManager(DirectoryManager directory, string directoryName,
             bool createNew = false)
             : this(System.IO.Path.Combine(directory.Path, directoryName), createNew) { }
 

@@ -1,16 +1,16 @@
 ﻿using ExternalUnityRendering.PathManagement;
 using ExternalUnityRendering.TcpIp;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-
 namespace ExternalUnityRendering
 {
     public class ExportScene : MonoBehaviour
-    {   
+    {
         [Flags]
         public enum ExportType
         {
@@ -20,7 +20,7 @@ namespace ExternalUnityRendering
             WriteToFile = 2,
             Log = 4
         };
-        
+
         private DirectoryManager _exportFolder;
 
         public string ExportFolder
@@ -35,25 +35,42 @@ namespace ExternalUnityRendering
             }
         }
 
+        private Dictionary<ExportType, Func<string, bool>> _exportActions;
+
         private void Awake()
         {
             _exportFolder = new DirectoryManager();
+            _exportActions = new Dictionary<ExportType, Func<string, bool>>()
+            {
+                {ExportType.None, (state) => { return true; } },
+                {ExportType.Transmit, (state) => new Sender().SendAsync(state) },
+                {ExportType.WriteToFile, (state) => WriteStateToFile(state) },
+                {ExportType.Log, (state) => { Debug.Log($"JSON Data = { state }"); return true; } },
+            };
         }
 
-        private void WriteStateToFile(string state)
+        private bool WriteStateToFile(string state)
         {
-            FileManager file = new FileManager(_exportFolder, 
-                $"Physics State-{ DateTime.Now:yyyy-MM-dd-HH-mm-ss-UTCzz}.json", true);
+            string filename = $"Physics State-{ DateTime.Now:yyyy-MM-dd-HH-mm-ss-UTCzz}.json";
+            FileManager file = new FileManager(_exportFolder, filename, true);
+
+            if (file.Path == null)
+            {
+                Debug.LogError($"Could not create file: {_exportFolder.Path}/{filename}");
+                return false;
+            }
+
             file.WriteToFile(state);
+            return true;
         }
 
         // HACK functionality and structure needs to be reworked
-        // TODO add options for receiver
-        // TODO add try finally to unparent objects
-        public void ExportCurrentScene(ExportType exportMode, Vector2Int renderResolution = default, string renderDirectory = "", bool prettyPrint = false)
+        public void ExportCurrentScene(ExportType exportMode,
+            Vector2Int renderResolution = default, string renderDirectory = "",
+            bool prettyPrint = false)
         {
             // pauses the state of the Unity
-            Time.timeScale = 0; 
+            Time.timeScale = 0;
 
             Debug.Log("Beginning Export.");
 
@@ -74,38 +91,69 @@ namespace ExternalUnityRendering
                 exportObject.transform.SetParent(transform, true);
             }
 
-            SceneState.CameraSettings render = new SceneState.CameraSettings(renderResolution, renderDirectory);
-
-            Debug.Log("Exporting...");
-            SceneState scene = new SceneState(transform, render);
-
-            Formatting jsonFormat = prettyPrint ? Formatting.Indented : Formatting.None;
-            string state = JsonConvert.SerializeObject(scene, jsonFormat);
-
-            if ((exportMode & ExportType.Log) == ExportType.Log)
+            try
             {
-                Debug.Log($"JSON Data = { state }");
-            }
+                SceneState.CameraSettings render =
+                    new SceneState.CameraSettings(renderResolution, renderDirectory);
 
-            if ((exportMode & ExportType.Transmit) == ExportType.Transmit)
+                Debug.Log("Exporting...");
+                SceneState scene = new SceneState(transform, render);
+
+                Formatting jsonFormat = prettyPrint ? Formatting.Indented : Formatting.None;
+
+                JsonSerializerSettings serializerSettings =
+                    new JsonSerializerSettings
+                    {
+                        // log error if reached a problematic point
+                        Error = delegate(object sender, ErrorEventArgs args)
+                        {
+                            if (args.CurrentObject == args.ErrorContext.OriginalObject)
+                            {
+                                Debug.LogError(args.ErrorContext.Error.Message);
+                                args.ErrorContext.Handled = true;
+                            }
+                        }
+                    };
+
+                string state = JsonConvert.SerializeObject(scene, jsonFormat, serializerSettings);
+
+                // NOTE would have loved to use Linq Aggregate
+                // bool success = _exportActions.Aggregate(true, (acc, kv) =>
+                //      ((kv.Key & exportMode) == kv.Key) && kv.Value.Invoke(state) && acc);
+
+                bool succeeded = true;
+
+                // for all the functions in export items
+                // check if the flag (key) is set, then invoke the function (value)
+                // if function returns false (i.e. failed)
+                foreach (KeyValuePair<ExportType, Func<string, bool>> item in _exportActions)
+                {
+                    if ((item.Key & exportMode) == item.Key)
+                    {
+                        succeeded &= item.Value.Invoke(state);
+                    }
+                }
+
+                if (succeeded)
+                {
+                    Debug.Log($"SUCCESS: Completed export at { DateTime.Now }");
+                }
+                else
+                {
+                    Debug.LogError($"FAILED: Export at { DateTime.Now } failed to complete fully. " +
+                        "See logs for more details.");
+                }
+
+            }
+            finally
             {
-                Sender sender = new Sender();
-                sender.SendAsync(state);
-            }
+                foreach (GameObject exportObject in exportObjects)
+                {
+                    exportObject.transform.parent = null;
+                }
 
-            if ((exportMode & ExportType.WriteToFile) == ExportType.WriteToFile)
-            {
-                WriteStateToFile(state);
+                Time.timeScale = 1;
             }
-
-            Debug.Log($"Export succeeded at { DateTime.Now }");
-            
-            foreach (GameObject exportObject in exportObjects)
-            {
-                exportObject.transform.parent = null;
-            }
-
-            Time.timeScale = 1;
         }
     }
 }

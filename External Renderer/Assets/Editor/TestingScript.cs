@@ -10,7 +10,7 @@ namespace ExternalUnityRendering.UnityEditor
         {
             if (!EditorApplication.isPlaying)
             {
-                if (!EditorUtility.DisplayDialog("Scene is not in play mode.", 
+                if (!EditorUtility.DisplayDialog("Scene is not in play mode.",
                     "The scene is not playing. Are you sure you want to continue " +
                     "adding an importer to the scene?", "Yes", "No"))
                 {

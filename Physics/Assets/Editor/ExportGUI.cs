@@ -25,8 +25,8 @@ namespace ExternalUnityRendering.UnityEditor
 
             // TODO add editor options for different export types
             // could have if statement with the different states and add the options
-            if ((_export & ExportScene.ExportType.WriteToFile) 
-                == ExportScene.ExportType.WriteToFile) 
+            if ((_export & ExportScene.ExportType.WriteToFile)
+                == ExportScene.ExportType.WriteToFile)
             {
                 if (GUILayout.Button("Select Export folder"))
                 {
@@ -39,7 +39,7 @@ namespace ExternalUnityRendering.UnityEditor
 
             if (GUILayout.Button("Export Now"))
             {
-                if ((_export & ExportScene.ExportType.WriteToFile) 
+                if ((_export & ExportScene.ExportType.WriteToFile)
                     == ExportScene.ExportType.WriteToFile)
                 {
                     currentExporter.ExportFolder = _exportFolder;

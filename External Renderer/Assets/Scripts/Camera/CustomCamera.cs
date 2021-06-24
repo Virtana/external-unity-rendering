@@ -50,11 +50,11 @@ namespace ExternalUnityRendering.CameraUtilites
             }
         }
 
-        // TODO Remove this and just directly call getcomponent CustomCamera is 
+        // TODO Remove this and just directly call getcomponent CustomCamera is
         // automatically added to objects with cameras so check should not be needed
         /// <summary>
         /// Create an internal reference to the Camera component attached to
-        /// this Gameobject. 
+        /// this Gameobject.
         /// </summary>
         public void SaveCamera()
         {
@@ -76,7 +76,7 @@ namespace ExternalUnityRendering.CameraUtilites
                 $"Render-{ DateTime.Now:yyyy-MM-dd-HH-mm-ss-fff-UTCzz}.png", true);
 
             // will automatically rename if name collision occurs
-            file.WriteToFile(render); 
+            file.WriteToFile(render);
             Debug.Log($"Saved render to { file.Path } at { DateTime.Now }.");
         }
 
@@ -86,7 +86,7 @@ namespace ExternalUnityRendering.CameraUtilites
         /// <param name="renderSize">The resolution of the rendered image.</param>
         public void RenderImage(Vector2Int renderSize = default)
         {
-            // TODO maybe figure out a way to not have crazy high values that will trigger a 
+            // TODO maybe figure out a way to not have crazy high values that will trigger a
             // out of vram error
             // ensure screenshot size is at least 300x300 in size.
             renderSize.Clamp(
@@ -123,7 +123,7 @@ namespace ExternalUnityRendering.CameraUtilites
         // TODO determine the need for this. Physics exports multiple states and
         // importer renders on each state. Exporter probably should have this functionality.
         /// <summary>
-        /// Coroutine that renders an image every 
+        /// Coroutine that renders an image every
         /// [<paramref name="delay"/>] seconds.
         /// </summary>
         /// <param name="renderSize">The resolution of the rendered image.</param>
@@ -168,7 +168,7 @@ namespace ExternalUnityRendering.CameraUtilites
         }
 
         /// <summary>
-        /// When the runtime loads, add a CustomCamera component to all camera 
+        /// When the runtime loads, add a CustomCamera component to all camera
         /// gameobjects that don't already have it.
         /// </summary>
         [Obsolete("Importer will handle attaching if necessary", true)]

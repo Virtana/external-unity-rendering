@@ -61,7 +61,7 @@ namespace ExternalUnityRendering.UnityEditor
             _millisecondsDelay = EditorGUILayout.IntSlider(label, _millisecondsDelay, 100, 10000);
 
             GUIContent optionLabel = new GUIContent("Export Options: ");
-            GUIContent optionListLabel = 
+            GUIContent optionListLabel =
                 new GUIContent("None : Attempt to serialize but do nothing with the data.\n" +
                 "Transmit: Attempt to transmit over TCP/IP.\n" +
                 "WriteToFile: Write to file in a specified folder (or the persistent data path).\n" +
@@ -200,7 +200,7 @@ namespace ExternalUnityRendering.UnityEditor
                     options.AppendLine("Explosion Radius: " + _explosionRadius);
                     options.AppendLine("Explosive Force: " + _explosionForce);
                     options.AppendLine("Explosive Force Upwards Modifier: " + _explosionUpwardsModifier);
-                } 
+                }
                 else
                 {
                     options.AppendLine("Force Type: " + _forceType);

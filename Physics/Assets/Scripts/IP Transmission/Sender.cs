@@ -32,7 +32,6 @@ namespace ExternalUnityRendering.TcpIp
         }
 
         public Sender(int port = 11000, string ipString = "localhost", int maxRetries = 3)
-
         {
             try
             {
@@ -142,13 +141,13 @@ namespace ExternalUnityRendering.TcpIp
             socket.Close();
         }
 
-        public void SendAsync(string data)
+        public bool SendAsync(string data)
         {
             if (_sender == null)
             {
                 Debug.LogError("Cannot send data. No socket was assigned during initializaiton. " +
                     "An error may have occured. Try reassigning the socket.");
-                return;
+                return false;
             }
 
             int retryCount = 0;
@@ -210,6 +209,8 @@ namespace ExternalUnityRendering.TcpIp
             {
                 Debug.LogError($"The socket has been closed.\n{ode}");
             }
+
+            return true;
         }
     }
 }
