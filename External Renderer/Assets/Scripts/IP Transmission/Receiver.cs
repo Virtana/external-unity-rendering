@@ -3,6 +3,7 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace ExternalUnityRendering.TcpIp
@@ -36,53 +37,63 @@ namespace ExternalUnityRendering.TcpIp
             }
             catch (Exception e) // remove pokemon exception handle
             {
-                Debug.LogError(e.ToString());
+                Debug.Log(e.ToString());
             }
         }
 
-        public void RecieveMessage(Action<string> dataReceivedCallback)
+        public async void ReceiveMessage(Action<string> dataReceivedCallback)
         {
-            // byte cache for what is recieved
-            byte[] bytes = new byte[1024];
-            using (MemoryStream cache = new MemoryStream(1000))
+            string data = "";
+            while (true)
             {
-                try
-                {
-                    Socket handler = _listener.Accept();
-
-                    // Incoming data from the client.
-                    while (true)
+                data =
+                    await Task.Run(() =>
                     {
-                        int bytesReceived = handler.Receive(bytes);
-                        cache.Write(bytes, 0, bytesReceived);
-
-                        // check if the client disconnected
-                        if (handler.Poll(1, SelectMode.SelectRead) && handler.Available == 0)
+                        // byte cache for what is recieved
+                        byte[] bytes = new byte[1024];
+                        using (MemoryStream cache = new MemoryStream())
                         {
-                            break;
+                            try
+                            {
+                                Socket handler = _listener.Accept();
+
+                                // Incoming data from the client.
+                                while (true)
+                                {
+                                    int bytesReceived = handler.Receive(bytes);
+                                    cache.Write(bytes, 0, bytesReceived);
+
+                                    // check if the client disconnected
+                                    if (handler.Poll(1, SelectMode.SelectRead) && handler.Available == 0)
+                                    {
+                                        break;
+                                    }
+                                }
+
+                                cache.Seek(0, SeekOrigin.Begin);
+
+                                StringBuilder stringBuilder = new StringBuilder();
+
+                                using (StreamReader reader = new StreamReader(cache))
+                                {
+                                    stringBuilder.Append(reader.ReadToEnd());
+                                }
+
+                                // TODO implement responses
+                                // Send status temporarily using "1"
+                                // byte[] msg = Encoding.ASCII.GetBytes("1");
+                                // handler.Send(msg);
+                                handler.Close();
+                                return stringBuilder.ToString();
+                            }
+                            catch (Exception e)
+                            {
+                                Debug.Log(e.ToString());
+                                return "";
+                            }
                         }
-                    }
-
-                    cache.Seek(0, SeekOrigin.Begin);
-
-                    StringBuilder data = new StringBuilder();
-
-                    var reader = new StreamReader(cache);
-                    data.Append(reader.ReadToEnd());
-
-                    dataReceivedCallback(data.ToString());
-
-                    // Send status temporarily using "1"
-                    byte[] msg = Encoding.ASCII.GetBytes("1");
-                    handler.Send(msg);
-                    handler.Shutdown(SocketShutdown.Both);
-                    handler.Close();
-                }
-                catch (Exception e)
-                {
-
-                    Debug.LogError(e.ToString());
-                }
+                    });
+                dataReceivedCallback(data);
             }
         }
     }
