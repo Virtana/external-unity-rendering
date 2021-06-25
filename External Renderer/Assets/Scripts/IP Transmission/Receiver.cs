@@ -73,7 +73,7 @@ namespace ExternalUnityRendering.TcpIp
                                 cache.Write(bytes, 0, bytesReceived);
 
                             // until the client disconnects
-                            } while (handler.Poll(1, SelectMode.SelectRead) && handler.Available == 0);
+                            } while (!(handler.Poll(1, SelectMode.SelectRead) && handler.Available == 0));
 
                             handler.Close();
 
