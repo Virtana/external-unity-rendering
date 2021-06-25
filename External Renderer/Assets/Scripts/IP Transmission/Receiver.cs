@@ -34,6 +34,7 @@ namespace ExternalUnityRendering.TcpIp
                 _listener = new Socket(_ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
                 // A Socket must be associated with an endpoint using the Bind method
                 _listener.Bind(_localEndPoint);
+                _listener.Listen(5);
 
                 Debug.Log("Waiting for a connection...");
             }
