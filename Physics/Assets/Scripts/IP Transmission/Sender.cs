@@ -13,7 +13,7 @@ namespace ExternalUnityRendering.TcpIp
         private readonly IPAddress _ipAddress;
         private readonly IPEndPoint _remoteEndPoint;
         private readonly Socket _sender;
-
+        private readonly int _maxRetries;
         private readonly int _chunkSize = 50;
 
         // Helper function to chunk data for sending
@@ -31,10 +31,12 @@ namespace ExternalUnityRendering.TcpIp
             return buffer;
         }
 
-        public Sender(int port = 11000, string ipString = "localhost")
+        public Sender(int port = 11000, string ipString = "localhost", int maxRetries = 3)
+
         {
             try
             {
+                _maxRetries = maxRetries;
                 // Connect to a Remote server
                 // Get Host IP Address that is used to establish a connection
                 // In this case, we get one IP address of localhost that is IP : 127.0.0.1
@@ -135,8 +137,6 @@ namespace ExternalUnityRendering.TcpIp
                 Debug.LogWarning("Transmission is not completed. Data may not be " +
                     "handled correctly.");
             }
-
-
             Socket socket = state.socket;
             socket.EndSend(result);
             socket.Close();
@@ -151,7 +151,43 @@ namespace ExternalUnityRendering.TcpIp
                 return;
             }
 
-            _sender.Connect(_remoteEndPoint);
+            int retryCount = 0;
+            while (retryCount < _maxRetries)
+            {
+                try
+                {
+                    _sender.Connect(_remoteEndPoint);
+                    break;
+                }
+                catch (SocketException se)
+                {
+                    Debug.LogError("Socket Exception occurred while trying to connect! " +
+                        $"Retrying {++retryCount}/{_maxRetries}. " +
+                        $"Error: {se.SocketErrorCode}. " +
+                        $"Error Code: {se.ErrorCode}.");
+                    if (se.ErrorCode != 10061) // if not ConnectionRefused quit
+                    {
+                        Debug.LogError("Aborting...");
+                        return;
+                    }
+                    continue;
+                }
+                catch (ObjectDisposedException ode)
+                {
+                    Debug.LogError($"The socket has been closed.\n{ode}");
+                }
+                catch (System.Security.SecurityException se)
+                {
+                    Debug.LogError("A caller higher in the call stack does not have permission " +
+                        $"for the requested operation.\n{se}");
+                }
+                catch (InvalidOperationException ioe)
+                {
+                    Debug.LogError("The socket has been placed in a listening state by calling " +
+                        $"Listen(Int32).\n{ioe}");
+                }
+                return;
+            }
 
             SendState state = new SendState
                 {
