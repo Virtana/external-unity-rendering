@@ -169,7 +169,8 @@ namespace ExternalUnityRendering.TcpIp
                     {
                         Debug.LogError("Aborting...");
                         return;
-                    }                    
+                    }
+                    continue;
                 }
                 catch (ObjectDisposedException ode)
                 {
@@ -185,6 +186,7 @@ namespace ExternalUnityRendering.TcpIp
                     Debug.LogError("The socket has been placed in a listening state by calling " +
                         $"Listen(Int32).\n{ioe}");
                 }
+                return;
             }
 
             SendState state = new SendState

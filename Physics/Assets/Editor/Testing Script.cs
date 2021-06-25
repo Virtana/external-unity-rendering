@@ -33,6 +33,10 @@ namespace ExternalUnityRendering.UnityEditor
         {
             TesterGUI window = GetWindow<TesterGUI>();
             window.Show();
+            // Assign Default folders
+            _rendererOutputFolder = System.IO.Directory.GetCurrentDirectory();
+            _renderFolder = _rendererOutputFolder; 
+            _exportFolder = _rendererOutputFolder;
         }
 
         // HACK Not very optimized. Includes lots of GUI workarounds
