@@ -14,8 +14,8 @@ namespace ExternalUnityRendering.UnityEditor
         private int _millisecondsDelay = 1000;
         private float _explosionRadius = 1;
         private float _explosionForce = 1;
-        private string _exportFolder = "";
-        private string _renderFolder = "";
+        private string _exportFolder = System.IO.Path.GetFullPath("../");
+        private string _renderFolder = System.IO.Path.GetFullPath("../");
         private ExportScene.ExportType _exportType = ExportScene.ExportType.None;
         private bool _exportTestRenders = false;
         private bool _useExplosion = true;
@@ -25,7 +25,7 @@ namespace ExternalUnityRendering.UnityEditor
         private Vector2 _minMaxForce = new Vector2(1, 10);
         private Vector2Int _renderResolution = new Vector2Int(1920, 1080);
         private Vector2Int _rendererOutputResolution = new Vector2Int(1920, 1080);
-        private string _rendererOutputFolder = System.IO.Directory.GetCurrentDirectory();
+        private string _rendererOutputFolder = System.IO.Path.GetFullPath("../");
 
         [MenuItem("Exporter Testing/Test Options")]
         static void Init()

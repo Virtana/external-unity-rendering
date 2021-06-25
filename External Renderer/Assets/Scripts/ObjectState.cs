@@ -29,9 +29,20 @@ namespace ExternalUnityRendering
             }
         }
 
-        // Variables representing the properties
+        /// <summary>
+        /// Name of the GameObject represented.
+        /// </summary>
         public string Name;
+
+        /// <summary>
+        /// The worldspace transform values (Position, Rotation, Scale) of the
+        /// GameObject.
+        /// </summary>
         public TransformState ObjectTransform;
+
+        /// <summary>
+        /// The list of children of this transform
+        /// </summary>
         public List<ObjectState> Children;
 
         /// <summary>
@@ -100,7 +111,7 @@ namespace ExternalUnityRendering
     public class SceneState
     {
         /// <summary>
-        /// Struct that represents the general settings for the cameras
+        /// Struct that represents settings for the CustomCameras
         /// </summary>
         public struct CameraSettings
         {
