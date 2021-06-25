@@ -67,17 +67,14 @@ namespace ExternalUnityRendering.TcpIp
                             {
                                 Socket handler = _listener.Accept();
 
-                                while (true)
+                                do
                                 {
+                                    // Incoming data from the client.
                                     int bytesReceived = handler.Receive(bytes);
                                     cache.Write(bytes, 0, bytesReceived);
 
-                                    // check if the client disconnected
-                                    if (handler.Poll(1, SelectMode.SelectRead) && handler.Available == 0)
-                                    {
-                                        break;
-                                    }
-                                }
+                                    // until the client disconnects
+                                } while (!(handler.Poll(1, SelectMode.SelectRead) && handler.Available == 0));
 
                                 cache.Seek(0, SeekOrigin.Begin);
 

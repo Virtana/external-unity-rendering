@@ -28,7 +28,12 @@ namespace ExternalUnityRendering.CameraUtilites
             }
             set
             {
-                _renderPath = new DirectoryManager($@"{ value }\Renders\{name}", true);
+                // HACK Export to same folders for same name
+                // Can't differentiate between folders created by this and folders
+                // created by something else
+                if (!string.IsNullOrEmpty(value)) {
+                    _renderPath = new DirectoryManager($@"{ value }\Renders\{name}");
+                }
             }
         }
 

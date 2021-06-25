@@ -134,7 +134,9 @@ namespace ExternalUnityRendering
                 ExportTimestamp = state.ExportDate;
                 SceneState.CameraSettings settings = state.RendererSettings;
 
-                Debug.LogFormat($"Imported state that was generated at { ExportTimestamp }");
+                Debug.LogFormat($"Imported state that was generated at { ExportTimestamp }." +
+                    $"Camera settings are:\n\t{settings.RenderDirectory}\n\t" +
+                    $"Resolution: {settings.RenderSize.x}x{settings.RenderSize.y}");
 
                 foreach (CustomCamera camera in customCameras)
                 {

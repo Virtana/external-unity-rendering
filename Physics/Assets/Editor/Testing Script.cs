@@ -14,8 +14,8 @@ namespace ExternalUnityRendering.UnityEditor
         private int _millisecondsDelay = 1000;
         private float _explosionRadius = 1;
         private float _explosionForce = 1;
-        private string _exportFolder = System.IO.Directory.GetCurrentDirectory();
-        private string _renderFolder = System.IO.Directory.GetCurrentDirectory();
+        private string _exportFolder = "";
+        private string _renderFolder = "";
         private ExportScene.ExportType _exportType = ExportScene.ExportType.None;
         private bool _exportTestRenders = false;
         private bool _useExplosion = true;
@@ -152,6 +152,11 @@ namespace ExternalUnityRendering.UnityEditor
                 }
                 // validate options and trigger explode
                 // also have confirm dialog showing the options
+
+                if (string.IsNullOrEmpty(_exportFolder))
+                {
+                    _exportFolder = System.IO.Directory.GetCurrentDirectory();
+                }
 
                 DirectoryManager exportFolder = new DirectoryManager(_exportFolder);
                 if (((_exportType & ExportScene.ExportType.WriteToFile)
