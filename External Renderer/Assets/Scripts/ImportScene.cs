@@ -41,7 +41,7 @@ namespace ExternalUnityRendering
             Receiver client = new Receiver();
 
             // non blocking async function
-            //client.ReceiveMessages(ImportCurrentScene);-
+            client.ReceiveMessages(ImportCurrentScene);
         }
 
         public void ImportCurrentScene(FileManager importFile)
@@ -63,7 +63,10 @@ namespace ExternalUnityRendering
             ImportCurrentScene(json);
         }
 
-        public void ImportCurrentScene(string json)
+        // By default returns true. If fail, exporter just needs to ping server
+        // and check if connection is refused. if not, then send a mostly blank object with
+        // continue importing as false
+        public bool ImportCurrentScene(string json)
         {
             Debug.Log("Beginning Import.");
 
@@ -76,7 +79,7 @@ namespace ExternalUnityRendering
             if (importObjects == null || importObjects.Count == 0)
             {
                 Debug.LogWarning("Empty object List.");
-                return;
+                return true;
             }
 
             Camera[] cameras = FindObjectsOfType<Camera>();
@@ -95,8 +98,8 @@ namespace ExternalUnityRendering
             if (cameras.Length == 0)
             {
                 // If cam is empty, then no cameras were found.
-                Debug.LogError("Missing Camera! Importer cannot render from this.");
-                return;
+                Debug.LogError("Missing Camera! Importer cannot render with no cameras.");
+                return true;
             }
 
             foreach (GameObject importObject in importObjects)
@@ -127,12 +130,13 @@ namespace ExternalUnityRendering
                 if (state == null)
                 {
                     Debug.LogError("Failed to deserialize!");
-                    return;
+                    return true;
                 }
 
                 state.SceneRoot.UnpackData(transform);
                 ExportTimestamp = state.ExportDate;
                 SceneState.CameraSettings settings = state.RendererSettings;
+                bool continueImporting = state.ContinueImporting;
 
                 Debug.LogFormat($"Imported state that was generated at { ExportTimestamp }." +
                     $"Camera settings are:\n\t{settings.RenderDirectory}\n\t" +
@@ -143,6 +147,12 @@ namespace ExternalUnityRendering
                     camera.RenderPath = settings.RenderDirectory;
                     camera.RenderImage(settings.RenderSize);
                 }
+                return continueImporting;
+            }
+            catch (JsonException je)
+            {
+                Debug.LogError($"Unexpected JSON Deserialization Error occurred!\n{je}");
+                return true;
             }
             finally
             {

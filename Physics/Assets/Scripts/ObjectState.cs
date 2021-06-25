@@ -130,6 +130,12 @@ namespace ExternalUnityRendering
         public CameraSettings RendererSettings;
 
         /// <summary>
+        /// Indicator for whether the rendering instance should continue
+        /// running after importing this object.
+        /// </summary>
+        public bool ContinueImporting;
+
+        /// <summary>
         /// Create a default SceneState with a blank ObjectState.
         /// </summary>
         public SceneState()
@@ -141,11 +147,13 @@ namespace ExternalUnityRendering
         /// <param name="root">The objectState whose children represent the
         /// root GameObjects.</param>
         /// <param name="settings">Settings for the renderer instance.</param>
-        public SceneState(ObjectState root, CameraSettings settings)
+        /// <param name="continueExporting">Whether to halt the Renderer Instance.</param>
+        public SceneState(ObjectState root, CameraSettings settings, bool continueExporting = true)
         {
             ExportDate = DateTime.Now;
             SceneRoot = root;
             RendererSettings = settings;
+            ContinueImporting = continueExporting;
         }
 
         /// <summary>

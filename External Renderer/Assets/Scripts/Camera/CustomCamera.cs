@@ -52,7 +52,7 @@ namespace ExternalUnityRendering.CameraUtilites
                 Destroy(this);
             }
 
-            // TODO Uncomment this or provide some sort of control to turn it on
+            // TODO Uncomment this and provide some sort of control to turn it on
             // should be off by default
             // _camera.enabled = false;
         }

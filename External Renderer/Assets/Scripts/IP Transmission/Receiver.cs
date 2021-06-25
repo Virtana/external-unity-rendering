@@ -140,6 +140,11 @@ namespace ExternalUnityRendering.TcpIp
                     }
                 }
             }
+
+            // Optionally Exit the application. If server is off, no point in render instance.
+            // This is ignored in editor.
+            Application.Quit();
+            // TODO maybe exit play mode and delete the importer in editor??
         }
     }
 }
