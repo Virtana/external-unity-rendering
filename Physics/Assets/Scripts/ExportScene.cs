@@ -9,19 +9,46 @@ using UnityEngine.SceneManagement;
 
 namespace ExternalUnityRendering
 {
+    /// <summary>
+    /// Component that manages exporting the scene.
+    /// </summary>
     public class ExportScene : MonoBehaviour
     {
+        /// <summary>
+        /// Flags for what the Exporter should do after serializing the scene.
+        /// </summary>
         [Flags]
-        public enum ExportType
+        public enum PostExportAction
         {
-            // None is intended for testing serialization errors
-            None = 0,
+            /// <summary>
+            /// Do nothing with the data. Intended for testing serialization errors.
+            /// </summary>
+            Nothing = 0,
+
+            /// <summary>
+            /// Transmit the data to the external renderer asynchronously.
+            /// </summary>
             Transmit = 1,
+
+            /// <summary>
+            /// Write the state to a file.
+            /// </summary>
             WriteToFile = 2,
+
+            /// <summary>
+            /// Log the state to the console. Intended for debugging and development testing.
+            /// </summary>
             Log = 4
         };
 
+        /// <summary>
+        /// Manager for the folder where states will be written to file.
+        /// </summary>
         private DirectoryManager _exportFolder;
+
+        /// <summary>
+        /// Property to manage the export folder.
+        /// </summary>
         public string ExportFolder
         {
             get
@@ -34,20 +61,31 @@ namespace ExternalUnityRendering
             }
         }
 
-        private Dictionary<ExportType, Func<string, bool>> _exportActions;
+        /// <summary>
+        /// Dictionary relating the PostExportActions to the actions they represent.
+        /// </summary>
+        private Dictionary<PostExportAction, Func<string, bool>> _exportActions;
 
+        /// <summary>
+        /// Initializes the state of the Exporter.
+        /// </summary>
         private void Awake()
         {
             _exportFolder = new DirectoryManager();
-            _exportActions = new Dictionary<ExportType, Func<string, bool>>()
+            _exportActions = new Dictionary<PostExportAction, Func<string, bool>>()
             {
-                {ExportType.None, (state) => { return true; } },
-                {ExportType.Transmit, (state) => new Sender().SendAsync(state) },
-                {ExportType.WriteToFile, (state) => WriteStateToFile(state) },
-                {ExportType.Log, (state) => { Debug.Log($"JSON Data = { state }"); return true; } },
+                {PostExportAction.Nothing, (state) => { return true; } },
+                {PostExportAction.Transmit, (state) => new Sender().SendAsync(state) },
+                {PostExportAction.WriteToFile, (state) => WriteStateToFile(state) },
+                {PostExportAction.Log, (state) => { Debug.Log($"JSON Data = { state }"); return true; } },
             };
         }
 
+        /// <summary>
+        /// Helper function to write the JSON state of the scene to file.
+        /// </summary>
+        /// <param name="state">The serialized scene state in JSON format.</param>
+        /// <returns>Whether or not the operation was successful.</returns>
         private bool WriteStateToFile(string state)
         {
             string filename = $"Physics State-{ DateTime.Now:yyyy-MM-dd-HH-mm-ss-UTCzz}.json";
@@ -59,16 +97,27 @@ namespace ExternalUnityRendering
                 return false;
             }
 
-            file.WriteToFile(state);
-            return true;
+            return file.WriteToFile(state);
         }
 
-        // HACK functionality and structure needs to be reworked
-        public void ExportCurrentScene(ExportType exportMode,
+        /// <summary>
+        /// Export the current scene state.
+        /// </summary>
+        /// <param name="exportMode">What to do with the state of the scene.</param>
+        /// <param name="renderResolution">The resolution for the renders produced by
+        /// the external renderer.</param>
+        /// <param name="renderDirectory">The directory to write the JSON files to
+        /// if the WriteToFile flag is set.</param>
+        /// <param name="prettyPrint">Whether to format the JSON to be more human
+        /// readable.</param>
+        public void ExportCurrentScene(PostExportAction exportMode,
             Vector2Int renderResolution = default, string renderDirectory = "",
             bool prettyPrint = false)
         {
-            // pauses the state of the Unity
+            // ensure this gameobject is a root object.
+            transform.parent = null;
+
+            // pause Unity Physics calculations
             Time.timeScale = 0;
 
             Debug.Log("Beginning Export.");
@@ -79,12 +128,14 @@ namespace ExternalUnityRendering
             currentScene.GetRootGameObjects(exportObjects);
             exportObjects.RemoveAll((obj) => gameObject == obj);
 
-            if (exportObjects == null || exportObjects.Count == 0)
+            // if there are no items to export, do nothing.
+            if ((exportObjects?.Count ?? 0) == 0)
             {
                 Debug.LogWarning("Empty object List.");
                 return;
             }
 
+            // set every other object as a child of this gameobject to
             foreach (GameObject exportObject in exportObjects)
             {
                 exportObject.transform.SetParent(transform, true);
@@ -100,6 +151,8 @@ namespace ExternalUnityRendering
 
                 Formatting jsonFormat = prettyPrint ? Formatting.Indented : Formatting.None;
 
+                bool succeeded = true;
+
                 JsonSerializerSettings serializerSettings =
                     new JsonSerializerSettings
                     {
@@ -110,22 +163,27 @@ namespace ExternalUnityRendering
                             {
                                 Debug.LogError(args.ErrorContext.Error.Message);
                                 args.ErrorContext.Handled = true;
+                                succeeded = false;
                             }
                         }
                     };
 
                 string state = JsonConvert.SerializeObject(scene, jsonFormat, serializerSettings);
 
+                if (!succeeded)
+                {
+                    Debug.Log("Aborting Export. Failed to serialize. See logs for cause.");
+                    return;
+                }
+
                 // NOTE a fancier way is Linq Aggregate
                 // bool success = _exportActions.Aggregate(true, (acc, kv) =>
-                //      (((kv.Key & exportMode) == kv.Key) && acc) || (kv.Value.Invoke(state) && acc));
-
-                bool succeeded = true;
+                //      ((kv.Key & exportMode) == kv.Key) && kv.Value.Invoke(state) && acc);
 
                 // for all the functions in export items
                 // check if the flag (key) is set, then invoke the function (value)
                 // if function returns false (i.e. failed)
-                foreach (KeyValuePair<ExportType, Func<string, bool>> item in _exportActions)
+                foreach (KeyValuePair<PostExportAction, Func<string, bool>> item in _exportActions)
                 {
                     if ((item.Key & exportMode) == item.Key)
                     {
@@ -144,8 +202,14 @@ namespace ExternalUnityRendering
                 }
 
             }
+            catch (JsonException je)
+            {
+                Debug.LogError($"Unexpected JSON Deserialization Error occurred!\n{je}");
+            }
             finally
             {
+                // unparent all gameobject so that exporting can be preformed
+                // again in the event of an unexpectedexception.
                 foreach (GameObject exportObject in exportObjects)
                 {
                     exportObject.transform.parent = null;

@@ -10,12 +10,20 @@ using UnityEngine.SceneManagement;
 
 namespace ExternalUnityRendering
 {
+    /// <summary>
+    /// Component that manages importing a scene and rendering images.
+    /// </summary>
     public class ImportScene : MonoBehaviour
     {
-        // Represents when the scene was exported.
-        // if null, then no import has occured
+        // TODO Make cameras use this time as their names
+        /// <summary>
+        /// Represents when the most recently imported scene was exported. If null, then no import has occured.
+        /// </summary>
         public DateTime? ExportTimestamp;
 
+        /// <summary>
+        /// Initialise all data.
+        /// </summary>
         private void Awake()
         {
             // Set timeScale to 0. Scene must always be static.
@@ -29,6 +37,11 @@ namespace ExternalUnityRendering
             client.ReceiveMessages((state) => ImportCurrentScene(state));
         }
 
+        /// <summary>
+        /// Import data from a file.
+        /// </summary>
+        /// <param name="importFile">The file to import data from.</param>
+        /// <param name="renderFolder">The folder to render images to. If null, uses the path specified in the JSON file.</param>
         public void ImportCurrentScene(FileManager importFile, DirectoryManager renderFolder)
         {
             if (importFile == null || string.IsNullOrEmpty(importFile.Path))
@@ -51,6 +64,14 @@ namespace ExternalUnityRendering
         // By default returns true. If fail, exporter just needs to ping server
         // and check if connection is refused. if not, then send a mostly blank object with
         // continue importing as false
+
+        /// <summary>
+        /// Import a scene from a json string.
+        /// </summary>
+        /// <param name="json">JSON holding data to import.</param>
+        /// <param name="renderPath">The path to render the scene to. If null, reads the
+        /// render path from file and uses that.</param>
+        /// <returns>Whether the receiver should continue receiving data or exit.</returns>
         public bool ImportCurrentScene(string json, DirectoryManager renderPath = null)
         {
             Debug.Log("Beginning Import.");
@@ -96,6 +117,7 @@ namespace ExternalUnityRendering
 
             try
             {
+                bool failed = false;
                 JsonSerializerSettings serializerSettings =
                 new JsonSerializerSettings
                 {
@@ -106,14 +128,24 @@ namespace ExternalUnityRendering
                         {
                             Debug.LogError(args.ErrorContext.Error.Message);
                             args.ErrorContext.Handled = true;
+                            failed = true;
                         }
                     }
                 };
 
+                if (failed)
+                {
+                    Debug.Log("Failed to deserialize.");
+                    return true;
+                }
+
+                // add check if blank state exists and return immediately
+                // or replace blank state with null and add that as an exit now
                 SceneState state = JsonConvert.DeserializeObject<SceneState>(json, serializerSettings);
 
                 if (state == null)
-                {
+                { // should never occur but who knows
+                    // if blank state replaced with null then this will be changed to return false
                     Debug.LogError("Failed to deserialize!");
                     return true;
                 }
@@ -125,9 +157,6 @@ namespace ExternalUnityRendering
                 // Reassign renderpath if override was provided
                 settings.RenderDirectory = renderPath?.Path ?? settings.RenderDirectory;
 
-
-                bool continueImporting = state.ContinueImporting;
-
                 Debug.LogFormat($"Imported state that was generated at { ExportTimestamp }." +
                     $"Camera settings are:\n\t{settings.RenderDirectory}\n\t" +
                     $"Resolution: {settings.RenderSize.x}x{settings.RenderSize.y}");
@@ -137,7 +166,7 @@ namespace ExternalUnityRendering
                     camera.RenderPath = settings.RenderDirectory;
                     camera.RenderImage(settings.RenderSize);
                 }
-                return continueImporting;
+                return true;
             }
             catch (JsonException je)
             {

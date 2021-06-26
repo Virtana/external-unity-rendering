@@ -8,7 +8,7 @@ namespace ExternalUnityRendering.UnityEditor
     public class ExportGUI : Editor
     {
         private string _exportFolder = "";
-        private ExportScene.ExportType _export = ExportScene.ExportType.None;
+        private ExportScene.PostExportAction _export = ExportScene.PostExportAction.Nothing;
 
         public override void OnInspectorGUI()
         {
@@ -20,13 +20,13 @@ namespace ExternalUnityRendering.UnityEditor
                 "WriteToFile: Write to file in a specified folder (or the persistent data path).\n\t" +
                 "Log: Write to the console.", MessageType.Info);
 
-            _export = (ExportScene.ExportType)
+            _export = (ExportScene.PostExportAction)
                 EditorGUILayout.EnumFlagsField("How to export Scene State: ", _export);
 
             // TODO add editor options for different export types
             // could have if statement with the different states and add the options
-            if ((_export & ExportScene.ExportType.WriteToFile)
-                == ExportScene.ExportType.WriteToFile)
+            if ((_export & ExportScene.PostExportAction.WriteToFile)
+                == ExportScene.PostExportAction.WriteToFile)
             {
                 if (GUILayout.Button("Select Export folder"))
                 {
@@ -39,8 +39,8 @@ namespace ExternalUnityRendering.UnityEditor
 
             if (GUILayout.Button("Export Now"))
             {
-                if ((_export & ExportScene.ExportType.WriteToFile)
-                    == ExportScene.ExportType.WriteToFile)
+                if ((_export & ExportScene.PostExportAction.WriteToFile)
+                    == ExportScene.PostExportAction.WriteToFile)
                 {
                     currentExporter.ExportFolder = _exportFolder;
                     if (currentExporter.ExportFolder == Application.persistentDataPath) {

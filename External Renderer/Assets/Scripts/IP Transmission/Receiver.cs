@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
@@ -10,16 +9,36 @@ namespace ExternalUnityRendering.TcpIp
 {
     public class Receiver
     {
+        /// <summary>
+        /// The host that this receiver should listen on.
+        /// </summary>
         private readonly IPHostEntry _host;
+
+        /// <summary>
+        /// The IP address that this receiver should listen on.
+        /// </summary>
         private readonly IPAddress _ipAddress;
+
+        /// <summary>
+        /// The endpoint that this receiver should bind to and listen on.
+        /// </summary>
         private readonly IPEndPoint _localEndPoint;
+
+        /// <summary>
+        /// The socket that will listen and accept connections.
+        /// </summary>
         private readonly Socket _listener;
 
         // TODO dispatch multiple listeners to collect data
         // Each listener would write received data into a system.collections.concurrent
         // maybe and have receivemessage check if there is data ready and run the callback
-        // There is a chance Accept may act wonky
+        // hopefully won't die.
 
+        /// <summary>
+        /// Initialise a receiver and bind and listen on the socket.
+        /// </summary>
+        /// <param name="port">The port to listen on.</param>
+        /// <param name="ipAddr">The IP address to listen on.</param>
         public Receiver(int port = 11000, string ipAddr = "localhost")
         {
             try
@@ -50,12 +69,17 @@ namespace ExternalUnityRendering.TcpIp
             }
         }
 
+        /// <summary>
+        /// Begin receiving data asynchronously.
+        /// </summary>
+        /// <param name="dataReceivedCallback">Func to be called each time data is received.
+        /// Returns whether the system should continue receiving data.</param>
         public async void ReceiveMessages(Func<string, bool> dataReceivedCallback)
         {
             string data = "";
             // byte cache for what is recieved
             byte[] bytes = new byte[1024];
-
+            
             bool continueReceiving = true;
             using (MemoryStream cache = new MemoryStream())
             {
@@ -142,10 +166,13 @@ namespace ExternalUnityRendering.TcpIp
                 }
             }
 
-            // Optionally Exit the application. If server is off, no point in render instance.
-            // This is ignored in editor.
+            // Exit the application in runtime, stop playing in editor.
+            // If server is off, no point in render instance.
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
             Application.Quit();
-            // TODO maybe exit play mode and delete the importer in editor??
+#endif
         }
     }
 }

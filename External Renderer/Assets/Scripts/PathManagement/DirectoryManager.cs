@@ -4,21 +4,25 @@ using UnityEngine;
 
 namespace ExternalUnityRendering.PathManagement
 {
-    // TODO see notes in FileManager.cs. Consider same for this.
+    /// <summary>
+    /// Class that manages directory creation and validation.
+    /// </summary>
     public class DirectoryManager
     {
+        /// <summary>
+        /// Internal reference to the file that this object manages.
+        /// </summary>
         private DirectoryInfo _directory;
+
+        /// <summary>
+        /// Whether this directory must be unique. Will automatically rename if necessary.
+        /// </summary>
         private readonly bool _createNewDirectory = false;
 
-        public DirectoryInfo Directory
-        {
-            get
-            {
-                _directory.Refresh();
-                return _directory;
-            }
-        }
-
+        /// <summary>
+        /// The path of the directory that this instance manages. It will not
+        /// assign invalid values. Defaults to the application persistent data path.
+        /// </summary>
         public string Path
         {
             get
@@ -71,12 +75,14 @@ namespace ExternalUnityRendering.PathManagement
                         + ioe.ToString());
                 }
 
-                // if directory failed to be assigned, then try a new one.
-                if (_directory == null)
+                if ((_directory == null) && value == Application.dataPath)
                 {
-                    // NOTE if this failed before, e.g. on parameterless cpnstructor
-                    // then its just trying again, but that would be a larger unity
-                    // issue
+                    // If this failed, big problem, but that is a unity problem
+                    Debug.LogError("Failed to reference persistent data path!");
+                }
+                else if (_directory == null)
+                {
+                    // if directory failed to be assigned, then try a new one.
                     _directory = new DirectoryInfo(Application.persistentDataPath);
                     Debug.LogWarning(
                         $"Defaulting to { Application.persistentDataPath}.");
@@ -84,18 +90,32 @@ namespace ExternalUnityRendering.PathManagement
             }
         }
 
+        /// <summary>
+        /// Create a directory given a path.
+        /// </summary>
+        /// <param name="path">Path to the directory.</param>
+        /// <param name="createNew">Whether the folder should be unique.</param>
         public DirectoryManager(string path, bool createNew = false)
         {
             _createNewDirectory = createNew;
             Path = path;
         }
 
+        /// <summary>
+        /// Create a manager for the application persistent data path
+        /// </summary>
         public DirectoryManager()
             : this(Application.persistentDataPath) { }
 
+        /// <summary>
+        /// Create a subdirectory in <paramref name="directory"/> named
+        /// <paramref name="directoryName"/>.
+        /// </summary>
+        /// <param name="directory">The main directory in which to create the subfolder.</param>
+        /// <param name="directoryName">The name of the subdirectory.</param>
+        /// <param name="createNew">Whether the folder should be unique.</param>
         public DirectoryManager(DirectoryManager directory, string directoryName,
             bool createNew = false)
             : this(System.IO.Path.Combine(directory.Path, directoryName), createNew) { }
-
     }
 }
