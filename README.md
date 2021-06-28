@@ -15,14 +15,14 @@ Run two instances of Unity in parallel. The “main” instance is responsible f
 1. [X] [Milestone 1](https://github.com/Virtana/external-unity-rendering#milestone-1--make-a-custom-camera-in-unity) : Make a custom camera.
 2. [X] [Milestone 2](https://github.com/Virtana/external-unity-rendering#milestone-2--identify-method-for-describing-scene-state) : Identify options for saving/communicating scene state.
 3. [X] [Milestone 3](https://github.com/Virtana/external-unity-rendering#milestone-3--implement-this-method-to-transfer-scenes-between-unity-instances) : Implement the chosen option.  
-    1. [X] [Milestone 3a]() : Save the scene to file.
-    2. [X] [Milestone 3b]() : Load the saved file in Unity.
-    3. [X] [Milestone 3c]() : Compare the original scene to the loaded scene
-    4. [X] [Milestone 3d]() : Programmatically communicate the scene.
+    1. [X] [Milestone 3a](https://github.com/Virtana/external-unity-rendering/tree/update-readme#milestone-3a--save-a-scene-to-a-file) : Save the scene to file.
+    2. [X] [Milestone 3b](https://github.com/Virtana/external-unity-rendering/tree/update-readme#milestone-3b--from-a-saved-file-successfully-load-a-scene-in-unity) : Load the saved file in Unity.
+    3. [X] [Milestone 3c](https://github.com/Virtana/external-unity-rendering/tree/update-readme#milestone-3c--compare-the-scenes) : Compare the original scene to the loaded scene
+    4. [X] [Milestone 3d](https://github.com/Virtana/external-unity-rendering/tree/update-readme#milestone-3d--send-a-scene-from-one-instance-to-another) : Programmatically communicate the scene.
 4. [X] [Milestone 4](https://github.com/Virtana/external-unity-rendering#milestone-4--render-an-image-from-one-unity-instance-using-another-instance) : Using the communication method developed in Milestone 3, use the camera from Milestone 1 to render an image.
-5. [ ] [Milestone 5]() : Merge Unity projects.
-6. [ ] [Milestone 6]() : Automate the process.
-7. [ ] [Milestone 7]() : Upgrade the design.
+5. [ ] [Milestone 5](https://github.com/Virtana/external-unity-rendering/tree/update-readme#milestone-5--merge-unity-projects) : Merge Unity projects.
+6. [ ] [Milestone 6](https://github.com/Virtana/external-unity-rendering/tree/update-readme#milestone-6--automate-the-process) : Automate the process.
+7. [ ] [Milestone 7](https://github.com/Virtana/external-unity-rendering/tree/update-readme#milestone-7--upgrade-the-design) : Upgrade the design.
 
 ## Milestones
 
