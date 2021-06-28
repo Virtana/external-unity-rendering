@@ -126,22 +126,6 @@ namespace ExternalUnityRendering
         }
 
         /// <summary>
-        /// SceneState to be serialised and transmitted as a closing signal
-        /// for the receiver instance.
-        /// </summary>
-        public SceneState JsonClosingSignal
-        {
-            get
-            {
-                return new SceneState
-                {
-                    ExportDate = DateTime.Now,
-                    ContinueImporting = false
-                };
-            }
-        }
-
-        /// <summary>
         /// Time at which the export was initiated.
         /// </summary>
         public DateTime ExportDate;
