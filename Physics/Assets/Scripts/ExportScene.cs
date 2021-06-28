@@ -218,5 +218,13 @@ namespace ExternalUnityRendering
                 Time.timeScale = 1;
             }
         }
+
+        private void Update()
+        {
+            if (Time.frameCount % 100 == 0)
+            {
+                ExportCurrentScene(PostExportAction.Log);
+            }
+        }
     }
 }
