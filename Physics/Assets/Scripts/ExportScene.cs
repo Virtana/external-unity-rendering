@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -61,6 +62,8 @@ namespace ExternalUnityRendering
             }
         }
 
+        private readonly JsonSerializer _serializer = new JsonSerializer();
+
         /// <summary>
         /// Dictionary relating the PostExportActions to the actions they represent.
         /// </summary>
@@ -79,6 +82,20 @@ namespace ExternalUnityRendering
                 {PostExportAction.WriteToFile, (state) => WriteStateToFile(state) },
                 {PostExportAction.Log, (state) => { Debug.Log($"JSON Data = { state }"); return true; } },
             };
+
+
+            _serializer.NullValueHandling = NullValueHandling.Ignore;
+            _serializer.Error += delegate (object sender, ErrorEventArgs args)
+            {
+                if (args.CurrentObject == args.ErrorContext.OriginalObject)
+                {
+                    Debug.LogError(args.ErrorContext.Error.Message);
+                    args.ErrorContext.Handled = true;
+                }
+            };
+
+            _serializer.Converters.Add(new ObjectStateConverter());
+            _serializer.Converters.Add(new SceneStateConverter());
         }
 
         /// <summary>
@@ -141,38 +158,51 @@ namespace ExternalUnityRendering
                 exportObject.transform.SetParent(transform, true);
             }
 
+            SceneState.CameraSettings render =
+                new SceneState.CameraSettings(renderResolution, renderDirectory);
+
+            Debug.Log("Exporting...");
+            SceneState scene = new SceneState(transform, render);
+
+            Task.Run(() =>
+            {
+                SerializeAndExport(scene, exportMode, prettyPrint);
+            });
+
+            // unparent all gameobject so that exporting can be preformed
+            // again in the event of an unexpectedexception.
+            foreach (GameObject exportObject in exportObjects)
+            {
+                exportObject.transform.parent = null;
+            }
+
+            Time.timeScale = 1;
+        }
+
+        private void SerializeAndExport(SceneState scene, PostExportAction exportMode, bool prettyPrint)
+        {
             try
             {
-                SceneState.CameraSettings render =
-                    new SceneState.CameraSettings(renderResolution, renderDirectory);
-
-                Debug.Log("Exporting...");
-                SceneState scene = new SceneState(transform, render);
-
-                Formatting jsonFormat = prettyPrint ? Formatting.Indented : Formatting.None;
+                _serializer.Formatting = prettyPrint ? Formatting.Indented : Formatting.None;
 
                 bool succeeded = true;
-
-                JsonSerializerSettings serializerSettings =
-                    new JsonSerializerSettings
-                    {
-                        // log error if reached a problematic point
-                        Error = delegate(object sender, ErrorEventArgs args)
-                        {
-                            if (args.CurrentObject == args.ErrorContext.OriginalObject)
-                            {
-                                Debug.LogError(args.ErrorContext.Error.Message);
-                                args.ErrorContext.Handled = true;
-                                succeeded = false;
-                            }
-                        }
-                    };
-
-                string state = JsonConvert.SerializeObject(scene, jsonFormat, serializerSettings);
-
-                if (!succeeded)
+                _serializer.Error += delegate (object sender, ErrorEventArgs args)
                 {
-                    Debug.Log("Aborting Export. Failed to serialize. See logs for cause.");
+                    succeeded = false;
+                };
+
+                System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                using (System.IO.StringWriter sw = new System.IO.StringWriter(sb))
+                using (JsonWriter writer = new JsonTextWriter(sw))
+                {
+                    _serializer.Serialize(writer, scene);
+                }
+
+                string state = sb.ToString();
+
+                if (!succeeded || state == null || !state.EndsWith("}"))
+                {
+                    Debug.Log("Aborting Export. Failed to serialize. Check logs for cause.");
                     return;
                 }
 
@@ -200,22 +230,10 @@ namespace ExternalUnityRendering
                     Debug.LogError($"FAILED: Export at { DateTime.Now } failed to complete fully. " +
                         "See logs for more details.");
                 }
-
             }
             catch (JsonException je)
             {
                 Debug.LogError($"Unexpected JSON Deserialization Error occurred!\n{je}");
-            }
-            finally
-            {
-                // unparent all gameobject so that exporting can be preformed
-                // again in the event of an unexpectedexception.
-                foreach (GameObject exportObject in exportObjects)
-                {
-                    exportObject.transform.parent = null;
-                }
-
-                Time.timeScale = 1;
             }
         }
 
