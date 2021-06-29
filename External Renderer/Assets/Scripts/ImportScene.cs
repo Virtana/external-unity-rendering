@@ -133,20 +133,13 @@ namespace ExternalUnityRendering
                     }
                 };
 
-                if (failed)
-                {
-                    Debug.Log("Failed to deserialize.");
-                    return true;
-                }
-
                 // add check if blank state exists and return immediately
                 // or replace blank state with null and add that as an exit now
                 SceneState state = JsonConvert.DeserializeObject<SceneState>(json, serializerSettings);
 
-                if (state == null)
-                { // should never occur but who knows
-                    // if blank state replaced with null then this will be changed to return false
-                    Debug.LogError("Failed to deserialize!");
+                if (failed || state == null)
+                {
+                    Debug.Log("Failed to deserialize.");
                     return true;
                 }
 

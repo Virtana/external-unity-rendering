@@ -236,13 +236,5 @@ namespace ExternalUnityRendering
                 Debug.LogError($"Unexpected JSON Deserialization Error occurred!\n{je}");
             }
         }
-
-        private void Update()
-        {
-            if (Time.frameCount % 100 == 0)
-            {
-                ExportCurrentScene(PostExportAction.Log);
-            }
-        }
     }
 }
