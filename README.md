@@ -12,15 +12,17 @@ Run two instances of Unity in parallel. The “main” instance is responsible f
 
 ## Progress
 
-1. [X] Milestone 1 : Make a custom camera.
-2. [X] Milestone 2 : Identify options for saving/communicating scene state.
-3. [X] Milestone 3 : Implement the chosen option.  
-    1. [X] Save the scene to file.
-    2. [X] Load the saved file in Unity.
-    3. [X] Compare the original scene to the loaded scene
-    4. [X] Programmatically communicate the scene.
-4. [X] Milestone 4 : Using the communication method developed in Milestone 3, use the camera from Milestone 1 to render an image.
-5. [ ] Milestone 5 : Upgrade the design.
+1. [X] [Milestone 1](https://github.com/Virtana/external-unity-rendering#milestone-1--make-a-custom-camera-in-unity) : Make a custom camera.
+2. [X] [Milestone 2](https://github.com/Virtana/external-unity-rendering#milestone-2--identify-method-for-describing-scene-state) : Identify options for saving/communicating scene state.
+3. [X] [Milestone 3](https://github.com/Virtana/external-unity-rendering#milestone-3--implement-this-method-to-transfer-scenes-between-unity-instances) : Implement the chosen option.  
+    1. [X] [Milestone 3a](https://github.com/Virtana/external-unity-rendering/tree/update-readme#milestone-3a--save-a-scene-to-a-file) : Save the scene to file.
+    2. [X] [Milestone 3b](https://github.com/Virtana/external-unity-rendering/tree/update-readme#milestone-3b--from-a-saved-file-successfully-load-a-scene-in-unity) : Load the saved file in Unity.
+    3. [X] [Milestone 3c](https://github.com/Virtana/external-unity-rendering/tree/update-readme#milestone-3c--compare-the-scenes) : Compare the original scene to the loaded scene
+    4. [X] [Milestone 3d](https://github.com/Virtana/external-unity-rendering/tree/update-readme#milestone-3d--send-a-scene-from-one-instance-to-another) : Programmatically communicate the scene.
+4. [X] [Milestone 4](https://github.com/Virtana/external-unity-rendering#milestone-4--render-an-image-from-one-unity-instance-using-another-instance) : Using the communication method developed in Milestone 3, use the camera from Milestone 1 to render an image.
+5. [ ] [Milestone 5](https://github.com/Virtana/external-unity-rendering/tree/update-readme#milestone-5--merge-unity-projects) : Merge Unity projects.
+6. [ ] [Milestone 6](https://github.com/Virtana/external-unity-rendering/tree/update-readme#milestone-6--automate-the-process) : Automate the process.
+7. [ ] [Milestone 7](https://github.com/Virtana/external-unity-rendering/tree/update-readme#milestone-7--upgrade-the-design) : Upgrade the design.
 
 ## Milestones
 
@@ -43,19 +45,19 @@ Current options include:
 
 Transfer a scene from the main instance to the secondary one, then have the secondary instance render the scene. This could mean saving the scene to disk in a specific format and loading it with the secondary instance. Alternatively, it could mean transferring the data over TCP/IP to the secondary instance.
 
-#### Save a scene to a file
+#### Milestone 3a : Save a scene to a file
 
 Use the method chosen to save the state of a current scene to disk.
 
-#### From a saved file, successfully load a scene in Unity
+#### Milestone 3b : From a saved file, successfully load a scene in Unity
 
 From the file saved on disk, load the state of a scene into Unity and ensure all objects are loaded in correctly.
 
-#### Compare the scenes
+#### Milestone 3c : Compare the scenes
 
 Compare the scene from which the file was saved, and the scene that represents the loaded file. Confirm they are identical. This can be done visually at first, but also needs to be checked programmatically.
 
-#### Send a scene from one instance to another
+#### Milestone 3d : Send a scene from one instance to another
 
 Transfer the state of a scene from one instance to another while they are both running. This should ideally be done via TCP/IP communication of some kind.
 
@@ -63,7 +65,15 @@ Transfer the state of a scene from one instance to another while they are both r
 
 This milestone involves the method implemented in Milestone 3, as well as the camera/scene constructed in Milestone 1. Communicate the state of one Unity instance to another, and render/save an image reflecting this state in the other instance.
 
-### Milestone 5 : Upgrade the design
+### Milestone 5 : Merge Unity Projects
+
+Integrate the two projects into one such that the project can be built for the two configurations (physics or renderer).
+
+### Milestone 6 : Automate the process
+
+The process of periodically saving the physical state of the scene and rendering/saving it externally should be made automatic. Ideally, this involves writing a bash script which, given a Linux build of the Unity project, starts and manages the process.
+
+### Milestone 7 : Upgrade the design
 
 Design improvements may include (but are not limited to):
 
@@ -74,4 +84,5 @@ Design improvements may include (but are not limited to):
 - Extending the SceneState and ObjectState classes (which are used to store the scene info) by:
     - Adding support for Components
     - Adding Components and GameObjects that don't exist
-    - Rendering on Multiple Cameras (possibly in a multithreaded manner)
+    - Rendering on Multiple Cameras in a multithreaded manner (possibly using Jobs)
+- Time Acceleration or using Physics.Simulate to cut out extra time spent simulating.
