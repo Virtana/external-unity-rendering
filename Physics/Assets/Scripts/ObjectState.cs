@@ -186,18 +186,18 @@ namespace ExternalUnityRendering
 
     public class SceneStateConverter : PartialConverter<SceneState>
     {
+        public override bool CanRead
+        {
+            get { return false; }
+        }
+
         private readonly ObjectStateConverter _stateConverter = new ObjectStateConverter();
         private readonly Vector2IntConverter _vector2IntConverter = new Vector2IntConverter();
         private readonly IsoDateTimeConverter _dateTimeConverter = new IsoDateTimeConverter();
 
         protected override void ReadValue(ref SceneState value, string name, JsonReader reader, JsonSerializer serializer)
         {
-            switch (name)
-            {
-                case nameof(value.ExportDate):
-                    value.ExportDate = reader.ReadAsDateTime() ?? DateTime.MinValue;
-                    break;
-            }
+            throw new NotImplementedException();
         }
 
         protected override void WriteJsonProperties(JsonWriter writer, SceneState value, JsonSerializer serializer)
@@ -228,6 +228,10 @@ namespace ExternalUnityRendering
     {
         private readonly Vector3Converter _vector3Converter = new Vector3Converter();
         private readonly QuaternionConverter _quaternionConverter = new QuaternionConverter();
+
+        public override bool CanRead {
+            get { return false; }
+        }
 
         protected override void ReadValue(ref ObjectState value, string name, JsonReader reader, JsonSerializer serializer)
         {

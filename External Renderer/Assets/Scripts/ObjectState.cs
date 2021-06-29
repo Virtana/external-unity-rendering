@@ -1,6 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Newtonsoft.Json;
+using Newtonsoft.Json.UnityConverters;
+using Newtonsoft.Json.UnityConverters.Math;
+using Newtonsoft.Json.Converters;
+using System.IO;
 
 namespace ExternalUnityRendering
 {
@@ -9,6 +14,7 @@ namespace ExternalUnityRendering
     /// It is used for Serialization Purposes.
     /// </summary>
     [Serializable]
+    [JsonConverter(typeof(ObjectStateConverter))]
     public class ObjectState
     {
         /// <summary>
@@ -108,6 +114,7 @@ namespace ExternalUnityRendering
     /// It is used for Serialization purposes.
     /// </summary>
     [Serializable]
+    [JsonConverter(typeof(SceneStateConverter))]
     public class SceneState
     {
         /// <summary>
@@ -122,22 +129,6 @@ namespace ExternalUnityRendering
             {
                 RenderSize = size;
                 RenderDirectory = directory;
-            }
-        }
-
-        /// <summary>
-        /// SceneState to be serialised and transmitted as a closing signal
-        /// for the receiver instance.
-        /// </summary>
-        public SceneState JsonClosingSignal
-        {
-            get
-            {
-                return new SceneState
-                {
-                    ExportDate = DateTime.Now,
-                    ContinueImporting = false
-                };
             }
         }
 
@@ -191,5 +182,88 @@ namespace ExternalUnityRendering
         /// GameObject.</param>
         public SceneState(Transform transform, CameraSettings settings)
             : this(new ObjectState(transform), settings) { }
+    }
+
+    public class SceneStateConverter : PartialConverter<SceneState>
+    {
+        public override bool CanRead
+        {
+            get { return false; }
+        }
+
+        private readonly ObjectStateConverter _stateConverter = new ObjectStateConverter();
+        private readonly Vector2IntConverter _vector2IntConverter = new Vector2IntConverter();
+        private readonly IsoDateTimeConverter _dateTimeConverter = new IsoDateTimeConverter();
+
+        protected override void ReadValue(ref SceneState value, string name, JsonReader reader, JsonSerializer serializer)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override void WriteJsonProperties(JsonWriter writer, SceneState value, JsonSerializer serializer)
+        {
+            writer.WritePropertyName(nameof(value.ExportDate));
+            _dateTimeConverter.WriteJson(writer, value.ExportDate, serializer);
+
+            writer.WritePropertyName(nameof(value.SceneRoot));
+            _stateConverter.WriteJson(writer, value.SceneRoot, serializer);
+
+            writer.WritePropertyName(nameof(value.RendererSettings));
+            writer.WriteStartObject();
+            {
+                writer.WritePropertyName(nameof(value.RendererSettings.RenderSize));
+                _vector2IntConverter.WriteJson(writer, value.RendererSettings.RenderSize, serializer);
+
+                writer.WritePropertyName(nameof(value.RendererSettings.RenderDirectory));
+                writer.WriteValue(value.RendererSettings.RenderDirectory);
+            }
+            writer.WriteEndObject();
+
+            writer.WritePropertyName(nameof(value.ContinueImporting));
+            writer.WriteValue(value.ContinueImporting);
+        }
+    }
+
+    public class ObjectStateConverter : PartialConverter<ObjectState>
+    {
+        private readonly Vector3Converter _vector3Converter = new Vector3Converter();
+        private readonly QuaternionConverter _quaternionConverter = new QuaternionConverter();
+
+        public override bool CanRead {
+            get { return false; }
+        }
+
+        protected override void ReadValue(ref ObjectState value, string name, JsonReader reader, JsonSerializer serializer)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override void WriteJsonProperties(JsonWriter writer, ObjectState value, JsonSerializer serializer)
+        {
+            writer.WritePropertyName(nameof(value.Name));
+            writer.WriteValue(value.Name);
+
+            writer.WritePropertyName(nameof(value.ObjectTransform));
+            writer.WriteStartObject();
+            {
+                writer.WritePropertyName(nameof(value.ObjectTransform.Position));
+                _vector3Converter.WriteJson(writer, value.ObjectTransform.Position, serializer);
+                writer.WritePropertyName(nameof(value.ObjectTransform.Rotation));
+                _quaternionConverter.WriteJson(writer, value.ObjectTransform.Rotation, serializer);
+                writer.WritePropertyName(nameof(value.ObjectTransform.Scale));
+                _vector3Converter.WriteJson(writer, value.ObjectTransform.Scale, serializer);
+            }
+            writer.WriteEndObject();
+
+            writer.WritePropertyName(nameof(value.Children));
+            writer.WriteStartArray();
+            foreach (ObjectState child in value.Children)
+            {
+                writer.WriteStartObject();
+                WriteJsonProperties(writer, child, serializer);
+                writer.WriteEndObject();
+            }
+            writer.WriteEndArray();
+        }
     }
 }
