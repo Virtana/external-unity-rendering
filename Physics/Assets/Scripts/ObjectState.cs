@@ -12,7 +12,7 @@ namespace ExternalUnityRendering
     public class ObjectState
     {
         /// <summary>
-        /// Struct representing the base parameters of the 
+        /// Struct representing the base parameters of the
         /// Transfrom Component.
         /// </summary>
         public struct TransformState
@@ -50,7 +50,7 @@ namespace ExternalUnityRendering
         }
 
         /// <summary>
-        /// Create an ObjectState representing the GameObject using its 
+        /// Create an ObjectState representing the GameObject using its
         /// transform.
         /// </summary>
         /// <param name="transform">The transform of the gameObject.</param>
@@ -120,7 +120,7 @@ namespace ExternalUnityRendering
         public DateTime ExportDate;
 
         /// <summary>
-        /// An object state whose children represent the root objects 
+        /// An object state whose children represent the root objects
         /// </summary>
         public ObjectState SceneRoot;
 
@@ -138,7 +138,7 @@ namespace ExternalUnityRendering
         /// <summary>
         /// Create a SceneState with the SceneRoot as <paramref name="root"/>.
         /// </summary>
-        /// <param name="root">The objectState whose children represent the 
+        /// <param name="root">The objectState whose children represent the
         /// root GameObjects.</param>
         /// <param name="settings">Settings for the renderer instance.</param>
         public SceneState(ObjectState root, CameraSettings settings)
@@ -149,10 +149,10 @@ namespace ExternalUnityRendering
         }
 
         /// <summary>
-        /// Create a new SceneState and create a new ObjectState using 
+        /// Create a new SceneState and create a new ObjectState using
         /// <paramref name="transform"/> and assign it as the scene root.
         /// </summary>
-        /// <param name="transform">The Transform of the root 
+        /// <param name="transform">The Transform of the root
         /// GameObject.</param>
         public SceneState(Transform transform, CameraSettings settings)
             : this(new ObjectState(transform), settings) { }

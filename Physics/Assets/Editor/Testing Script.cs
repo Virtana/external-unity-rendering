@@ -1,11 +1,10 @@
 ﻿using ExternalUnityRendering.CameraUtilites;
+using ExternalUnityRendering.PathManagement;
+using System.Collections.Generic;
+using System.Text;
+using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using ExternalUnityRendering.PathManagement;
-using System.Text;
-using System.Linq;
 
 namespace ExternalUnityRendering.UnityEditor
 {
@@ -26,17 +25,13 @@ namespace ExternalUnityRendering.UnityEditor
         private Vector2 _minMaxForce = new Vector2(1, 10);
         private Vector2Int _renderResolution = new Vector2Int(1920, 1080);
         private Vector2Int _rendererOutputResolution = new Vector2Int(1920, 1080);
-        private string _rendererOutputFolder = "";
+        private string _rendererOutputFolder = System.IO.Directory.GetCurrentDirectory();
 
         [MenuItem("Exporter Testing/Test Options")]
         static void Init()
         {
             TesterGUI window = GetWindow<TesterGUI>();
             window.Show();
-            // Assign Default folders
-            _rendererOutputFolder = System.IO.Directory.GetCurrentDirectory();
-            _renderFolder = _rendererOutputFolder; 
-            _exportFolder = _rendererOutputFolder;
         }
 
         // HACK Not very optimized. Includes lots of GUI workarounds
@@ -61,7 +56,7 @@ namespace ExternalUnityRendering.UnityEditor
             _millisecondsDelay = EditorGUILayout.IntSlider(label, _millisecondsDelay, 100, 10000);
 
             GUIContent optionLabel = new GUIContent("Export Options: ");
-            GUIContent optionListLabel = 
+            GUIContent optionListLabel =
                 new GUIContent("None : Attempt to serialize but do nothing with the data.\n" +
                 "Transmit: Attempt to transmit over TCP/IP.\n" +
                 "WriteToFile: Write to file in a specified folder (or the persistent data path).\n" +
@@ -158,6 +153,11 @@ namespace ExternalUnityRendering.UnityEditor
                 // validate options and trigger explode
                 // also have confirm dialog showing the options
 
+                if (string.IsNullOrEmpty(_exportFolder))
+                {
+                    _exportFolder = System.IO.Directory.GetCurrentDirectory();
+                }
+
                 DirectoryManager exportFolder = new DirectoryManager(_exportFolder);
                 if (((_exportType & ExportScene.ExportType.WriteToFile)
                     == ExportScene.ExportType.WriteToFile)
@@ -200,7 +200,7 @@ namespace ExternalUnityRendering.UnityEditor
                     options.AppendLine("Explosion Radius: " + _explosionRadius);
                     options.AppendLine("Explosive Force: " + _explosionForce);
                     options.AppendLine("Explosive Force Upwards Modifier: " + _explosionUpwardsModifier);
-                } 
+                }
                 else
                 {
                     options.AppendLine("Force Type: " + _forceType);

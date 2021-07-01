@@ -100,7 +100,7 @@ namespace ExternalUnityRendering.PathManagement
             // HACK no exceptions rn because if it does, its likely a pathtoolong exception
             // May need to consider how it works
             // Create a near-guaranteed valid and unique file. See the first
-            // comment on https://stackoverflow.com/a/11938280 
+            // comment on https://stackoverflow.com/a/11938280
             FileInfo file = new FileInfo(
                 System.IO.Path.Combine(Application.persistentDataPath,
                 (
@@ -113,10 +113,10 @@ namespace ExternalUnityRendering.PathManagement
         }
 
         // HACK Tries to detect if path is relative (a filename) or absolute
-        public FileManager(string path, bool createNew = false) 
+        public FileManager(string path, bool createNew = false)
         {
             _createNew = createNew;
-            // HACK May not be best implementation for windows, can't find .net source 
+            // HACK May not be best implementation for windows, can't find .net source
             // for Windows implementation in .net 5. Maybe not needed?
             if (System.IO.Path.IsPathRooted(path))
             {
@@ -129,13 +129,13 @@ namespace ExternalUnityRendering.PathManagement
             }
         }
 
-        public FileManager(DirectoryManager directory, string name, bool createNew = false) 
+        public FileManager(DirectoryManager directory, string name, bool createNew = false)
         {
             _createNew = createNew;
             Path = System.IO.Path.Combine(directory.Path, name);
         }
 
-        public FileManager(string folder, string name, bool createNew = false) 
+        public FileManager(string folder, string name, bool createNew = false)
             : this(new DirectoryManager(folder), name, createNew) { }
 
         // OPTIONAL add generic serialization options
@@ -217,7 +217,7 @@ namespace ExternalUnityRendering.PathManagement
             catch (ArgumentOutOfRangeException aoore)
             {
                 // normally would trigger when the second and/or third params to
-                // stream.Write are negative, but that **should** not be possible. 
+                // stream.Write are negative, but that **should** not be possible.
                 // Multithreading issue??
                 Debug.LogError($"Could not write data in array to stream.\n{ aoore }");
             }
@@ -284,7 +284,7 @@ namespace ExternalUnityRendering.PathManagement
                 // if unity doesn't do it well ¯\_(ツ)_/¯
                 Debug.LogError("Catastrophic error. Out of memory when trying to " +
                     $"read from { _file.FullName }.\n{ oome }");
-                throw; 
+                throw;
             }
 
             return data.ToString();

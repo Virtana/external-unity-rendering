@@ -2,6 +2,7 @@
 using ExternalUnityRendering.PathManagement;
 using ExternalUnityRendering.TcpIp;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -43,8 +44,6 @@ namespace ExternalUnityRendering
             client.ReceiveMessage(ImportCurrentScene);
         }
 
-        // Refactored to allow for the caller to manage where the data files
-        // this is meant for testing purposes
         public void ImportCurrentScene(FileManager importFile)
         {
             if (importFile == null || string.IsNullOrEmpty(importFile.Path))
@@ -60,6 +59,7 @@ namespace ExternalUnityRendering
                 Debug.LogError($"No data in file { importFile.Path }");
                 return;
             }
+
             ImportCurrentScene(json);
         }
 
@@ -73,30 +73,29 @@ namespace ExternalUnityRendering
             currentScene.GetRootGameObjects(importObjects);
             importObjects.RemoveAll((obj) => obj == gameObject);
 
+            if (importObjects == null || importObjects.Count == 0)
+            {
+                Debug.LogWarning("Empty object List.");
+                return;
+            }
+
             Camera[] cameras = FindObjectsOfType<Camera>();
             List<CustomCamera> customCameras = new List<CustomCamera>();
+
+            // add custom cameras to all cameras in the scene and save them
+            foreach (Camera camera in cameras)
+            {
+                if (!camera.gameObject.TryGetComponent(out CustomCamera customCamera))
+                {
+                    customCamera = camera.gameObject.AddComponent<CustomCamera>();
+                }
+                customCameras.Add(customCamera);
+            }
 
             if (cameras.Length == 0)
             {
                 // If cam is empty, then no cameras were found.
                 Debug.LogError("Missing Camera! Importer cannot render from this.");
-                return;
-            }
-
-            // add custom cameras to all cameras in the scene and save them
-            foreach (Camera camera in cameras)
-            {
-                CustomCamera customCam = camera.gameObject.GetComponent<CustomCamera>();
-                if (customCam == null)
-                {
-                    customCam = camera.gameObject.AddComponent<CustomCamera>();
-                }
-                customCameras.Add(customCam);
-            }
-
-            if (importObjects == null || importObjects.Count == 0)
-            {
-                Debug.LogWarning("Empty object List.");
                 return;
             }
 
@@ -107,34 +106,52 @@ namespace ExternalUnityRendering
 
             Debug.Log("Deserializing...");
 
-            SceneState state = JsonConvert.DeserializeObject<SceneState>(json);
- 
-            if (state == null)
+            try
             {
-                Debug.LogError("Failed to deserialize!");
-                return;
+                JsonSerializerSettings serializerSettings =
+                new JsonSerializerSettings
+                {
+                    // log error if reached a problematic point
+                    Error = delegate (object sender, ErrorEventArgs args)
+                    {
+                        if (args.CurrentObject == args.ErrorContext.OriginalObject)
+                        {
+                            Debug.LogError(args.ErrorContext.Error.Message);
+                            args.ErrorContext.Handled = true;
+                        }
+                    }
+                };
+
+                SceneState state = JsonConvert.DeserializeObject<SceneState>(json, serializerSettings);
+
+                if (state == null)
+                {
+                    Debug.LogError("Failed to deserialize!");
+                    return;
+                }
+
+                state.SceneRoot.UnpackData(transform);
+                ExportTimestamp = state.ExportDate;
+                SceneState.CameraSettings settings = state.RendererSettings;
+
+                Debug.LogFormat($"Imported state that was generated at { ExportTimestamp }." +
+                    $"Camera settings are:\n\t{settings.RenderDirectory}\n\t" +
+                    $"Resolution: {settings.RenderSize.x}x{settings.RenderSize.y}");
+
+                foreach (CustomCamera camera in customCameras)
+                {
+                    camera.RenderPath = settings.RenderDirectory;
+                    camera.RenderImage(settings.RenderSize);
+                }
             }
-
-            state.SceneRoot.UnpackData(transform);
-            ExportTimestamp = state.ExportDate;
-            SceneState.CameraSettings settings = state.RendererSettings;
-
-            Debug.LogFormat($"Imported state that was generated at { ExportTimestamp }");
-
-            // TODO test this
-            foreach (CustomCamera camera in customCameras) {
-                camera.RenderPath = settings.RenderDirectory;
-                camera.RenderImage(settings.RenderSize);
-            }
-
-            // FindObjectOfType<CustomCamera>()
-            //    .RenderImage(ImageSaveFolder, new Vector2Int(1920,1080));
-
-            foreach (GameObject importObject in importObjects)
+            finally
             {
-                importObject.transform.parent = null;
+                // unparent in case new objects get added
+                foreach (GameObject importObject in importObjects)
+                {
+                    importObject.transform.parent = null;
+                }
             }
-            // unparent in case new objects get added
         }
     }
 }
