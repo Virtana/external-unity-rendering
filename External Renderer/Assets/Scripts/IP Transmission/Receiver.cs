@@ -103,11 +103,13 @@ namespace ExternalUnityRendering.TcpIp
 
                             cache.Seek(0, SeekOrigin.Begin);
 
-                            using (StreamReader reader = new StreamReader(cache))
+                            using (StreamReader reader = new StreamReader(cache, System.Text.Encoding.ASCII, false, 1024, true))
                             {
                                 data = reader.ReadToEnd();
                             }
 
+                            cache.Seek(0, SeekOrigin.Begin);
+                            cache.SetLength(0);
                             return true;
                         }
                         catch (SocketException se)

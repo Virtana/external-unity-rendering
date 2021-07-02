@@ -211,5 +211,44 @@ namespace ExternalUnityRendering.TcpIp
 
             return true;
         }
+
+// intended for debug testing only
+// if async communication is not working properly
+#if UNITY_EDITOR || DEBUG || DEVELOPMENT_BUILD
+        public bool Send(string data)
+        {
+            // Connect the socket to the remote endpoint. Catch any errors.
+            try
+            {
+                // Connect to Remote EndPoint
+                _sender.Connect(_remoteEndPoint);
+
+                Debug.Log($"Socket connected to {_sender.RemoteEndPoint}");
+
+                // Encode the data string into a byte array.
+                List<ArraySegment<byte>> msg = ConvertToBuffer(data);
+
+                // Send the data through the socket.
+                int bytesSent = _sender.Send(msg);
+
+                // Release the socket.
+                _sender.Close();
+                return true;
+            }
+            catch (ArgumentNullException ane)
+            {
+                Debug.LogFormat("ArgumentNullException : {0}", ane.ToString());
+            }
+            catch (SocketException se)
+            {
+                Debug.LogFormat("SocketException : {0}", se.ToString());
+            }
+            catch (Exception e)
+            {
+                Debug.LogFormat("Unexpected exception : {0}", e.ToString());
+            }
+            return false;
+        }
     }
+#endif
 }
