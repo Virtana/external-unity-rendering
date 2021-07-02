@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace ExternalUnityRendering.UnityEditor
 {
+#if RENDERER
     /// <summary>
     /// Class allowing quick imports + renders of scenes from the editor.
     /// </summary>
@@ -63,4 +64,5 @@ namespace ExternalUnityRendering.UnityEditor
             }
         }
     }
+#endif
 }

@@ -10,6 +10,7 @@ using UnityEngine.SceneManagement;
 
 namespace ExternalUnityRendering
 {
+#if PHYSICS
     /// <summary>
     /// Component that manages exporting the scene.
     /// </summary>
@@ -243,4 +244,5 @@ namespace ExternalUnityRendering
             }
         }
     }
+#endif
 }
