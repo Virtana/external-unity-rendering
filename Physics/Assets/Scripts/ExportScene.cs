@@ -116,9 +116,9 @@ namespace ExternalUnityRendering
 
                 string state = JsonConvert.SerializeObject(scene, jsonFormat, serializerSettings);
 
-                // NOTE would have loved to use Linq Aggregate
+                // NOTE a fancier way is Linq Aggregate
                 // bool success = _exportActions.Aggregate(true, (acc, kv) =>
-                //      ((kv.Key & exportMode) == kv.Key) && kv.Value.Invoke(state) && acc);
+                //      (((kv.Key & exportMode) == kv.Key) && acc) || (kv.Value.Invoke(state) && acc));
 
                 bool succeeded = true;
 

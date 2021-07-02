@@ -1,5 +1,6 @@
 ﻿using ExternalUnityRendering.PathManagement;
 using System;
+using System.IO;
 using UnityEngine;
 
 namespace ExternalUnityRendering.CameraUtilites
@@ -28,14 +29,23 @@ namespace ExternalUnityRendering.CameraUtilites
             }
             set
             {
-                _renderPath = new DirectoryManager($@"{ value }\Renders\{name}", true);
+                // HACK Export to same folders for same name
+                // Can't differentiate between folders created by this and folders
+                // created by something else
+                if (!string.IsNullOrEmpty(value))
+                {
+                    _renderPath = new DirectoryManager(Path.Combine(value, "Renders", name));
+                }
             }
         }
 
+        /// <summary>
+        /// Executes when the CustomCamera is created. Used for initializing data.
+        /// </summary>
         private void Awake()
         {
             // create a new camera directory in the subdirectory renders
-            _renderPath = new DirectoryManager($@"Renders\{name}", true);
+            _renderPath = new DirectoryManager(Path.Combine("Renders", name), true);
 
             // Importer will attach this to cameras right before importing.
             // so can delete if accidentally attached
@@ -47,7 +57,7 @@ namespace ExternalUnityRendering.CameraUtilites
                 Destroy(this);
             }
 
-            // TODO Uncomment this or provide some sort of control to turn it on
+            // TODO Uncomment this and provide some sort of control to turn it on
             // should be off by default
             // _camera.enabled = false;
         }
@@ -66,7 +76,7 @@ namespace ExternalUnityRendering.CameraUtilites
             if (file == null)
             {
                 file = new FileManager();
-                Debug.LogError($@"File {_renderPath.Path}\{filename} could not be " +
+                Debug.LogError($@"File {_renderPath.Path}/{filename} could not be " +
                     $"created. Using {file.Path} instead.");
             }
 

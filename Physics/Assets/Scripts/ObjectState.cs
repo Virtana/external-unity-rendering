@@ -29,9 +29,20 @@ namespace ExternalUnityRendering
             }
         }
 
-        // Variables representing the properties
+        /// <summary>
+        /// Name of the GameObject represented.
+        /// </summary>
         public string Name;
+
+        /// <summary>
+        /// The worldspace transform values (Position, Rotation, Scale) of the
+        /// GameObject.
+        /// </summary>
         public TransformState ObjectTransform;
+
+        /// <summary>
+        /// The list of children of this transform
+        /// </summary>
         public List<ObjectState> Children;
 
         /// <summary>
@@ -100,7 +111,7 @@ namespace ExternalUnityRendering
     public class SceneState
     {
         /// <summary>
-        /// Struct that represents the general settings for the cameras
+        /// Struct that represents settings for the CustomCameras
         /// </summary>
         public struct CameraSettings
         {
@@ -130,6 +141,12 @@ namespace ExternalUnityRendering
         public CameraSettings RendererSettings;
 
         /// <summary>
+        /// Indicator for whether the rendering instance should continue
+        /// running after importing this object.
+        /// </summary>
+        public bool ContinueImporting;
+
+        /// <summary>
         /// Create a default SceneState with a blank ObjectState.
         /// </summary>
         public SceneState()
@@ -141,11 +158,13 @@ namespace ExternalUnityRendering
         /// <param name="root">The objectState whose children represent the
         /// root GameObjects.</param>
         /// <param name="settings">Settings for the renderer instance.</param>
-        public SceneState(ObjectState root, CameraSettings settings)
+        /// <param name="continueExporting">Whether to halt the Renderer Instance.</param>
+        public SceneState(ObjectState root, CameraSettings settings, bool continueExporting = true)
         {
             ExportDate = DateTime.Now;
             SceneRoot = root;
             RendererSettings = settings;
+            ContinueImporting = continueExporting;
         }
 
         /// <summary>

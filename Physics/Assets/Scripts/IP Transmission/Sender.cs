@@ -13,7 +13,7 @@ namespace ExternalUnityRendering.TcpIp
         private readonly IPAddress _ipAddress;
         private readonly IPEndPoint _remoteEndPoint;
         private readonly Socket _sender;
-        private readonly int _maxRetries;
+        private readonly int _maxAttempts;
         private readonly int _chunkSize = 50;
 
         // Helper function to chunk data for sending
@@ -35,7 +35,7 @@ namespace ExternalUnityRendering.TcpIp
         {
             try
             {
-                _maxRetries = maxRetries;
+                _maxAttempts = maxRetries;
                 // Connect to a Remote server
                 // Get Host IP Address that is used to establish a connection
                 // In this case, we get one IP address of localhost that is IP : 127.0.0.1
@@ -60,41 +60,6 @@ namespace ExternalUnityRendering.TcpIp
             }
         }
 
-        [Obsolete("Use SendAsync instead.")]
-        public void Send(string data)
-        {
-            // Connect the socket to the remote endpoint. Catch any errors.
-            try
-            {
-                // Connect to Remote EndPoint
-                _sender.Connect(_remoteEndPoint);
-
-                Debug.LogFormat("Socket connected to {0}",
-                    _sender.RemoteEndPoint.ToString());
-
-                // Encode the data string into a byte array.
-                byte[] msg = Encoding.ASCII.GetBytes(data);
-
-                // Send the data through the socket.
-                int bytesSent = _sender.Send(msg);
-
-                _sender.Close();
-            }
-            catch (ArgumentNullException ane)
-            {
-                Debug.LogErrorFormat("ArgumentNullException : {0}", ane.ToString());
-            }
-            catch (SocketException se)
-            {
-                Debug.LogErrorFormat("SocketException : {0}", se.ToString());
-            }
-            catch (Exception e)
-            {
-                Debug.LogErrorFormat("Unexpected exception : {0}", e.ToString());
-            }
-        }
-
-        // TODO add struct with callback for handling responses.
         private struct SendState
         {
             public SocketError errorCode;
@@ -116,7 +81,7 @@ namespace ExternalUnityRendering.TcpIp
             }
             if (!result.IsCompleted)
             {
-                Debug.LogWarning("Transmission is not completed. Data may not be " +
+                Debug.LogWarning("Transmission is not completed. Data may not have been " +
                     "handled correctly.");
             }
             Socket socket = state.socket;
@@ -133,8 +98,8 @@ namespace ExternalUnityRendering.TcpIp
                 return false;
             }
 
-            int retryCount = 0;
-            while (retryCount < _maxRetries)
+            int connectionAttempts = 0;
+            while (connectionAttempts < _maxAttempts)
             {
                 try
                 {
@@ -144,14 +109,14 @@ namespace ExternalUnityRendering.TcpIp
                 catch (SocketException se)
                 {
                     Debug.LogError("Socket Exception occurred while trying to connect! " +
-                        $"Retrying {++retryCount}/{_maxRetries}. " +
                         $"Error: {se.SocketErrorCode}. " +
                         $"Error Code: {se.ErrorCode}.");
-                    if (se.ErrorCode != 10061 || _maxRetries == retryCount) // if not ConnectionRefused quit
+                    if (se.ErrorCode != 10061 || _maxAttempts == connectionAttempts) // if not ConnectionRefused quit
                     {
                         Debug.LogError("Aborting...");
                         return false;
                     }
+                    Debug.Log($"Tried {++connectionAttempts}/{_maxAttempts} times. Retrying...");
                     continue;
                 }
                 catch (ObjectDisposedException ode)

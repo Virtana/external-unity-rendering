@@ -12,27 +12,12 @@ namespace ExternalUnityRendering
 {
     public class ImportScene : MonoBehaviour
     {
-        private DirectoryManager _renderFolder;
-        public string RenderFolder
-        {
-            get
-            {
-                return _renderFolder.Path;
-            }
-            set
-            {
-                // Propery will handle failure
-                _renderFolder = new DirectoryManager(value);
-            }
-        }
-
         // Represents when the scene was exported.
         // if null, then no import has occured
         public DateTime? ExportTimestamp;
 
         private void Awake()
         {
-            _renderFolder = new DirectoryManager();
             // Set timeScale to 0. Scene must always be static.
             // will be updated on each import
             Time.timeScale = 0;
@@ -41,10 +26,10 @@ namespace ExternalUnityRendering
             Receiver client = new Receiver();
 
             // non blocking async function
-            client.ReceiveMessage(ImportCurrentScene);
+            client.ReceiveMessages((state) => ImportCurrentScene(state));
         }
 
-        public void ImportCurrentScene(FileManager importFile)
+        public void ImportCurrentScene(FileManager importFile, DirectoryManager renderFolder)
         {
             if (importFile == null || string.IsNullOrEmpty(importFile.Path))
             {
@@ -60,10 +45,13 @@ namespace ExternalUnityRendering
                 return;
             }
 
-            ImportCurrentScene(json);
+            ImportCurrentScene(json, renderFolder);
         }
 
-        public void ImportCurrentScene(string json)
+        // By default returns true. If fail, exporter just needs to ping server
+        // and check if connection is refused. if not, then send a mostly blank object with
+        // continue importing as false
+        public bool ImportCurrentScene(string json, DirectoryManager renderPath = null)
         {
             Debug.Log("Beginning Import.");
 
@@ -76,7 +64,7 @@ namespace ExternalUnityRendering
             if (importObjects == null || importObjects.Count == 0)
             {
                 Debug.LogWarning("Empty object List.");
-                return;
+                return true;
             }
 
             Camera[] cameras = FindObjectsOfType<Camera>();
@@ -95,8 +83,8 @@ namespace ExternalUnityRendering
             if (cameras.Length == 0)
             {
                 // If cam is empty, then no cameras were found.
-                Debug.LogError("Missing Camera! Importer cannot render from this.");
-                return;
+                Debug.LogError("Missing Camera! Importer cannot render with no cameras.");
+                return true;
             }
 
             foreach (GameObject importObject in importObjects)
@@ -127,12 +115,18 @@ namespace ExternalUnityRendering
                 if (state == null)
                 {
                     Debug.LogError("Failed to deserialize!");
-                    return;
+                    return true;
                 }
 
                 state.SceneRoot.UnpackData(transform);
                 ExportTimestamp = state.ExportDate;
                 SceneState.CameraSettings settings = state.RendererSettings;
+
+                // Reassign renderpath if override was provided
+                settings.RenderDirectory = renderPath?.Path ?? settings.RenderDirectory;
+
+
+                bool continueImporting = state.ContinueImporting;
 
                 Debug.LogFormat($"Imported state that was generated at { ExportTimestamp }." +
                     $"Camera settings are:\n\t{settings.RenderDirectory}\n\t" +
@@ -143,6 +137,12 @@ namespace ExternalUnityRendering
                     camera.RenderPath = settings.RenderDirectory;
                     camera.RenderImage(settings.RenderSize);
                 }
+                return continueImporting;
+            }
+            catch (JsonException je)
+            {
+                Debug.LogError($"Unexpected JSON Deserialization Error occurred!\n{je}");
+                return true;
             }
             finally
             {
