@@ -22,13 +22,12 @@ namespace ExternalUnityRendering.PathManagement
 
         private readonly bool _createNew = false;
 
-        // TODO: consider whether this should throw an exception
-        // HACK: if initialization fails, File is null
+        // NOTE if fail, file is null. caller must handle
+
         public string Path
         {
             get
             {
-                // HACK using null conditional until decision is made
                 return _file?.FullName;
             }
             set
