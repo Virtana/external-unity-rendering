@@ -5,7 +5,7 @@ namespace ExternalUnityRendering.UnityEditor
 {
     // TODO Decide if removing
     [CustomEditor(typeof(ExportScene))]
-    public class ExportGUI : Editor
+    public class ExporterInspectorGUI : Editor
     {
         private string _exportFolder = "";
         private ExportScene.PostExportAction _export = ExportScene.PostExportAction.Nothing;

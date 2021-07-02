@@ -7,7 +7,7 @@ namespace ExternalUnityRendering.UnityEditor
     /// Class allowing quick imports + renders of scenes from the editor.
     /// </summary>
     [CustomEditor(typeof(ImportScene))]
-    class ImportGUI : Editor
+    class ImporterInspectorGUI : Editor
     {
         /// <summary>
         /// The path to the file to be imported.

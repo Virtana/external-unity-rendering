@@ -6,7 +6,7 @@ namespace ExternalUnityRendering.UnityEditor
     /// <summary>
     /// Class for editor menu options
     /// </summary>
-    public class TestingScript : MonoBehaviour
+    public class ImporterEditorMenu : MonoBehaviour
     {
         /// <summary>
         /// Editor Function to quickly add an importer to the scene.

@@ -11,7 +11,7 @@ namespace ExternalUnityRendering.UnityEditor
     /// <summary>
     /// Editor window for testing options and quick export settings.
     /// </summary>
-    public class TesterGUI : EditorWindow
+    public class ExporterEditorMenu : EditorWindow
     {
         /// <summary>
         /// Number of times that the exporter will run.
@@ -103,7 +103,7 @@ namespace ExternalUnityRendering.UnityEditor
         [MenuItem("Exporter Testing/Menu")]
         static void Init()
         {
-            TesterGUI window = GetWindow<TesterGUI>();
+            ExporterEditorMenu window = GetWindow<ExporterEditorMenu>();
             window.Show();
         }
 
