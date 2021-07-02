@@ -103,7 +103,7 @@ namespace ExternalUnityRendering.UnityEditor
         [MenuItem("Exporter Testing/Menu")]
         static void Init()
         {
-            TesterGUI window = GetWindow<TesterGUI>();
+            ExporterEditorMenu window = GetWindow<ExporterEditorMenu>();
             window.Show();
         }
 
