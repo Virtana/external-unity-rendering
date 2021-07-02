@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace ExternalUnityRendering.UnityEditor
 {
-#if PHYSICS
+#if PHYSICS && UNITY_EDITOR
     /// <summary>
     /// Editor window for testing options and quick export settings.
     /// </summary>

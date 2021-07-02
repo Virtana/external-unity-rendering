@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace ExternalUnityRendering.UnityEditor
 {
-#if RENDERER
+#if RENDERER && UNITY_EDITOR
     /// <summary>
     /// Class allowing quick imports + renders of scenes from the editor.
     /// </summary>
