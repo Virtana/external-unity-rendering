@@ -3,8 +3,14 @@ using UnityEngine;
 
 namespace ExternalUnityRendering.UnityEditor
 {
+    /// <summary>
+    /// Class for editor menu options
+    /// </summary>
     public class TestingScript : MonoBehaviour
     {
+        /// <summary>
+        /// Editor Function to quickly add an importer to the scene.
+        /// </summary>
         [MenuItem("Testing/Prepare Importer")]
         public static void TestImports()
         {

@@ -7,16 +7,47 @@ using UnityEngine;
 
 namespace ExternalUnityRendering.TcpIp
 {
+    /// <summary>
+    /// Class that manages socket transmission.
+    /// </summary>
     public class Sender
     {
+        /// <summary>
+        /// The host that this class transmits to.
+        /// </summary>
         private readonly IPHostEntry _host;
+
+        /// <summary>
+        /// The IP address of the host.
+        /// </summary>
         private readonly IPAddress _ipAddress;
+
+        /// <summary>
+        /// An IPEndpoint consisting of the IP address and the port to communicate over.
+        /// </summary>
         private readonly IPEndPoint _remoteEndPoint;
+
+        /// <summary>
+        /// The socket that will be used to send data.
+        /// </summary>
         private readonly Socket _sender;
+
+        /// <summary>
+        /// The maximum number of attempts that the sender will try to send the
+        /// data if the connection is refused.
+        /// </summary>
         private readonly int _maxAttempts;
+
+        /// <summary>
+        /// The size in bytes of each chunk of data.
+        /// </summary>
         private readonly int _chunkSize = 50;
 
-        // Helper function to chunk data for sending
+        /// <summary>
+        /// Helper function to split a string into chunks of bytes.
+        /// </summary>
+        /// <param name="data">The string to be converted.</param>
+        /// <returns>A list of array segments to be used during transmission.</returns>
         private List<ArraySegment<byte>> ConvertToBuffer(string data)
         {
             byte[] dataAsBytes = Encoding.ASCII.GetBytes(data);
@@ -31,6 +62,13 @@ namespace ExternalUnityRendering.TcpIp
             return buffer;
         }
 
+        /// <summary>
+        /// Initialize data for the socket transmission.
+        /// </summary>
+        /// <param name="port">The port to send data over.</param>
+        /// <param name="ipString">The string representing the IP address.</param>
+        /// <param name="maxRetries">The maximum number of times to retry sending data
+        /// after the connection has been refused.</param>
         public Sender(int port = 11000, string ipString = "localhost", int maxRetries = 3)
         {
             try
@@ -60,6 +98,9 @@ namespace ExternalUnityRendering.TcpIp
             }
         }
 
+        /// <summary>
+        /// Struct representing data to be passed to the Async callback.
+        /// </summary>
         private struct SendState
         {
             public SocketError errorCode;
@@ -68,6 +109,10 @@ namespace ExternalUnityRendering.TcpIp
             public SocketFlags flags;
         }
 
+        /// <summary>
+        /// Async Callback to end connection.
+        /// </summary>
+        /// <param name="result">Represents the status of an asynchronous operation.</param>
         private void SendDataCallback(IAsyncResult result)
         {
             // NOTE: need to investigate what to do if result.isCompleted is false.
@@ -89,6 +134,11 @@ namespace ExternalUnityRendering.TcpIp
             socket.Close();
         }
 
+        /// <summary>
+        /// Send a string asynchronously.
+        /// </summary>
+        /// <param name="data">The data to be sent.</param>
+        /// <returns>Whether the connection was established successfully.</returns>
         public bool SendAsync(string data)
         {
             if (_sender == null)
@@ -111,8 +161,9 @@ namespace ExternalUnityRendering.TcpIp
                     Debug.LogError("Socket Exception occurred while trying to connect! " +
                         $"Error: {se.SocketErrorCode}. " +
                         $"Error Code: {se.ErrorCode}.");
-                    if (se.ErrorCode != 10061 || _maxAttempts == connectionAttempts) // if not ConnectionRefused quit
+                    if (se.ErrorCode != 10061 || _maxAttempts == connectionAttempts)
                     {
+                        // if error is not connection refused or has run out of attempts
                         Debug.LogError("Aborting...");
                         return false;
                     }

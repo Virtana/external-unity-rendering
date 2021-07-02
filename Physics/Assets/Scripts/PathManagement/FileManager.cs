@@ -5,25 +5,26 @@ using UnityEngine;
 
 namespace ExternalUnityRendering.PathManagement
 {
-
     // TODO: consider making Interface or class for this and Dirmanager to inherit from
+
+    /// <summary>
+    /// Class that manages file creation, reading and writing.
+    /// </summary>
     public class FileManager
     {
+        /// <summary>
+        /// Internal reference to the file that this object manages.
+        /// </summary>
         private FileInfo _file;
 
-        public FileInfo File
-        {
-            get
-            {
-                _file.Refresh();
-                return _file;
-            }
-        }
-
+        /// <summary>
+        /// Whether this file must be unique. Will automatically rename the
+        /// </summary>
         private readonly bool _createNew = false;
 
-        // NOTE if fail, file is null. caller must handle
-
+        /// <summary>
+        /// The path of the file that this instance manages. It will not assign invalid paths.
+        /// </summary>
         public string Path
         {
             get
@@ -43,17 +44,16 @@ namespace ExternalUnityRendering.PathManagement
                             return;
                         }
                         int i = 1;
-                        string dir = file.Directory.FullName;
-                        string name = file.Name;
+                        string nameWithoutExtension =
+                            System.IO.Path.GetFileNameWithoutExtension(file.FullName);
                         string extension = file.Extension;
                         string filename = "";
 
                         do
                         {
                             // Rename in the same way windows does.
-                            filename = System.IO.Path.Combine(
-                                        dir, $"{ name } ({ i++ }){ extension }");
-                        } while (System.IO.File.Exists(filename));
+                            filename = $"{nameWithoutExtension} ({i++}){extension}";
+                        } while (File.Exists(filename));
 
                         file = new FileInfo(filename);
                     }
@@ -94,10 +94,14 @@ namespace ExternalUnityRendering.PathManagement
             }
         }
 
+        /// <summary>
+        /// Generate a file that should be unique. To be used as a fallback for files that must exist.
+        /// </summary>
         public FileManager()
         {
-            // HACK no exceptions rn because if it does, its likely a pathtoolong exception
-            // May need to consider how it works
+            // HACK assumes no exceptions rn because if it does,
+            // its likely a pathtoolong exception this is an edge case though
+            // consider options
             // Create a near-guaranteed valid and unique file. See the first
             // comment on https://stackoverflow.com/a/11938280
             FileInfo file = new FileInfo(
@@ -112,34 +116,64 @@ namespace ExternalUnityRendering.PathManagement
         }
 
         // HACK Tries to detect if path is relative (a filename) or absolute
+        /// <summary>
+        /// Creates a file given a path as a string.
+        /// </summary>
+        /// <param name="path">The path of the file to be created.</param>
+        /// <param name="createNew">Whether the file must be newly created.</param>
         public FileManager(string path, bool createNew = false)
         {
+            // note, this does implement the some of the same functionality another
+            // constructor but I can't call it from here without some funky obfuscated
+            // logic that may perform worse
             _createNew = createNew;
-            // HACK May not be best implementation for windows, can't find .net source
-            // for Windows implementation in .net 5. Maybe not needed?
+            // check if file path is absolute or relative, may not be optimal for windows
             if (System.IO.Path.IsPathRooted(path))
             {
-                // TODO use https://docs.microsoft.com/en-us/dotnet/api/system.io.path.getdirectoryname
-                // and get the name of the dir, parse it, and then use the path
-                Path = path;
-            } else
+                string directoryPath = System.IO.Path.GetDirectoryName(path);
+                path = path.Remove(0, directoryPath.Length);
+                DirectoryManager directory = new DirectoryManager(directoryPath);
+                Path = System.IO.Path.Combine(directory.Path, path);
+            }
+            else
             {
                 Path = System.IO.Path.Combine(Application.persistentDataPath, path);
             }
         }
 
+        /// <summary>
+        /// Create a file given a filename and directoryManager.
+        /// </summary>
+        /// <param name="directory">The directory in which the file must be created.</param>
+        /// <param name="name">The name of the file.</param>
+        /// <param name="createNew">Whether the file must be newly created.</param>
         public FileManager(DirectoryManager directory, string name, bool createNew = false)
         {
             _createNew = createNew;
             Path = System.IO.Path.Combine(directory.Path, name);
         }
 
+        /// <summary>
+        /// Create a file given a string folder and filename.
+        /// </summary>
+        /// <param name="folder">The folder in which the file should be made. If
+        /// invalid defaults to the persistent data path.</param>
+        /// <param name="name">The name of the file.</param>
+        /// <param name="createNew">Whether the file must be newly created.</param>
         public FileManager(string folder, string name, bool createNew = false)
             : this(new DirectoryManager(folder), name, createNew) { }
 
-        // OPTIONAL add generic serialization options
+        // OPTIONAL add more options based on the overloads for writer, use generics maybe?
         // OPTIONAL retry options?
-        public void WriteToFile(string data, bool append = false)
+
+        /// <summary>
+        /// Write string into file and return its success.
+        /// </summary>
+        /// <param name="data">The string to be written to file.</param>
+        /// <param name="append">False if to overwrite the file's contents,
+        /// true to append <paramref name="data"/> to the end of the file.</param>
+        /// <returns>True if the data was written sucessfully.</returns>
+        public bool WriteToFile(string data, bool append = false)
         {
             FileMode mode = append ? FileMode.Append : FileMode.Truncate;
 
@@ -150,7 +184,7 @@ namespace ExternalUnityRendering.PathManagement
                 {
                     writer.WriteLine(data);
                 }
-                return;
+                return true;
             }
             catch (FileNotFoundException fnfe)
             {
@@ -186,8 +220,13 @@ namespace ExternalUnityRendering.PathManagement
                 Debug.LogError("The file is already opened by another process or an I/O " +
                     $"error has occurred while writing to file.\n{ ioe }");
             }
+            return false;
         }
 
+        /// <summary>
+        /// Write <paramref name="data"/> to file as bytes.
+        /// </summary>
+        /// <param name="data">THe byte data to write.</param>
         public void WriteToFile(byte[] data)
         {
             if (data == null)
@@ -243,6 +282,11 @@ namespace ExternalUnityRendering.PathManagement
             }
         }
 
+        /// <summary>
+        /// Reads the file and return the data as a string.
+        /// </summary>
+        /// <returns>Data read from the file. Returns an empty string if an
+        /// error occurs.</returns>
         public string ReadFile()
         {
             StringBuilder data = new StringBuilder();

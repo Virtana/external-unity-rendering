@@ -3,13 +3,27 @@ using UnityEngine;
 
 namespace ExternalUnityRendering.UnityEditor
 {
+    /// <summary>
+    /// Class allowing quick imports + renders of scenes from the editor.
+    /// </summary>
     [CustomEditor(typeof(ImportScene))]
     class ImportGUI : Editor
     {
+        /// <summary>
+        /// The path to the file to be imported.
+        /// </summary>
         private string _importFile = System.IO.Directory.GetCurrentDirectory();
+
+        /// <summary>
+        /// The path to the folder to render to.
+        /// </summary>
         private string _renderFolder = System.IO.Directory.GetCurrentDirectory();
 
         // HACK very janky
+
+        /// <summary>
+        /// Method that is called every time the inspector needs to be updated.
+        /// </summary>
         public override void OnInspectorGUI()
         {
             DrawDefaultInspector();
@@ -35,13 +49,16 @@ namespace ExternalUnityRendering.UnityEditor
                 if (import.Path == null)
                 {
                     Debug.LogError("Invalid import path given.");
-                } else if (render.Path == Application.persistentDataPath)
-                {
-                    Debug.LogError("Invalid render folder given.");
-                } else
-                {
-                    currentImporter.ImportCurrentScene(import, render);
+                    return;
                 }
+
+                // TODO add checkboxes for use datapath or json path or an assigned path
+                if (render.Path == Application.persistentDataPath)
+                {
+                    Debug.LogError("Invalid render folder given. Using path specified in JSON file.");
+                    return;
+                }
+                currentImporter.ImportCurrentScene(import, render);
             }
         }
     }

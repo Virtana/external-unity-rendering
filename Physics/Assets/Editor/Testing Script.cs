@@ -8,45 +8,123 @@ using UnityEngine;
 
 namespace ExternalUnityRendering.UnityEditor
 {
+    /// <summary>
+    /// Editor window for testing options and quick export settings.
+    /// </summary>
     public class TesterGUI : EditorWindow
     {
-        private int _exportCount = 1;
+        /// <summary>
+        /// Number of times that the exporter will run.
+        /// </summary>
+        private int _exportCount = 10;
+
+        /// <summary>
+        /// The difference in unity time between two exported states.
+        /// </summary>
         private int _millisecondsDelay = 1000;
-        private float _explosionRadius = 1;
-        private float _explosionForce = 1;
+
+        /// <summary>
+        /// The radius for the explosion
+        /// </summary>
+        private ExportScene.PostExportAction _exportType = ExportScene.PostExportAction.Nothing;
+
+        /// <summary>
+        /// The path where scene states (json) will be saved if the write to file
+        /// option is chosen.
+        /// </summary>
         private string _exportFolder = System.IO.Path.GetFullPath("../");
-        private string _renderFolder = System.IO.Path.GetFullPath("../");
-        private ExportScene.ExportType _exportType = ExportScene.ExportType.None;
-        private bool _exportTestRenders = false;
+
+        /// <summary>
+        /// Whether to use an explosion (true) or randomly applied force (false).
+        /// </summary>
         private bool _useExplosion = true;
+
+        /// <summary>
+        /// The point in worldspace coordinates where the explosive force emanates from.
+        /// </summary>
         private Vector3 _explosionOrigin = Vector3.zero;
+
+        /// <summary>
+        /// The radius of the explosion. Outside of this radius, the explosion has no
+        /// effect.
+        /// </summary>
+        private float _explosionRadius = 10;
+
+        /// <summary>
+        /// The force of the explosion.
+        /// </summary>
+        private float _explosionForce = 1;
+
+        /// <summary>
+        /// A modifier to the y-axis position of the source of the explosion. Used to
+        /// offset the source of the explosion to give the effect of lifting objects.
+        /// </summary>
         private float _explosionUpwardsModifier = 10;
+
+        /// <summary>
+        /// The type of random force to apply to the objects in the sceme.
+        /// </summary>
         private ForceMode _forceType = ForceMode.Impulse;
-        private Vector2 _minMaxForce = new Vector2(1, 10);
+
+        /// <summary>
+        /// Each component of the directional force will be a random value
+        /// between these two limits.
+        /// </summary>
+        private Vector2 _minMaxForce = new Vector2(-10, 10);
+
+        /// <summary>
+        /// Whether the exporter should render images. Meant for testing only.
+        /// </summary>
+        private bool _exportTestRenders = false;
+
+        /// <summary>
+        /// The path where exporter images would be rendered to.
+        /// </summary>
+        private string _renderFolder = System.IO.Path.GetFullPath("../");
+
+        /// <summary>
+        /// The resolution of all of the rendered images by the exporter.
+        /// </summary>
         private Vector2Int _renderResolution = new Vector2Int(1920, 1080);
-        private Vector2Int _rendererOutputResolution = new Vector2Int(1920, 1080);
+
+        /// <summary>
+        /// The path where the external rendering instance should render its images to.
+        /// </summary>
         private string _rendererOutputFolder = System.IO.Path.GetFullPath("../");
 
-        [MenuItem("Exporter Testing/Test Options")]
+        /// <summary>
+        /// The resolution of all the rendered images by the external renderer.
+        /// </summary>
+        private Vector2Int _rendererOutputResolution = new Vector2Int(1920, 1080);
+
+        /// <summary>
+        /// Initiator for the window to appear.
+        /// </summary>
+        [MenuItem("Exporter Testing/Menu")]
         static void Init()
         {
             TesterGUI window = GetWindow<TesterGUI>();
             window.Show();
         }
 
-        // HACK Not very optimized. Includes lots of GUI workarounds
+        /// <summary>
+        /// Function that is called every time the GUI needs to update. Defines the UI layout.
+        /// </summary>
         private void OnGUI()
         {
             // TODO make scrollable between top label and button
-
             // HACK manually resizing each element
+
+            // Get/set some values needed for the GUI
             GUIStyle style = EditorStyles.label;
             EditorStyles.boldLabel.alignment = TextAnchor.MiddleCenter;
 
-            EditorGUILayout.LabelField("Configure the following before exporting.", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Configure the following before exporting.",
+                EditorStyles.boldLabel);
             EditorGUILayout.Space();
 
-            EditorGUILayout.LabelField("Exporter & Testing Settings", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Exporter & Testing Settings",
+                EditorStyles.boldLabel);
 
             GUIContent label = new GUIContent("Number of Exports to perform: ");
             EditorGUIUtility.labelWidth = style.CalcSize(label).x;
@@ -63,20 +141,21 @@ namespace ExternalUnityRendering.UnityEditor
                 "Log: Write to the console.");
 
             EditorGUIUtility.labelWidth = style.CalcSize(optionLabel).x;
-            EditorGUILayout.LabelField(optionLabel, optionListLabel, EditorStyles.wordWrappedLabel);
+            EditorGUILayout.LabelField(optionLabel, optionListLabel,
+                EditorStyles.wordWrappedLabel);
 
             label = new GUIContent("How to export Scene State: ");
             EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-            _exportType = (ExportScene.ExportType)
+            _exportType = (ExportScene.PostExportAction)
                 EditorGUILayout.EnumFlagsField(label, _exportType);
 
-            if ((_exportType & ExportScene.ExportType.WriteToFile)
-                == ExportScene.ExportType.WriteToFile)
+            if ((_exportType & ExportScene.PostExportAction.WriteToFile)
+                == ExportScene.PostExportAction.WriteToFile)
             {
                 if (GUILayout.Button("Select Export folder"))
                 {
-                    _exportFolder = EditorUtility.OpenFolderPanel("Select the folder to export the scene state to.",
-                        _exportFolder, "");
+                    _exportFolder = EditorUtility.OpenFolderPanel(
+                        "Select the folder to export the scene state to.", _exportFolder, "");
                 }
             }
 
@@ -94,7 +173,8 @@ namespace ExternalUnityRendering.UnityEditor
             _explosionForce = EditorGUILayout.Slider(label, _explosionForce, 10, 500);
             label = new GUIContent("Upwards Force Modifier: ");
             EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-            _explosionUpwardsModifier = EditorGUILayout.Slider(label, _explosionUpwardsModifier, 10, 500);
+            _explosionUpwardsModifier =
+                EditorGUILayout.Slider(label, _explosionUpwardsModifier, 10, 500);
             EditorGUILayout.EndToggleGroup();
 
             EditorGUILayout.Space();
@@ -106,7 +186,8 @@ namespace ExternalUnityRendering.UnityEditor
 
             label = new GUIContent("Random Force Limits: ");
             EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-            GUIContent limits = new GUIContent($"Min: {_minMaxForce.x:.0} Max: {_minMaxForce.y:.0}");
+            GUIContent limits =
+                new GUIContent($"Min: {_minMaxForce.x:.0} Max: {_minMaxForce.y:.0}");
             EditorGUILayout.LabelField(label, limits);
 
             EditorGUILayout.MinMaxSlider(ref _minMaxForce.x, ref _minMaxForce.y, -100, 100);
@@ -114,11 +195,12 @@ namespace ExternalUnityRendering.UnityEditor
 
             EditorGUILayout.Space();
 
-            _exportTestRenders = EditorGUILayout.BeginToggleGroup("Export Renders", _exportTestRenders);
+            _exportTestRenders =
+                EditorGUILayout.BeginToggleGroup("Export Renders", _exportTestRenders);
             if (GUILayout.Button("Select Render Folder"))
             {
-                _renderFolder = EditorUtility.OpenFolderPanel("Select the folder to export the renders to.",
-                    _renderFolder, "");
+                _renderFolder = EditorUtility.OpenFolderPanel(
+                    "Select the folder to export the renders to.", _renderFolder, "");
             }
 
             label = new GUIContent("Render Resolution: ");
@@ -132,13 +214,14 @@ namespace ExternalUnityRendering.UnityEditor
 
             if (GUILayout.Button("Select Render Instance Output Folder"))
             {
-                _rendererOutputFolder = EditorUtility.OpenFolderPanel("Select the folder to export the final renders to.",
-                    _rendererOutputFolder, "");
+                _rendererOutputFolder = EditorUtility.OpenFolderPanel(
+                    "Select the folder to export the final renders to.", _rendererOutputFolder, "");
             }
 
             label = new GUIContent("Renderer Output Resolution: ");
             EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-            _rendererOutputResolution = EditorGUILayout.Vector2IntField(label, _rendererOutputResolution);
+            _rendererOutputResolution =
+                EditorGUILayout.Vector2IntField(label, _rendererOutputResolution);
 
             GUILayout.FlexibleSpace();
 
@@ -146,8 +229,9 @@ namespace ExternalUnityRendering.UnityEditor
             {
                 if (!EditorApplication.isPlaying)
                 {
-                    EditorUtility.DisplayDialog("Start Playmode", "The Unity Editor is not playing. " +
-                        "Due to Unity Limitations, Playmode must be started manually before export.", "OK");
+                    EditorUtility.DisplayDialog("Start Playmode", "The Unity Editor " +
+                        "is not playing. Due to Unity Limitations, Playmode must be " +
+                        "started manually before export.", "OK");
                     return;
                 }
                 // validate options and trigger explode
@@ -159,8 +243,8 @@ namespace ExternalUnityRendering.UnityEditor
                 }
 
                 DirectoryManager exportFolder = new DirectoryManager(_exportFolder);
-                if (((_exportType & ExportScene.ExportType.WriteToFile)
-                    == ExportScene.ExportType.WriteToFile)
+                if (((_exportType & ExportScene.PostExportAction.WriteToFile)
+                    == ExportScene.PostExportAction.WriteToFile)
                     && exportFolder.Path == Application.persistentDataPath)
                 {
                     Debug.Log("Failed to get access to the export folder.");
@@ -181,15 +265,12 @@ namespace ExternalUnityRendering.UnityEditor
                     return;
                 }
 
-                // investigate using a tuple to store info about each and an
-                // array or list to hold all and then a foreach to build string
-
                 StringBuilder options = new StringBuilder();
                 options.AppendLine("Number of Exports: " + _exportCount);
                 options.AppendLine("Delay between Exports: " + _millisecondsDelay);
                 options.AppendLine("Scene State Export: " + _exportType);
-                if ((_exportType & ExportScene.ExportType.WriteToFile)
-                    == ExportScene.ExportType.WriteToFile)
+                if ((_exportType & ExportScene.PostExportAction.WriteToFile)
+                    == ExportScene.PostExportAction.WriteToFile)
                 {
                     options.AppendLine("Export Folder: " + _exportFolder);
                 }
@@ -199,7 +280,8 @@ namespace ExternalUnityRendering.UnityEditor
                     options.AppendLine("Explosion Source: " + _explosionOrigin);
                     options.AppendLine("Explosion Radius: " + _explosionRadius);
                     options.AppendLine("Explosive Force: " + _explosionForce);
-                    options.AppendLine("Explosive Force Upwards Modifier: " + _explosionUpwardsModifier);
+                    options.AppendLine("Explosive Force Upwards Modifier: "
+                        + _explosionUpwardsModifier);
                 }
                 else
                 {
@@ -212,21 +294,30 @@ namespace ExternalUnityRendering.UnityEditor
                 if (_exportTestRenders)
                 {
                     options.AppendLine("Test Render Folder: " + _renderFolder);
-                    options.AppendLine($"Test Render Resolution: {_renderResolution.x}x{_renderResolution.y}");
+                    options.AppendLine("Test Render Resolution: " +
+                        $"{_renderResolution.x}x{_renderResolution.y}");
                 }
 
                 options.AppendLine("Renderer Output Folder: " + _renderFolder);
-                options.AppendLine($"Renderer Output Resolution: {_renderResolution.x}x{_renderResolution.y}");
+                options.AppendLine("Renderer Output Resolution: " +
+                    $"{_renderResolution.x}x{_renderResolution.y}");
 
-                if (EditorUtility.DisplayDialog("Confirm your choices", options.ToString(), "Yes", "No"))
+                if (EditorUtility.DisplayDialog("Confirm your choices",
+                    options.ToString(), "Yes", "No"))
                 {
                     ExplodeAndRecord();
                 }
             }
         }
 
+        /// <summary>
+        /// Create an exportScene object if none exists, apply the chosen force
+        /// (explosion or normal), and export the scene a chosen number of times
+        /// at a specified interval.
+        /// </summary>
         private async void ExplodeAndRecord()
         {
+            // Grab the exporter if it exists
             ExportScene export = FindObjectOfType<ExportScene>();
             if (export == null)
             {
@@ -236,6 +327,9 @@ namespace ExternalUnityRendering.UnityEditor
                 };
                 export = gameObject.AddComponent<ExportScene>();
             }
+
+            // All folders should be valid if being used.
+            export.ExportFolder = _exportFolder;
 
             Camera[] cameras = FindObjectsOfType<Camera>();
 
@@ -253,32 +347,42 @@ namespace ExternalUnityRendering.UnityEditor
                 foreach (Camera camera in cameras)
                 {
                     // add custom cameras if they don't already have and save them
-                    CustomCamera customCamera = camera.gameObject.GetComponent<CustomCamera>();
-                    if (customCamera == null)
+                    if (!camera.TryGetComponent(out CustomCamera customCamera))
                     {
                         customCamera = camera.gameObject.AddComponent<CustomCamera>();
                     }
+                    customCamera.RenderPath = _renderFolder;
                     customCameras.Add(customCamera);
                 }
             }
 
-            // All folders should be valid if being used.
-            export.ExportFolder = _exportFolder;
-            foreach (CustomCamera cam in customCameras)
+            Collider[] colliders;
+            if (_useExplosion)
             {
-                cam.RenderPath = _renderFolder;
+                // Using overlap sphere to avoid excess calculation. Explosion has
+                // extremely little effect outside of the radius, so this will cut
+                // the unnecessary calculations.
+                colliders = Physics.OverlapSphere(_explosionOrigin, _explosionRadius);
             }
-
-            Collider[] colliders = FindObjectsOfType<Collider>();
+            else
+            {
+                colliders = FindObjectsOfType<Collider>();
+            }
 
             foreach (Collider hit in colliders)
             {
+                // addforce etc has no effect on inactive GameObjects
+                if (!hit.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
                 // Handle non-convex mesh collider with non-kinematic rigidbody error
-                MeshCollider mesh = hit.gameObject.GetComponent<MeshCollider>();
-                if (mesh != null)
+                if (hit.gameObject.TryGetComponent(out MeshCollider _))
                 {
                     // meshcolliders are used with items that should be static
-                    // in this test so skip for now otherwise set mesh.convex to true
+                    // in this test so skip for now otherwise assign out meshcollider
+                    // and set mesh.convex to true
                     continue;
                 }
 
@@ -309,7 +413,8 @@ namespace ExternalUnityRendering.UnityEditor
             // Keep running while not done and editor is running
             for (int i = 0; i < _exportCount && EditorApplication.isPlaying; i++)
             {
-                export.ExportCurrentScene(_exportType, _rendererOutputResolution, _rendererOutputFolder, true);
+                export.ExportCurrentScene(_exportType, _rendererOutputResolution,
+                    _rendererOutputFolder, true);
 
                 // should do nothing if customcameras empty
                 foreach (CustomCamera cam in customCameras)
@@ -317,6 +422,9 @@ namespace ExternalUnityRendering.UnityEditor
                     cam.RenderImage(_renderResolution);
                 }
 
+                // _millisecondsDelay is the amount of time that the physics system will
+                // calculate for in between renders. Rendering is a blocking task that "freezes"
+                // unity time, so this does not represent the real time between two exports.
                 await Task.Delay(_millisecondsDelay);
             }
 
