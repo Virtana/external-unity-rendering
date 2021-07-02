@@ -79,7 +79,7 @@ namespace ExternalUnityRendering.TcpIp
             string data = "";
             // byte cache for what is recieved
             byte[] bytes = new byte[1024];
-
+            
             bool continueReceiving = true;
             using (MemoryStream cache = new MemoryStream())
             {

@@ -197,12 +197,18 @@ namespace ExternalUnityRendering
                 {
                     _serializer.Serialize(writer, scene);
                 }
-
+                
                 string state = sb.ToString();
 
                 if (!succeeded || state == null || !state.EndsWith("}"))
                 {
                     Debug.Log("Aborting Export. Failed to serialize. Check logs for cause.");
+                    return;
+                }
+
+                if (!succeeded)
+                {
+                    Debug.Log("Aborting Export. Failed to serialize. See logs for cause.");
                     return;
                 }
 
