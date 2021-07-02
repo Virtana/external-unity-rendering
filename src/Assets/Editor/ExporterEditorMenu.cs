@@ -11,7 +11,7 @@ namespace ExternalUnityRendering.UnityEditor
     /// <summary>
     /// Editor window for testing options and quick export settings.
     /// </summary>
-    public class TesterGUI : EditorWindow
+    public class ExporterEditorMenu : EditorWindow
     {
         /// <summary>
         /// Number of times that the exporter will run.
