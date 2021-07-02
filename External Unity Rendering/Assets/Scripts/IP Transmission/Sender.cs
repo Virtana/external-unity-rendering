@@ -249,6 +249,6 @@ namespace ExternalUnityRendering.TcpIp
             }
             return false;
         }
-    }
 #endif
+    }
 }
