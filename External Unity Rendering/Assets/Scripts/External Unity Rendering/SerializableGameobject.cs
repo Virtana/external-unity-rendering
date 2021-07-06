@@ -1,11 +1,12 @@
-﻿using System;
+﻿//#define PHYSICS
+//#define RENDERER
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Newtonsoft.Json;
 using Newtonsoft.Json.UnityConverters;
 using Newtonsoft.Json.UnityConverters.Math;
 using Newtonsoft.Json.Converters;
-using System.IO;
 
 namespace ExternalUnityRendering
 {
@@ -133,7 +134,7 @@ namespace ExternalUnityRendering
         }
 
         /// <summary>
-        /// SceneState to be serialised and transmitted as a closing signal
+        /// SerializableScene to be serialised and transmitted as a closing signal
         /// for the receiver instance.
         /// </summary>
         public SerializableScene JsonClosingSignal
@@ -170,13 +171,13 @@ namespace ExternalUnityRendering
         public bool ContinueImporting;
 
         /// <summary>
-        /// Create a default SceneState with a blank ObjectState.
+        /// Create a default SerializableScene with a blank ObjectState.
         /// </summary>
         public SerializableScene()
             : this(new SerializableGameobject(), new CameraSettings()) { }
 
         /// <summary>
-        /// Create a SceneState with the SceneRoot as <paramref name="root"/>.
+        /// Create a SerializableScene with the SceneRoot as <paramref name="root"/>.
         /// </summary>
         /// <param name="root">The objectState whose children represent the
         /// root GameObjects.</param>
@@ -191,7 +192,7 @@ namespace ExternalUnityRendering
         }
 
         /// <summary>
-        /// Create a new SceneState and create a new ObjectState using
+        /// Create a new SerializableScene and create a new ObjectState using
         /// <paramref name="transform"/> and assign it as the scene root.
         /// </summary>
         /// <param name="transform">The Transform of the root
