@@ -20,11 +20,14 @@ public class BuildScript : MonoBehaviour
         Renderer = 2
     }
 
+// TODO replace with the kinda hack parser from the init script
+// add project path checking and call EditorApplication.Quit(1) if fail
     public static void Build()
     {
         // Filter unity's command line args
         string[] args = Environment.GetCommandLineArgs();
 
+        string outputName = null;
         // Make renderer by default
         BuildConfigurations config = 0;
 
@@ -38,6 +41,9 @@ public class BuildScript : MonoBehaviour
             Console.WriteLine("Missing Argument for build type.");
             Console.ResetColor();
             EditorApplication.Exit(1);
+        } else {
+            outputName = Enum.GetName(typeof(BuildConfigurations), config);
+            PlayerSettings.SetScriptingDefineSymbolsForGroup(BuildTargetGroup.Standalone, outputName.ToUpperInvariant());
         }
 
         string[] scenePaths = Directory.GetFiles(Application.dataPath,
@@ -47,8 +53,6 @@ public class BuildScript : MonoBehaviour
         {
             scenePaths[i] = scenePaths[i].Remove(0, Application.dataPath.Length - 6);
         }
-
-        string outputName = Enum.GetName(typeof(BuildConfigurations), config);
 
         BuildPipeline.BuildPlayer(scenePaths,
             Path.GetFullPath(Path.Combine(Application.dataPath,
