@@ -1,4 +1,5 @@
-﻿using ExternalUnityRendering.PathManagement;
+﻿#define PHYSICS
+using ExternalUnityRendering.PathManagement;
 using ExternalUnityRendering.TcpIp;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
@@ -198,7 +199,7 @@ namespace ExternalUnityRendering
                 {
                     _serializer.Serialize(writer, scene);
                 }
-                
+
                 string state = sb.ToString();
 
                 if (!succeeded || state == null || !state.EndsWith("}"))
