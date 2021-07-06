@@ -10,7 +10,7 @@ using UnityEngine.SceneManagement;
 
 namespace ExternalUnityRendering
 {
-#if RENDERER
+#if RENDERER || UNITY_EDITOR
     /// <summary>
     /// Component that manages importing a scene and rendering images.
     /// </summary>
@@ -136,7 +136,7 @@ namespace ExternalUnityRendering
 
                 // add check if blank state exists and return immediately
                 // or replace blank state with null and add that as an exit now
-                SceneState state = JsonConvert.DeserializeObject<SceneState>(json, serializerSettings);
+                SerializableScene state = JsonConvert.DeserializeObject<SerializableScene>(json, serializerSettings);
 
                 if (failed || state == null)
                 {
@@ -146,7 +146,7 @@ namespace ExternalUnityRendering
 
                 state.SceneRoot.UnpackData(transform);
                 ExportTimestamp = state.ExportDate;
-                SceneState.CameraSettings settings = state.RendererSettings;
+                SerializableScene.CameraSettings settings = state.RendererSettings;
 
                 // Reassign renderpath if override was provided
                 settings.RenderDirectory = renderPath?.Path ?? settings.RenderDirectory;
