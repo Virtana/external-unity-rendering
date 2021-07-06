@@ -136,7 +136,18 @@ public class Init : MonoBehaviour
         await Task.Delay(5000); // HACK wait five seconds to finish transmit
         Exit("Completed Execution.", 0);
     }
+#elif RENDERER
+    // A declaration to wait for an endsignal
+    private static async void AwaitEndSignal()
+    {
+        await Task.Delay(0);
+    }
 #endif
+
+    private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs ccea)
+    {
+        Exit($"Received {ccea.SpecialKey}.", 0);
+    }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Initialize()
@@ -149,6 +160,7 @@ public class Init : MonoBehaviour
             // #:~:text=taking%20this%20survey.-,ILogHandler,-interface%20in%20UnityEngine
             Application.logMessageReceived += Application_logMessageReceived;
         }
+        Console.CancelKeyPress += Console_CancelKeyPress;
 
 #if PHYSICS
         foreach (Camera camera in FindObjectsOfType<Camera>())

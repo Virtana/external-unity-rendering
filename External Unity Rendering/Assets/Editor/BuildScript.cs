@@ -22,6 +22,7 @@ public class BuildScript : MonoBehaviour
 
 // TODO replace with the kinda hack parser from the init script
 // add project path checking and call EditorApplication.Quit(1) if fail
+// and output folder checking
     public static void Build()
     {
         // Filter unity's command line args
