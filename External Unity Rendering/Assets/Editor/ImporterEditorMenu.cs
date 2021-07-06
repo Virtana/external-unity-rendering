@@ -3,7 +3,6 @@ using UnityEngine;
 
 namespace ExternalUnityRendering.UnityEditor
 {
-#if RENDERER && UNITY_EDITOR
     /// <summary>
     /// Class for editor menu options
     /// </summary>
@@ -37,5 +36,4 @@ namespace ExternalUnityRendering.UnityEditor
 
         }
     }
-#endif
 }

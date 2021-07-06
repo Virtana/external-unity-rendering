@@ -3,7 +3,6 @@ using UnityEngine;
 
 namespace ExternalUnityRendering.UnityEditor
 {
-#if RENDERER && UNITY_EDITOR
     /// <summary>
     /// Class allowing quick imports + renders of scenes from the editor.
     /// </summary>
@@ -45,8 +44,10 @@ namespace ExternalUnityRendering.UnityEditor
             if (GUILayout.Button("Import Now"))
             {
                 PathManagement.DirectoryManager render = new PathManagement.DirectoryManager(_renderFolder);
-                PathManagement.FileManager import = new PathManagement.FileManager(_importFile);
-                import.Path = _importFile;
+                PathManagement.FileManager import = new PathManagement.FileManager(_importFile)
+                {
+                    Path = _importFile
+                };
 
                 if (import.Path == null)
                 {
@@ -64,5 +65,4 @@ namespace ExternalUnityRendering.UnityEditor
             }
         }
     }
-#endif
 }

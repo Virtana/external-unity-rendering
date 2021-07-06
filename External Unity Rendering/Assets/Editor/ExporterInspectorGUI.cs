@@ -3,7 +3,6 @@ using UnityEngine;
 
 namespace ExternalUnityRendering.UnityEditor
 {
-#if PHYSICS && UNITY_EDITOR
     // TODO Decide if removing
     [CustomEditor(typeof(ExportScene))]
     public class ExporterInspectorGUI : Editor
@@ -53,5 +52,4 @@ namespace ExternalUnityRendering.UnityEditor
             }
         }
     }
-#endif
 }

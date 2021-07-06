@@ -8,7 +8,6 @@ using UnityEngine;
 
 namespace ExternalUnityRendering.UnityEditor
 {
-#if PHYSICS && UNITY_EDITOR
     /// <summary>
     /// Editor window for testing options and quick export settings.
     /// </summary>
@@ -432,5 +431,4 @@ namespace ExternalUnityRendering.UnityEditor
             Debug.Log("Finished Export Loop.");
         }
     }
-#endif
 }
