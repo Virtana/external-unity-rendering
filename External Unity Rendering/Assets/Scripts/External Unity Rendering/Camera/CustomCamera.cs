@@ -97,7 +97,7 @@ namespace ExternalUnityRendering.CameraUtilites
                 new Vector2Int(300, 300),
                 new Vector2Int(int.MaxValue, int.MaxValue));
 
-            _camera.enabled = false;
+            _camera.enabled = false; // always disabling in case a script enables
             RenderTexture renderTexture = new RenderTexture(renderSize.x, renderSize.y, 24);
             _camera.targetTexture = renderTexture;
 
@@ -114,9 +114,9 @@ namespace ExternalUnityRendering.CameraUtilites
             _camera.targetTexture = null;
             RenderTexture.active = null;
 
-            // add check to only enable if needed
+#if UNITY_EDITOR
             _camera.enabled = true;
-
+#endif
             // now image holds the image in texture2d form
             byte[] png = ImageConversion.EncodeToPNG(image);
 
