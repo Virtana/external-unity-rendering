@@ -1,5 +1,4 @@
-﻿#define PHYSICS
-using ExternalUnityRendering.PathManagement;
+﻿using ExternalUnityRendering.PathManagement;
 using ExternalUnityRendering.TcpIp;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
@@ -96,8 +95,8 @@ namespace ExternalUnityRendering
                 }
             };
 
-            _serializer.Converters.Add(new ObjectStateConverter());
-            _serializer.Converters.Add(new SceneStateConverter());
+            _serializer.Converters.Add(new SerializableGameobjectConverter());
+            _serializer.Converters.Add(new SerializableSceneConverter());
         }
 
         /// <summary>
@@ -160,11 +159,11 @@ namespace ExternalUnityRendering
                 exportObject.transform.SetParent(transform, true);
             }
 
-            SceneState.CameraSettings render =
-                new SceneState.CameraSettings(renderResolution, renderDirectory);
+            SerializableScene.CameraSettings render =
+                new SerializableScene.CameraSettings(renderResolution, renderDirectory);
 
             Debug.Log("Exporting...");
-            SceneState scene = new SceneState(transform, render);
+            SerializableScene scene = new SerializableScene(transform, render);
 
             Task.Run(() =>
             {
@@ -181,7 +180,7 @@ namespace ExternalUnityRendering
             Time.timeScale = 1;
         }
 
-        private void SerializeAndExport(SceneState scene, PostExportAction exportMode, bool prettyPrint)
+        private void SerializeAndExport(SerializableScene scene, PostExportAction exportMode, bool prettyPrint)
         {
             try
             {

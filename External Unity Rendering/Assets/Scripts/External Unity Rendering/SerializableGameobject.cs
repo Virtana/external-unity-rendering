@@ -14,8 +14,8 @@ namespace ExternalUnityRendering
     /// It is used for Serialization Purposes.
     /// </summary>
     [Serializable]
-    [JsonConverter(typeof(ObjectStateConverter))]
-    public class ObjectState
+    [JsonConverter(typeof(SerializableGameobjectConverter))]
+    public class SerializableGameobject
     {
         /// <summary>
         /// Struct representing the base parameters of the
@@ -49,12 +49,12 @@ namespace ExternalUnityRendering
         /// <summary>
         /// The list of children of this transform
         /// </summary>
-        public List<ObjectState> Children;
+        public List<SerializableGameobject> Children;
 
         /// <summary>
         /// Create a Default blank ObjectState.
         /// </summary>
-        public ObjectState()
+        public SerializableGameobject()
         {
             ObjectTransform = new TransformState()
             {
@@ -62,7 +62,7 @@ namespace ExternalUnityRendering
                 Rotation = Quaternion.identity,
                 Scale = Vector3.one
             };
-            Children = new List<ObjectState>();
+            Children = new List<SerializableGameobject>();
             Name = "";
         }
 
@@ -71,15 +71,15 @@ namespace ExternalUnityRendering
         /// transform.
         /// </summary>
         /// <param name="transform">The transform of the gameObject.</param>
-        public ObjectState(Transform transform)
+        public SerializableGameobject(Transform transform)
         {
             Name = transform.name;
             ObjectTransform = new TransformState(transform);
-            Children = new List<ObjectState>();
+            Children = new List<SerializableGameobject>();
 
             foreach (Transform childTransform in transform)
             {
-                Children.Add(new ObjectState(childTransform));
+                Children.Add(new SerializableGameobject(childTransform));
             }
         }
 
@@ -93,7 +93,7 @@ namespace ExternalUnityRendering
             transform.SetPositionAndRotation(ObjectTransform.Position, ObjectTransform.Rotation);
             transform.localScale = ObjectTransform.Scale;
 
-            foreach (ObjectState child in Children)
+            foreach (SerializableGameobject child in Children)
             {
                 var childTransform = transform.Find(child.Name);
                 if (childTransform == null)
@@ -114,8 +114,8 @@ namespace ExternalUnityRendering
     /// It is used for Serialization purposes.
     /// </summary>
     [Serializable]
-    [JsonConverter(typeof(SceneStateConverter))]
-    public class SceneState
+    [JsonConverter(typeof(SerializableSceneConverter))]
+    public class SerializableScene
     {
         /// <summary>
         /// Struct that represents settings for the CustomCameras
@@ -136,11 +136,11 @@ namespace ExternalUnityRendering
         /// SceneState to be serialised and transmitted as a closing signal
         /// for the receiver instance.
         /// </summary>
-        public SceneState JsonClosingSignal
+        public SerializableScene JsonClosingSignal
         {
             get
             {
-                return new SceneState
+                return new SerializableScene
                 {
                     ExportDate = DateTime.Now,
                     ContinueImporting = false
@@ -156,7 +156,7 @@ namespace ExternalUnityRendering
         /// <summary>
         /// An object state whose children represent the root objects
         /// </summary>
-        public ObjectState SceneRoot;
+        public SerializableGameobject SceneRoot;
 
         /// <summary>
         /// Settings for the cameras to use while rendering.
@@ -172,8 +172,8 @@ namespace ExternalUnityRendering
         /// <summary>
         /// Create a default SceneState with a blank ObjectState.
         /// </summary>
-        public SceneState()
-            : this(new ObjectState(), new CameraSettings()) { }
+        public SerializableScene()
+            : this(new SerializableGameobject(), new CameraSettings()) { }
 
         /// <summary>
         /// Create a SceneState with the SceneRoot as <paramref name="root"/>.
@@ -182,7 +182,7 @@ namespace ExternalUnityRendering
         /// root GameObjects.</param>
         /// <param name="settings">Settings for the renderer instance.</param>
         /// <param name="continueExporting">Whether to halt the Renderer Instance.</param>
-        public SceneState(ObjectState root, CameraSettings settings, bool continueExporting = true)
+        public SerializableScene(SerializableGameobject root, CameraSettings settings, bool continueExporting = true)
         {
             ExportDate = DateTime.Now;
             SceneRoot = root;
@@ -196,27 +196,27 @@ namespace ExternalUnityRendering
         /// </summary>
         /// <param name="transform">The Transform of the root
         /// GameObject.</param>
-        public SceneState(Transform transform, CameraSettings settings)
-            : this(new ObjectState(transform), settings) { }
+        public SerializableScene(Transform transform, CameraSettings settings)
+            : this(new SerializableGameobject(transform), settings) { }
     }
 
-    public class SceneStateConverter : PartialConverter<SceneState>
+    public class SerializableSceneConverter : PartialConverter<SerializableScene>
     {
         public override bool CanRead
         {
             get { return false; }
         }
 
-        private readonly ObjectStateConverter _stateConverter = new ObjectStateConverter();
+        private readonly SerializableGameobjectConverter _stateConverter = new SerializableGameobjectConverter();
         private readonly Vector2IntConverter _vector2IntConverter = new Vector2IntConverter();
         private readonly IsoDateTimeConverter _dateTimeConverter = new IsoDateTimeConverter();
 
-        protected override void ReadValue(ref SceneState value, string name, JsonReader reader, JsonSerializer serializer)
+        protected override void ReadValue(ref SerializableScene value, string name, JsonReader reader, JsonSerializer serializer)
         {
             throw new NotImplementedException();
         }
 
-        protected override void WriteJsonProperties(JsonWriter writer, SceneState value, JsonSerializer serializer)
+        protected override void WriteJsonProperties(JsonWriter writer, SerializableScene value, JsonSerializer serializer)
         {
             writer.WritePropertyName(nameof(value.ExportDate));
             _dateTimeConverter.WriteJson(writer, value.ExportDate, serializer);
@@ -240,7 +240,7 @@ namespace ExternalUnityRendering
         }
     }
 
-    public class ObjectStateConverter : PartialConverter<ObjectState>
+    public class SerializableGameobjectConverter : PartialConverter<SerializableGameobject>
     {
         private readonly Vector3Converter _vector3Converter = new Vector3Converter();
         private readonly QuaternionConverter _quaternionConverter = new QuaternionConverter();
@@ -249,12 +249,12 @@ namespace ExternalUnityRendering
             get { return false; }
         }
 
-        protected override void ReadValue(ref ObjectState value, string name, JsonReader reader, JsonSerializer serializer)
+        protected override void ReadValue(ref SerializableGameobject value, string name, JsonReader reader, JsonSerializer serializer)
         {
             throw new NotImplementedException();
         }
 
-        protected override void WriteJsonProperties(JsonWriter writer, ObjectState value, JsonSerializer serializer)
+        protected override void WriteJsonProperties(JsonWriter writer, SerializableGameobject value, JsonSerializer serializer)
         {
             writer.WritePropertyName(nameof(value.Name));
             writer.WriteValue(value.Name);
@@ -273,7 +273,7 @@ namespace ExternalUnityRendering
 
             writer.WritePropertyName(nameof(value.Children));
             writer.WriteStartArray();
-            foreach (ObjectState child in value.Children)
+            foreach (SerializableGameobject child in value.Children)
             {
                 writer.WriteStartObject();
                 WriteJsonProperties(writer, child, serializer);
