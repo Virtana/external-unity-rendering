@@ -22,13 +22,12 @@ public class BuildScript : MonoBehaviour
 
 // TODO replace with the kinda hack parser from the init script
 // add project path checking and call EditorApplication.Quit(1) if fail
-// and output folder checking
+// and choice of output folder
     public static void Build()
     {
         // Filter unity's command line args
         string[] args = Environment.GetCommandLineArgs();
 
-        string outputName = null;
         // Make renderer by default
         BuildConfigurations config = 0;
 
@@ -42,9 +41,12 @@ public class BuildScript : MonoBehaviour
             Console.WriteLine("Missing Argument for build type.");
             Console.ResetColor();
             EditorApplication.Exit(1);
-        } else {
-            outputName = Enum.GetName(typeof(BuildConfigurations), config);
-            PlayerSettings.SetScriptingDefineSymbolsForGroup(BuildTargetGroup.Standalone, outputName.ToUpperInvariant());
+        }
+
+        string outputName = Enum.GetName(typeof(BuildConfigurations), config);
+
+        if (config == BuildConfigurations.Physics)
+        {
         }
 
         string[] scenePaths = Directory.GetFiles(Application.dataPath,
@@ -55,10 +57,15 @@ public class BuildScript : MonoBehaviour
             scenePaths[i] = scenePaths[i].Remove(0, Application.dataPath.Length - 6);
         }
 
-        BuildPipeline.BuildPlayer(scenePaths,
-            Path.GetFullPath(Path.Combine(Application.dataPath,
-                "..", "..", "builds", outputName, outputName)
-            ),
-            BuildTarget.StandaloneLinux64, BuildOptions.None);
+        BuildPipeline.BuildPlayer(new BuildPlayerOptions
+        {
+            scenes = scenePaths,
+            locationPathName = Path.GetFullPath(Path.Combine(Application.dataPath,
+                "..", "..", "builds", outputName, outputName)),
+            target = BuildTarget.StandaloneLinux64,
+            targetGroup = BuildTargetGroup.Standalone,
+            extraScriptingDefines = new string[] { outputName.ToUpperInvariant() },
+            options = config == BuildConfigurations.Physics ? BuildOptions.EnableHeadlessMode : BuildOptions.None
+        });
     }
 }

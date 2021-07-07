@@ -4,6 +4,8 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using UnityEngine;
+using System.Threading;
+using System.Threading.Channels;
 
 namespace ExternalUnityRendering.TcpIp
 {
@@ -12,6 +14,14 @@ namespace ExternalUnityRendering.TcpIp
     /// </summary>
     public class Sender
     {
+        private static readonly Channel<string> _dataToSend =
+            Channel.CreateBounded<string>(new BoundedChannelOptions(10) {
+                SingleReader = true,
+                SingleWriter = true
+            });
+
+        public static Mutex Handle = new Mutex(true);
+
         /// <summary>
         /// The host that this class transmits to.
         /// </summary>
@@ -27,10 +37,6 @@ namespace ExternalUnityRendering.TcpIp
         /// </summary>
         private readonly IPEndPoint _remoteEndPoint;
 
-        /// <summary>
-        /// The socket that will be used to send data.
-        /// </summary>
-        private readonly Socket _sender;
 
         /// <summary>
         /// The maximum number of attempts that the sender will try to send the
@@ -81,10 +87,6 @@ namespace ExternalUnityRendering.TcpIp
                 _host = Dns.GetHostEntry(ipString);
                 _ipAddress = _host.AddressList[0];
                 _remoteEndPoint = new IPEndPoint(_ipAddress, port);
-
-                // Create a TCP/IP socket.
-                _sender = new Socket(_ipAddress.AddressFamily,
-                    SocketType.Stream, ProtocolType.Tcp);
             }
             catch (SocketException se)
             {
@@ -141,6 +143,9 @@ namespace ExternalUnityRendering.TcpIp
         /// <returns>Whether the connection was established successfully.</returns>
         public bool SendAsync(string data)
         {
+            // Create a TCP/IP socket.
+            Socket _sender = new Socket(_ipAddress.AddressFamily,
+                SocketType.Stream, ProtocolType.Tcp);
             if (_sender == null)
             {
                 Debug.LogError("Cannot send data. No socket was assigned during initializaiton. " +
@@ -197,6 +202,7 @@ namespace ExternalUnityRendering.TcpIp
             try
             {
                 _sender.BeginSend(state.data, state.flags, out state.errorCode, SendDataCallback, state);
+                return true;
             }
             catch (SocketException se)
             {
@@ -208,15 +214,18 @@ namespace ExternalUnityRendering.TcpIp
             {
                 Debug.LogError($"The socket has been closed.\n{ode}");
             }
-
-            return true;
+            return false;
         }
 
 // intended for debug testing only
 // if async communication is not working properly
-#if UNITY_EDITOR || DEBUG || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEBUG || DEVELOPMENT_BUILD || UNITY_2017_1_OR_NEWER // HACK EXPOSING FOR END SIGNAL
         public bool Send(string data)
         {
+
+            // Create a TCP/IP socket.
+            Socket _sender = new Socket(_ipAddress.AddressFamily,
+                SocketType.Stream, ProtocolType.Tcp);
             // Connect the socket to the remote endpoint. Catch any errors.
             try
             {
@@ -250,5 +259,32 @@ namespace ExternalUnityRendering.TcpIp
             return false;
         }
 #endif
+        public async void Send()
+        {
+            while (await _dataToSend.Reader.WaitToReadAsync()
+                && _dataToSend.Reader.TryRead(out string item))
+            {
+                Send(item);
+                Console.Out.WriteLine($"Completed Data Transmission at {DateTime.Now}.");
+                if (_dataToSend.Reader.CanCount)
+                {
+                    Debug.Log($"{_dataToSend.Reader.Count} items left in the queue.");
+                }
+            }
+            Debug.Log("Completing...");
+            Handle.ReleaseMutex();
+        }
+
+        public static void FinishTransmissionsAndClose()
+        {
+            Debug.Log("Setting queue to closed.");
+            _dataToSend.Writer.Complete();
+            Debug.Log("Closed queue. When queue is empty, the program will terminate.");
+        }
+
+        public async void SendConcurrently(string data)
+        {
+            await _dataToSend.Writer.WriteAsync(data);
+        }
     }
 }
