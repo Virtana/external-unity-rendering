@@ -1,23 +1,14 @@
-﻿using UnityEngine;
+﻿using System;
 using System.IO;
 using UnityEditor;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using UnityEngine;
 
 public class BuildScript : MonoBehaviour
 {
-    // add a better way to detect options
-    private static readonly Dictionary<string, BuildConfigurations> _buildSymbols = new Dictionary<string, BuildConfigurations>
-    {
-        { "-physics", BuildConfigurations.Physics },
-        { "-renderer", BuildConfigurations.Renderer },
-    };
-
     private enum BuildConfigurations
     {
-        Physics = 1,
-        Renderer = 2
+        Renderer = 0,
+        Physics = 1
     }
 
 // TODO replace with the kinda hack parser from the init script
@@ -25,29 +16,38 @@ public class BuildScript : MonoBehaviour
 // and choice of output folder
     public static void Build()
     {
-        // Filter unity's command line args
-        string[] args = Environment.GetCommandLineArgs();
-
         // Make renderer by default
         BuildConfigurations config = 0;
+        string buildFolder = "";
 
-        foreach (string arg in args)
+        // Filter unity's command line args
+        string[] commandLineArgs = Environment.GetCommandLineArgs();
+        for (int i = 0, j = 1; i < commandLineArgs.Length; i++, j++)
         {
-            _buildSymbols.TryGetValue(arg, out config);
+            switch (commandLineArgs[i])
+            {
+                case "-b":
+                case "--build":
+                    if (j == commandLineArgs.Length)
+                    {
+                        Debug.LogError("Missing Build Folder.");
+                        EditorApplication.Exit(1);
+                    }
+                    buildFolder = commandLineArgs[j];
+                    break;
+                case "-p":
+                case "--physics":
+                    config = BuildConfigurations.Physics;
+                    break;
+                case "-r":
+                case "--renderer":
+                    config = BuildConfigurations.Renderer;
+                    break;
+            }
         }
 
-        if (config == 0)
-        {
-            Console.WriteLine("Missing Argument for build type.");
-            Console.ResetColor();
-            EditorApplication.Exit(1);
-        }
 
         string outputName = Enum.GetName(typeof(BuildConfigurations), config);
-
-        if (config == BuildConfigurations.Physics)
-        {
-        }
 
         string[] scenePaths = Directory.GetFiles(Application.dataPath,
             "*.unity", SearchOption.AllDirectories);
@@ -57,15 +57,21 @@ public class BuildScript : MonoBehaviour
             scenePaths[i] = scenePaths[i].Remove(0, Application.dataPath.Length - 6);
         }
 
+        BuildOptions buildOptions = BuildOptions.None;
+        if (config == BuildConfigurations.Physics)
+        {
+            buildOptions |= BuildOptions.EnableHeadlessMode;
+        }
+
+
         BuildPipeline.BuildPlayer(new BuildPlayerOptions
         {
             scenes = scenePaths,
-            locationPathName = Path.GetFullPath(Path.Combine(Application.dataPath,
-                "..", "..", "builds", outputName, outputName)),
+            locationPathName = Path.GetFullPath(Path.Combine(buildFolder, outputName, outputName)),
             target = BuildTarget.StandaloneLinux64,
             targetGroup = BuildTargetGroup.Standalone,
             extraScriptingDefines = new string[] { outputName.ToUpperInvariant() },
-            options = config == BuildConfigurations.Physics ? BuildOptions.EnableHeadlessMode : BuildOptions.None
+            options = buildOptions
         });
     }
 }

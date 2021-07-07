@@ -1,12 +1,12 @@
 ﻿//#define PHYSICS
 //#define RENDERER
-using UnityEngine;
-using ExternalUnityRendering;
-using ExternalUnityRendering.PathManagement;
 using System;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
+using ExternalUnityRendering;
+using ExternalUnityRendering.PathManagement;
 using ExternalUnityRendering.TcpIp;
+using Newtonsoft.Json;
+using UnityEngine;
 
 // cant use init script functionality in editor play mode
 // use editor gui functions instead
@@ -171,14 +171,14 @@ public class Init : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Initialize()
     {
-        string[] commandLineArgs = Environment.GetCommandLineArgs();
         // TODO change to intercept
         // https://docs.unity3d.com/ScriptReference/ILogHandler.html
         // #:~:text=taking%20this%20survey.-,ILogHandler,-interface%20in%20UnityEngine
-
         Console.CancelKeyPress += Console_CancelKeyPress;
 
 #if PHYSICS
+        string[] commandLineArgs = Environment.GetCommandLineArgs();
+
         foreach (Camera camera in FindObjectsOfType<Camera>())
         {
             camera.enabled = false;
