@@ -220,7 +220,7 @@ namespace ExternalUnityRendering.TcpIp
 // intended for debug testing only
 // if async communication is not working properly
 #if UNITY_EDITOR || DEBUG || DEVELOPMENT_BUILD || UNITY_2017_1_OR_NEWER // HACK EXPOSING FOR END SIGNAL
-        public bool Send(string data)
+        private bool Send(string data)
         {
 
             // Create a TCP/IP socket.

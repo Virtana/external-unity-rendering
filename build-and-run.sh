@@ -16,7 +16,7 @@ trap_with_arg() {
 stop() {
 	trap - SIGINT EXIT
 	printfn '\n%s\n' "received $1, killing child processes"
-	kill -s SIGKILL 0
+	kill -s -SIGKILL 0
 }
 
 trap_with_arg 'stop' EXIT SIGINT SIGTERM SIGHUP

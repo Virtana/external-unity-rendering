@@ -34,7 +34,7 @@ public class Init : MonoBehaviour
         {
             Debug.Log(message);
         }
-        Application.Quit();
+        Application.Quit(exitCode);
     }
 
     private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs ccea)
