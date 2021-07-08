@@ -15,6 +15,9 @@ namespace ExternalUnityRendering.TcpIp
     /// </summary>
     public class Sender
     {
+        /// <summary>
+        /// Container for data to be passed to the async callback.
+        /// </summary>
         private struct SendState
         {
             public SocketError errorCode;
@@ -23,18 +26,53 @@ namespace ExternalUnityRendering.TcpIp
             public SocketFlags flags;
         }
 
+        /// <summary>
+        /// Internal queue of data to be sent. Works asynchronously.
+        /// </summary>
         private readonly Channel<string> _dataToSend =
-            Channel.CreateBounded<string>(new BoundedChannelOptions(10) {
+            Channel.CreateBounded<string>(new BoundedChannelOptions(10)
+            {
                 SingleReader = true,
                 SingleWriter = true
             });
-        private readonly IPHostEntry _host;
-        private readonly IPAddress _ipAddress;
-        private readonly IPEndPoint _remoteEndPoint;
-        private readonly int _maxAttempts;
-        private readonly int _chunkSize = 50;
-        private readonly Mutex _awaitCompletion = new Mutex(true);
 
+        /// <summary>
+        /// The host that this class transmits to.
+        /// </summary>
+        private readonly IPHostEntry _host;
+
+        /// <summary>
+        /// The IP address of the host.
+        /// </summary>
+        private readonly IPAddress _ipAddress;
+
+        /// <summary>
+        /// An IPEndpoint consisting of the IP address and the port to communicate over.
+        /// </summary>
+        private readonly IPEndPoint _remoteEndPoint;
+
+
+        /// <summary>
+        /// The maximum number of attempts that the sender will try to send the
+        /// data if the connection is refused.
+        /// </summary>
+        private readonly int _maxAttempts;
+
+        /// <summary>
+        /// The size in bytes of each chunk of data.
+        /// </summary>
+        private readonly int _chunkSize = 50;
+
+        /// <summary>
+        /// Event internally used to signal the completion state of the queue.
+        /// </summary>
+        private readonly ManualResetEvent _queueClosed = new ManualResetEvent(false);
+
+        /// <summary>
+        /// Helper function to split a string into chunks of bytes.
+        /// </summary>
+        /// <param name="data">The string to be converted.</param>
+        /// <returns>A list of array segments to be used during transmission.</returns>
         private List<ArraySegment<byte>> ConvertToBuffer(string data)
         {
             byte[] dataAsBytes = Encoding.ASCII.GetBytes(data);
@@ -49,6 +87,10 @@ namespace ExternalUnityRendering.TcpIp
             return buffer;
         }
 
+        /// <summary>
+        /// Async callback to end connection.
+        /// </summary>
+        /// <param name="result">Represents the status of an asynchronous operation.</param>
         private void SendDataCallback(IAsyncResult result)
         {
             // NOTE: need to investigate what to do if result.isCompleted is false.
@@ -70,6 +112,9 @@ namespace ExternalUnityRendering.TcpIp
             socket.Close();
         }
 
+        /// <summary>
+        /// Initialize the sending queue to send data asynchronously.
+        /// </summary>
         private async void InitializeSender()
         {
             Debug.Log("Opening message queue.");
@@ -79,22 +124,14 @@ namespace ExternalUnityRendering.TcpIp
                 _dataToSend.Reader.TryRead(out string item);
 
                 // Create a TCP/IP socket.
-                Socket sender = null;
-                try
-                {
-                    sender = new Socket(_ipAddress.AddressFamily,
+                Socket sender = new Socket(_ipAddress.AddressFamily,
                         SocketType.Stream, ProtocolType.Tcp);
-                }
-                catch (SocketException se)
-                {
-                    Debug.Log($"The socket was not able to be created as the combination of addressFamily, " +
-                        $"socketType, and protocolType results in an invalid socket.\n{se}");
-                }
 
                 if (sender == null)
                 {
                     Debug.LogError("Cannot send data. No socket was assigned during initializaiton. " +
                         "An error may have occured. Try reassigning the socket.");
+                    continue;
                 }
 
                 int connectionAttempts = 0;
@@ -152,9 +189,9 @@ namespace ExternalUnityRendering.TcpIp
                 try
                 {
                     await Task.Factory.FromAsync((callback, callbackData) =>
-                        {
-                            return sender.BeginSend(state.data, state.flags, callback, callbackData);
-                        }, SendDataCallback, state);
+                    {
+                        return sender.BeginSend(state.data, state.flags, callback, callbackData);
+                    }, SendDataCallback, state);
                 }
                 catch (SocketException se)
                 {
@@ -169,9 +206,16 @@ namespace ExternalUnityRendering.TcpIp
             }
 
             Debug.Log("Completing...");
-            _awaitCompletion.ReleaseMutex();
+            _queueClosed.Set();
         }
 
+        /// <summary>
+        /// Initialize data for the socket transmission.
+        /// </summary>
+        /// <param name="port">The port to send data over.</param>
+        /// <param name="ipString">The string representing the IP address.</param>
+        /// <param name="maxRetries">The maximum number of times to retry sending data
+        /// after the connection has been refused.</param>
         public Sender(int port = 11000, string ipString = "localhost", int maxRetries = 3)
         {
             try
@@ -199,22 +243,32 @@ namespace ExternalUnityRendering.TcpIp
             }
         }
 
+        /// <summary>
+        /// Add a string to the queue of data to be sent.
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
         public bool QueueSend(string data)
         {
+            _queueClosed.Set();
             return _dataToSend.Writer.TryWrite(data);
         }
 
+        /// <summary>
+        /// Queue a closing message to the server and wait until it has been sent.
+        /// </summary>
         public void FinishTransmissionsAndClose()
         {
             Debug.Log("Sending closing message.");
             _dataToSend.Writer.WriteAsync(
                 Newtonsoft.Json.JsonConvert.SerializeObject(new SerializableScene()
-                    {
-                        ContinueImporting = false
-                    }));
+                {
+                    ContinueImporting = false
+                }));
             _dataToSend.Writer.Complete();
-            _awaitCompletion.WaitOne();
-            Debug.Log("Closed message queue. When queue is empty, the program will terminate.");
+
+            _queueClosed.WaitOne();
+            Debug.Log("Closed queue. When queue is empty, the program will terminate.");
         }
     }
 }
