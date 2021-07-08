@@ -1,4 +1,4 @@
-﻿#define PHYSICS
+﻿//#define PHYSICS
 //#define RENDERER
 using System;
 using System.Threading.Tasks;

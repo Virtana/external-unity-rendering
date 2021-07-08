@@ -76,14 +76,20 @@ namespace ExternalUnityRendering.TcpIp
         {
             bool continueReading = true;
 
-            while (continueReading && await _dataReceieved.Reader.WaitToReadAsync()
-                && _dataReceieved.Reader.TryRead(out string data))
+            while (continueReading && await _dataReceieved.Reader.WaitToReadAsync())
             {
-                continueReading = dataReceivedCallback(data);
+                if (_dataReceieved.Reader.TryRead(out string data))
+                {
+                    continueReading = dataReceivedCallback(data);
+                }
+                else
+                {
+                    Debug.LogError("FAILED to read from internal channel");
+                }
             }
             // Exit the application in runtime, stop playing in editor.
             // If server is off, no point in render instance.
-            Debug.Log("Completed imported.");
+            Debug.Log("Finished importing.");
             Application.Quit(0);
         }
 

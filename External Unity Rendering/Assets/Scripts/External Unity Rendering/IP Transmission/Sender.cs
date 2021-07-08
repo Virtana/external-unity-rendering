@@ -72,6 +72,7 @@ namespace ExternalUnityRendering.TcpIp
 
         private async void InitializeSender()
         {
+            Debug.Log("Opening message queue.");
             while (await _dataToSend.Reader.WaitToReadAsync())
             {
                 // add fail check
@@ -165,11 +166,6 @@ namespace ExternalUnityRendering.TcpIp
                 {
                     Debug.LogError($"The socket has been closed.\n{ode}");
                 }
-
-                if (_dataToSend.Reader.CanCount)
-                {
-                    Debug.Log($"{_dataToSend.Reader.Count} items left in the queue.");
-                }
             }
 
             Debug.Log("Completing...");
@@ -210,10 +206,15 @@ namespace ExternalUnityRendering.TcpIp
 
         public void FinishTransmissionsAndClose()
         {
-            Debug.Log("Setting queue to closed.");
+            Debug.Log("Sending closing message.");
+            _dataToSend.Writer.WriteAsync(
+                Newtonsoft.Json.JsonConvert.SerializeObject(new SerializableScene()
+                    {
+                        ContinueImporting = false
+                    }));
             _dataToSend.Writer.Complete();
             _awaitCompletion.WaitOne();
-            Debug.Log("Closed queue. When queue is empty, the program will terminate.");
+            Debug.Log("Closed message queue. When queue is empty, the program will terminate.");
         }
     }
 }
