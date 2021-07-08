@@ -1,10 +1,10 @@
-﻿using ExternalUnityRendering.PathManagement;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using ExternalUnityRendering.PathManagement;
 using ExternalUnityRendering.TcpIp;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -70,16 +70,21 @@ namespace ExternalUnityRendering
         /// </summary>
         private Dictionary<PostExportAction, Func<string, bool>> _exportActions;
 
+        public readonly Sender _sender = new Sender();
+
         /// <summary>
         /// Initializes the state of the Exporter.
         /// </summary>
         private void Awake()
         {
+            // HACK dodging job temp alloc deleting things
+            //Application.targetFrameRate = 1;
+
             _exportFolder = new DirectoryManager();
             _exportActions = new Dictionary<PostExportAction, Func<string, bool>>()
             {
                 {PostExportAction.Nothing, (state) => { return true; } },
-                {PostExportAction.Transmit, (state) => new Sender().SendAsync(state) },
+                {PostExportAction.Transmit, (state) => { _sender.SendConcurrently(state); return true; } },
                 {PostExportAction.WriteToFile, (state) => WriteStateToFile(state) },
                 {PostExportAction.Log, (state) => { Debug.Log($"JSON Data = { state }"); return true; } },
             };
@@ -224,18 +229,26 @@ namespace ExternalUnityRendering
                 {
                     if ((item.Key & exportMode) == item.Key)
                     {
-                        succeeded &= item.Value.Invoke(state);
+                        bool success = item.Value.Invoke(state);
+                        if (item.Key == PostExportAction.Nothing)
+                        {
+                            continue;
+                        }
+                        if ((item.Key & exportMode) == PostExportAction.Transmit)
+                        {
+                            Debug.Log("Queued Data to be transmitted. See logs for status.");
+                        }
+                        else if (success)
+                        {
+                            // need to add consideration for async saying nope
+                            Debug.Log($"SUCCESS: Completed {item.Key & exportMode} at { DateTime.Now }.");
+                        }
+                        else
+                        {
+                            Debug.LogError($"FAILED: {item.Key & exportMode} at { DateTime.Now } failed to complete fully. " +
+                                "See logs for more details.");
+                        }
                     }
-                }
-
-                if (succeeded)
-                {
-                    Debug.Log($"SUCCESS: Completed export at { DateTime.Now }");
-                }
-                else
-                {
-                    Debug.LogError($"FAILED: Export at { DateTime.Now } failed to complete fully. " +
-                        "See logs for more details.");
                 }
             }
             catch (JsonException je)

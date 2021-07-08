@@ -34,7 +34,7 @@ namespace ExternalUnityRendering.CameraUtilites
                 // created by something else
                 if (!string.IsNullOrEmpty(value))
                 {
-                    _renderPath = new DirectoryManager(Path.Combine(value, "Renders", name));
+                    _renderPath = new DirectoryManager(Path.Combine(value, name));
                 }
             }
         }
@@ -45,7 +45,8 @@ namespace ExternalUnityRendering.CameraUtilites
         private void Awake()
         {
             // create a new camera directory in the subdirectory renders
-            _renderPath = new DirectoryManager(Path.Combine("Renders", name), true);
+            _renderPath = new DirectoryManager(
+                Path.Combine(Application.persistentDataPath, name), true);
 
             // Importer will attach this to cameras right before importing.
             // so can delete if accidentally attached
@@ -59,7 +60,7 @@ namespace ExternalUnityRendering.CameraUtilites
 
             // TODO Uncomment this and provide some sort of control to turn it on
             // should be off by default
-            // _camera.enabled = false;
+            _camera.enabled = false;
         }
 
         /// <summary>

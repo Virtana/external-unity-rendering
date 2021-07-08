@@ -1,11 +1,12 @@
 ﻿//#define PHYSICS
 //#define RENDERER
-using UnityEngine;
-using ExternalUnityRendering;
-using ExternalUnityRendering.PathManagement;
 using System;
 using System.Threading.Tasks;
-using System.Linq;
+using ExternalUnityRendering;
+using ExternalUnityRendering.PathManagement;
+using ExternalUnityRendering.TcpIp;
+using Newtonsoft.Json;
+using UnityEngine;
 
 // cant use init script functionality in editor play mode
 // use editor gui functions instead
@@ -36,26 +37,10 @@ public class Init : MonoBehaviour
         Application.Quit(exitCode);
     }
 
-    private static void Application_logMessageReceived(string message, string stacktrace, LogType logType)
+    private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs ccea)
     {
-        switch (logType)
-        {
-            case LogType.Assert:
-            case LogType.Error:
-            case LogType.Exception:
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.Error.WriteLine($"{Enum.GetName(typeof(LogType), logType)}: ${message}.\n{stacktrace}");
-                break;
-            case LogType.Warning:
-                Console.ForegroundColor = ConsoleColor.Magenta;
-                Console.Error.WriteLine($"{Enum.GetName(typeof(LogType), logType)}: ${message}.\n{stacktrace}");
-                break;
-            case LogType.Log:
-                Console.WriteLine($"LOG: {message}");
-                break;
-        }
-
-        Console.ResetColor();
+        ccea.Cancel = true;
+        Exit($"Received {ccea.SpecialKey}.", 0);
     }
 
 #if PHYSICS
@@ -119,11 +104,46 @@ public class Init : MonoBehaviour
         ExportScene.PostExportAction afterExport, Vector2Int rendererOutputResolution,
         string rendererOutputFolder)
     {
-        // Keep running while not done and editor is running
+        Collider[] colliders = FindObjectsOfType<Collider>();
+
+        foreach (Collider hit in colliders)
+        {
+            // addforce etc has no effect on inactive GameObjects
+            if (!hit.gameObject.activeInHierarchy)
+            {
+                continue;
+            }
+
+            // Handle non-convex mesh collider with non-kinematic rigidbody error
+            if (hit.gameObject.TryGetComponent(out MeshCollider _))
+            {
+                // meshcolliders are used with items that should be static
+                // in this test so skip for now otherwise assign out meshcollider
+                // and set mesh.convex to true
+                continue;
+            }
+
+            if (!hit.gameObject.TryGetComponent(out Rigidbody rb))
+            {
+                rb = hit.gameObject.AddComponent<Rigidbody>();
+            }
+
+            rb.mass = 10;
+            rb.interpolation = RigidbodyInterpolation.Interpolate;
+            rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+            rb.AddForce(new Vector3(
+                        UnityEngine.Random.Range(-50, 50),
+                        UnityEngine.Random.Range(-50, 50),
+                        UnityEngine.Random.Range(-50, 50)),
+                        ForceMode.Impulse);
+        }
+
+        exporter._sender.Send();
+        // Keep running while not done and application is running
         for (int i = 0; i < totalExports && Application.isPlaying; i++)
         {
             exporter.ExportCurrentScene(afterExport, rendererOutputResolution,
-                rendererOutputFolder, true);
+                rendererOutputFolder);
 
             // delay is the amount of time that the physics system will calculate for in
             // between renders. Rendering is a blocking task that "freezes" unity time,
@@ -132,37 +152,33 @@ public class Init : MonoBehaviour
             await Task.Delay(delay);
         }
 
-        // TODO await transmission complete.
-        await Task.Delay(5000); // HACK wait five seconds to finish transmit
+        if ((afterExport & ExportScene.PostExportAction.Transmit) == ExportScene.PostExportAction.Transmit)
+        {
+            new Sender().Send(JsonConvert.SerializeObject(new SerializableScene()
+            {
+                ContinueImporting = false
+            }));
+        }
+
+        Sender.FinishTransmissionsAndClose();
+        Sender.Handle.WaitOne();
+        Debug.Log("Emptied queue and closing programs.");
+
         Exit("Completed Execution.", 0);
     }
-#elif RENDERER
-    // A declaration to wait for an endsignal
-    private static async void AwaitEndSignal()
-    {
-        await Task.Delay(0);
-    }
 #endif
-
-    private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs ccea)
-    {
-        Exit($"Received {ccea.SpecialKey}.", 0);
-    }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Initialize()
     {
-        string[] commandLineArgs = Environment.GetCommandLineArgs();
-        if (commandLineArgs.Contains("-nographics"))
-        {
-            // TODO change to intercept
-            // https://docs.unity3d.com/ScriptReference/ILogHandler.html
-            // #:~:text=taking%20this%20survey.-,ILogHandler,-interface%20in%20UnityEngine
-            Application.logMessageReceived += Application_logMessageReceived;
-        }
+        // TODO change to intercept
+        // https://docs.unity3d.com/ScriptReference/ILogHandler.html
+        // #:~:text=taking%20this%20survey.-,ILogHandler,-interface%20in%20UnityEngine
         Console.CancelKeyPress += Console_CancelKeyPress;
 
 #if PHYSICS
+        string[] commandLineArgs = Environment.GetCommandLineArgs();
+
         foreach (Camera camera in FindObjectsOfType<Camera>())
         {
             camera.enabled = false;
@@ -194,21 +210,21 @@ public class Init : MonoBehaviour
         {
             switch (commandLineArgs[i])
             {
-                case "-delay":
+                case "--delay":
                     if (j == commandLineArgs.Length)
                     {
                         Exit("Missing Delay argument. If it is not needed, exclude it.");
                     }
                     delayArgument = new Time(commandLineArgs[j]);
                     break;
-                case "-time":
+                case "--time":
                     if (j == commandLineArgs.Length)
                     {
                         Exit("Missing time argument. If it is not needed, exclude it.");
                     }
                     totalTimeArgument = new Time(commandLineArgs[j]);
                     break;
-                case "-export":
+                case "--export":
                     if (j == commandLineArgs.Length)
                     {
                         Exit("Missing export count argument. If it is not needed, exclude it.");
@@ -223,7 +239,7 @@ public class Init : MonoBehaviour
                     }
                     break;
                 case "-h":
-                case "-height":
+                case "--height":
                     if (j == commandLineArgs.Length)
                     {
                         Exit("Missing height argument.");
@@ -238,7 +254,7 @@ public class Init : MonoBehaviour
                     }
                     break;
                 case "-w":
-                case "-width":
+                case "--width":
                     if (j == commandLineArgs.Length)
                     {
                         Exit("Missing width argument.");
@@ -253,14 +269,14 @@ public class Init : MonoBehaviour
                     }
                     break;
                 case "-r":
-                case "-renderPath":
+                case "--renderPath":
                     if (j == commandLineArgs.Length)
                     {
                         Exit("Missing render path argument.");
                     }
                     renderPath.Path = commandLineArgs[j];
                     break;
-                case "-writeToFile":
+                case "--writeToFile":
                     exportAction |= ExportScene.PostExportAction.WriteToFile;
                     if (j == commandLineArgs.Length)
                     {
@@ -275,16 +291,16 @@ public class Init : MonoBehaviour
                         }
                     }
                     break;
-                case "-logExport":
+                case "--logExport":
                     exportAction |= ExportScene.PostExportAction.Log;
                     break;
-                case "-transmit":
+                case "--transmit":
                     exportAction |= ExportScene.PostExportAction.Transmit;
                     break;
             }
         }
 
-        if (delayArgument != null && totalExportsArgument < 1 && totalTimeArgument != null
+        if (delayArgument != null && totalExportsArgument > 0 && totalTimeArgument != null
             && delayArgument.Milliseconds * totalExportsArgument != totalTimeArgument.Milliseconds)
         {
             Exit("Inconsistent time arguments given.");
@@ -319,13 +335,24 @@ public class Init : MonoBehaviour
             Exit("Missing Arguments to export.");
         }
 
+        Debug.Log($"TOTAL EXPORTS <[-:=|=:-]> {totalExports}");
+
         // TODO add other options currently partly hardcoded
         exporter.ExportFolder = jsonPath.Path;
         ExportLoop(exporter, delay, totalExports, exportAction,
             renderResolution, renderPath.Path);
 #elif RENDERER
+        if (FindObjectOfType<ImportScene>() == null)
+        {
+            GameObject obj = new GameObject
+            {
+                name = Guid.NewGuid().ToString()
+            };
 
+            obj.AddComponent<ImportScene>();
+        }
 #else
+        // TODO FIX render folder go to good one time blank default
         Debug.LogError("Renderer or Physics is not defined. Will not do anything. Exiting...");
         Application.Quit(1);
 #endif

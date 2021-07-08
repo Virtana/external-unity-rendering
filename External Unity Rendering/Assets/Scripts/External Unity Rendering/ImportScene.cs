@@ -1,10 +1,10 @@
-﻿using ExternalUnityRendering.CameraUtilites;
+﻿using System;
+using System.Collections.Generic;
+using ExternalUnityRendering.CameraUtilites;
 using ExternalUnityRendering.PathManagement;
 using ExternalUnityRendering.TcpIp;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-using System;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -34,8 +34,9 @@ namespace ExternalUnityRendering
             Debug.Log("Awaiting Messages?");
             Receiver client = new Receiver();
 
+            client.ProcessCallback((state) => ImportCurrentScene(state));
             // non blocking async function
-            client.ReceiveMessages((state) => ImportCurrentScene(state));
+            client.ReceiveMessages();
         }
 
         /// <summary>
@@ -137,6 +138,11 @@ namespace ExternalUnityRendering
                 // add check if blank state exists and return immediately
                 // or replace blank state with null and add that as an exit now
                 SerializableScene state = JsonConvert.DeserializeObject<SerializableScene>(json, serializerSettings);
+
+                if (!state.ContinueImporting)
+                {
+                    return false;
+                }
 
                 if (failed || state == null)
                 {
