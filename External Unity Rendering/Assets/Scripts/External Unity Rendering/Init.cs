@@ -138,7 +138,6 @@ public class Init : MonoBehaviour
                         ForceMode.Impulse);
         }
 
-        exporter._sender.Send();
         // Keep running while not done and application is running
         for (int i = 0; i < totalExports && Application.isPlaying; i++)
         {
@@ -154,15 +153,9 @@ public class Init : MonoBehaviour
 
         if ((afterExport & ExportScene.PostExportAction.Transmit) == ExportScene.PostExportAction.Transmit)
         {
-            new Sender().Send(JsonConvert.SerializeObject(new SerializableScene()
-            {
-                ContinueImporting = false
-            }));
+            Debug.Log("Emptied queue and closing programs.");
+            exporter.Sender.FinishTransmissionsAndClose();
         }
-
-        Sender.FinishTransmissionsAndClose();
-        Sender.Handle.WaitOne();
-        Debug.Log("Emptied queue and closing programs.");
 
         Exit("Completed Execution.", 0);
     }
