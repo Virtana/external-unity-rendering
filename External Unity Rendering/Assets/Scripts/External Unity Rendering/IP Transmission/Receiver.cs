@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using UnityEngine;
 
@@ -9,6 +10,8 @@ namespace ExternalUnityRendering.TcpIp
 {
     public class Receiver
     {
+        private readonly Channel<string> _dataReceieved = Channel.CreateUnbounded<string>();
+
         /// <summary>
         /// The host that this receiver should listen on.
         /// </summary>
@@ -69,17 +72,33 @@ namespace ExternalUnityRendering.TcpIp
             }
         }
 
+        public async void ProcessCallback(Func<string, bool> dataReceivedCallback)
+        {
+            bool continueReading = true;
+
+            while (continueReading && await _dataReceieved.Reader.WaitToReadAsync()
+                && _dataReceieved.Reader.TryRead(out string data))
+            {
+                continueReading = dataReceivedCallback(data);
+            }
+            // Exit the application in runtime, stop playing in editor.
+            // If server is off, no point in render instance.
+            Debug.Log("Completed imported.");
+            Application.Quit(0);
+        }
+
         /// <summary>
         /// Begin receiving data asynchronously.
         /// </summary>
         /// <param name="dataReceivedCallback">Func to be called each time data is received.
         /// Returns whether the system should continue receiving data.</param>
-        public async void ReceiveMessages(Func<string, bool> dataReceivedCallback)
+        public async void ReceiveMessages()
         {
             string data = "";
             // byte cache for what is recieved
             byte[] bytes = new byte[1024];
-            
+
+            // maybe switch to infinite loop or some sort of ienumerable idk
             bool continueReceiving = true;
             using (MemoryStream cache = new MemoryStream())
             {
@@ -163,18 +182,10 @@ namespace ExternalUnityRendering.TcpIp
                     });
                     if (success)
                     {
-                        continueReceiving = dataReceivedCallback(data);
+                        await _dataReceieved.Writer.WriteAsync(data);
                     }
                 }
             }
-
-            // Exit the application in runtime, stop playing in editor.
-            // If server is off, no point in render instance.
-#if UNITY_EDITOR
-            UnityEditor.EditorApplication.isPlaying = false;
-#else
-            Application.Quit();
-#endif
         }
     }
 }
