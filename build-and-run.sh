@@ -16,9 +16,10 @@ trap_with_arg() {
 stop() {
 	trap - SIGINT EXIT
 	printfn '\n%s\n' "received $1, killing child processes"
-	kill -s -SIGKILL 0
+	kill -s SIGINT 0
 }
 
+# maybe take out SIGHUP and make it do nothing
 trap_with_arg 'stop' EXIT SIGINT SIGTERM SIGHUP
 
 
@@ -50,6 +51,7 @@ if [ ! -d "$projectFolder" ] && [ ! -r "$projectFolder" ]; then
 	printfn "Invalid render folder provided.\n > $projectFolder" >&2
 	exit 1
 fi
+projectFolder=$(readlink -f "$projectFolder")
 
 # check if output folder provided and if it is, validate it
 if [ -n "$jsonFolder" ] && [ ! -d "$jsonFolder" ] \
@@ -58,7 +60,7 @@ if [ -n "$jsonFolder" ] && [ ! -d "$jsonFolder" ] \
 	exit 1
 elif [ -n "$jsonFolder" ]; then
 	# prepend argument switch
-	jsonFolder="--writeToFile $jsonFolder"
+	jsonFolder="--writeToFile $(readlink -f "$jsonFolder")"
 fi
 
 # validate renderpath
@@ -67,15 +69,15 @@ if [ -n "$renderPath" ] && [ ! -d "$renderPath" ] \
 	printfn "Invalid render folder provided.\n > $renderPath" >&2
 	exit 1
 fi
-renderPath="-r $renderPath"
+renderPath="-r $(readlink -f "$renderPath")"
 
-# validate buildPath
+# validate buildDir
 if [ -n "$buildDir" ] && [ ! -d "$buildDir" ] \
 	&& [ ! -w "$buildDir" ] && [ ! -r "$buildDir" ]; then
 	printfn "Invalid build folder provided.\n > $buildDir" >&2
 	exit 1
 fi
-buildPath="-build $buildPath"
+buildDir=$(readlink -f "$buildDir")
 
 # validate copyProjectFolder
 if [ -n "$copyProject" ] && [ ! -d "$copyProject" ] \
@@ -84,6 +86,7 @@ if [ -n "$copyProject" ] && [ ! -d "$copyProject" ] \
 	printfn "Invalid copy project folder provided.\n > $copyProject" >&2
 	exit 1
 fi
+copyProject=$(readlink -f "$copyProject")
 
 # validate renderheight
 if [ -z "$renderHeight" ] && [[ $renderHeight == +([0-9]) ]]; then
@@ -135,7 +138,7 @@ printfn "Arguments:
 
 if [ -n "$copyProject" ]; then
 	# clear src
-	#rm -r ./src/*
+	rm -r ./src/*
 	cp -r "$projectFolder/Assets" "$copyProject"
 	cp -r "$projectFolder/ProjectSettings" "$copyProject"
 	cp -r "$projectFolder/Packages" "$copyProject"
@@ -145,7 +148,7 @@ fi
 
 if [ "$build" = true ]; then
 	# build physics
-	~/Unity/Hub/Editor/2020.3.11f1/Editor/Unity -quit -batchmode -nographics -projectPath "$copyProject" -executeMethod BuildScript.Build --physics "$buildPath"
+	~/Unity/Hub/Editor/2020.3.11f1/Editor/Unity -quit -batchmode -nographics -projectPath "$copyProject" -executeMethod BuildScript.Build --physics --build "$buildDir"
 
 	# quit if fail
 	if [[ $? -ne 0 ]]; then
@@ -154,7 +157,7 @@ if [ "$build" = true ]; then
 	fi
 
 	# build renderer
-	~/Unity/Hub/Editor/2020.3.11f1/Editor/Unity -quit -batchmode -nographics -projectPath "$copyProject" -executeMethod BuildScript.Build --renderer "$buildPath"
+	~/Unity/Hub/Editor/2020.3.11f1/Editor/Unity -quit -batchmode -nographics -projectPath "$copyProject" -executeMethod BuildScript.Build --renderer --build "$buildDir"
 
 	# quit if fail
 	if [[ $? -ne 0 ]]; then
@@ -167,15 +170,13 @@ rendererPath="$buildDir/Renderer/Renderer"
 physicsPath="$buildDir/Physics/Physics"
 
 if [ -n "$transmit" ]; then
-	printf "%s" "$rendererPath" | xargs -I {} bash -c 'DISPLAY=:0 {} -batchmode -logFile /dev/stdout' &
+	DISPLAY=:0 exec "$rendererPath" -batchmode -logFile /dev/stdout &
 	renderer_pid=$!
-	disown $renderer_pid
-	#while jobs %% 2> /dev/null ; do tail -f nohup.out | xargs -I {} bash -c "echo -e \e[30;46m{}\e[0m\n"; done &
 fi
 
 # VERY BIG HACK TO ENSURE PHYSICS LAUNCHES AFTER RENDERER IS READY
 # option, try pinging the socket?
-sleep 0.5
+#sleep 0.5
 
 # run physics
 printf "%s" "$physicsPath" | xargs -I {} bash -c "{} \
@@ -186,9 +187,7 @@ printf "%s" "$physicsPath" | xargs -I {} bash -c "{} \
 	$exportCount $delayms $totalTime"
 
 if [ -n "$transmit" ] && [[ $? -ne 0 ]]; then
-	kill -EXIT %%
+	kill -EXIT $renderer_pid
 fi
 
-if ps -p $renderer_pid > /dev/null && jobs $renderer_pid 2> /dev/null; then
-	wait $renderer_pid
-fi
+wait
