@@ -70,21 +70,20 @@ namespace ExternalUnityRendering
         /// </summary>
         private Dictionary<PostExportAction, Func<string, bool>> _exportActions;
 
-        public readonly Sender _sender = new Sender();
+        // TODO add compile options or assign when created
+        // for the port etc and exit if fatal error
+        public Sender Sender = new Sender();
 
         /// <summary>
         /// Initializes the state of the Exporter.
         /// </summary>
         private void Awake()
         {
-            // HACK dodging job temp alloc deleting things
-            //Application.targetFrameRate = 1;
-
             _exportFolder = new DirectoryManager();
             _exportActions = new Dictionary<PostExportAction, Func<string, bool>>()
             {
                 {PostExportAction.Nothing, (state) => { return true; } },
-                {PostExportAction.Transmit, (state) => { _sender.SendConcurrently(state); return true; } },
+                {PostExportAction.Transmit, (state) => { return Sender.QueueSend(state); } },
                 {PostExportAction.WriteToFile, (state) => WriteStateToFile(state) },
                 {PostExportAction.Log, (state) => { Debug.Log($"JSON Data = { state }"); return true; } },
             };
