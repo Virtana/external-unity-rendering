@@ -81,6 +81,11 @@ namespace ExternalUnityRendering.TcpIp
                 if (_dataReceieved.Reader.TryRead(out string data))
                 {
                     continueReading = dataReceivedCallback(data);
+                    
+                    if (!continueReading)
+                    {
+                        _dataReceieved.Writer.Complete();
+                    }
                 }
                 else
                 {
@@ -186,6 +191,7 @@ namespace ExternalUnityRendering.TcpIp
 
                         return false;
                     });
+                    
                     if (success)
                     {
                         await _dataReceieved.Writer.WriteAsync(data);

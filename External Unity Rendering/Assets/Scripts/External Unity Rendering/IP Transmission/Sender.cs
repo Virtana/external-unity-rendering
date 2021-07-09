@@ -30,8 +30,7 @@ namespace ExternalUnityRendering.TcpIp
         /// Internal queue of data to be sent. Works asynchronously.
         /// </summary>
         private readonly Channel<string> _dataToSend =
-            Channel.CreateBounded<string>(new BoundedChannelOptions(10)
-            {
+            Channel.CreateUnbounded<string>(new UnboundedChannelOptions() {
                 SingleReader = true,
                 SingleWriter = true
             });
@@ -122,7 +121,7 @@ namespace ExternalUnityRendering.TcpIp
             {
                 // add fail check
                 _dataToSend.Reader.TryRead(out string item);
-
+                //Debug.Log($"complete? : {_dataToSend.Writer.}");
                 // Create a TCP/IP socket.
                 Socket sender = new Socket(_ipAddress.AddressFamily,
                         SocketType.Stream, ProtocolType.Tcp);
@@ -178,7 +177,7 @@ namespace ExternalUnityRendering.TcpIp
                             $"Listen(Int32).\n{ioe}");
                     }
                 }
-
+                
                 SendState state = new SendState
                 {
                     socket = sender,
@@ -189,9 +188,9 @@ namespace ExternalUnityRendering.TcpIp
                 try
                 {
                     await Task.Factory.FromAsync((callback, callbackData) =>
-                    {
-                        return sender.BeginSend(state.data, state.flags, callback, callbackData);
-                    }, SendDataCallback, state);
+                        {
+                            return sender.BeginSend(state.data, state.flags, callback, callbackData);
+                        }, SendDataCallback, state);
                 }
                 catch (SocketException se)
                 {
@@ -260,15 +259,16 @@ namespace ExternalUnityRendering.TcpIp
         public void FinishTransmissionsAndClose()
         {
             Debug.Log("Sending closing message.");
-            _dataToSend.Writer.WriteAsync(
-                Newtonsoft.Json.JsonConvert.SerializeObject(new SerializableScene()
-                {
-                    ContinueImporting = false
-                }));
-            _dataToSend.Writer.Complete();
-
+            Task.WaitAll(_dataToSend.Writer.WriteAsync(
+                    Newtonsoft.Json.JsonConvert.SerializeObject(new SerializableScene()
+                        {
+                            ContinueImporting = false
+                        })).AsTask()
+            );
+            
+            _dataToSend.Writer.TryComplete();
             _queueClosed.WaitOne();
-            Debug.Log("Closed queue. When queue is empty, the program will terminate.");
+            Debug.Log("Closed message queue. When queue is empty, the program will terminate.");
         }
     }
 }
