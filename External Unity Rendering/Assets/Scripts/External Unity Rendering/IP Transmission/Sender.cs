@@ -4,8 +4,8 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
+using AwaitableConcurrentQueue;
 using UnityEngine;
 
 namespace ExternalUnityRendering.TcpIp
@@ -29,11 +29,7 @@ namespace ExternalUnityRendering.TcpIp
         /// <summary>
         /// Internal queue of data to be sent. Works asynchronously.
         /// </summary>
-        private readonly Channel<string> _dataToSend =
-            Channel.CreateUnbounded<string>(new UnboundedChannelOptions() {
-                SingleReader = true,
-                SingleWriter = true
-            });
+        private readonly AwaitableConcurrentQueue<string> _messageQueue = new AwaitableConcurrentQueue<string>();
 
         /// <summary>
         /// The host that this class transmits to.
@@ -65,7 +61,7 @@ namespace ExternalUnityRendering.TcpIp
         /// <summary>
         /// Event internally used to signal the completion state of the queue.
         /// </summary>
-        private readonly ManualResetEvent _queueClosed = new ManualResetEvent(false);
+        private readonly ManualResetEventSlim _queueClosed = new ManualResetEventSlim(false);
 
         /// <summary>
         /// Helper function to split a string into chunks of bytes.
@@ -106,6 +102,7 @@ namespace ExternalUnityRendering.TcpIp
                 Debug.LogWarning("Transmission is not completed. Data may not have been " +
                     "handled correctly.");
             }
+
             Socket socket = state.socket;
             socket.EndSend(result);
             socket.Close();
@@ -117,12 +114,16 @@ namespace ExternalUnityRendering.TcpIp
         private async void InitializeSender()
         {
             Debug.Log("Opening message queue.");
-            while (await _dataToSend.Reader.WaitToReadAsync())
+            while (_messageQueue.DataAvailable)
             {
-                // add fail check
-                _dataToSend.Reader.TryRead(out string item);
-                //Debug.Log($"complete? : {_dataToSend.Writer.}");
-                // Create a TCP/IP socket.
+                (bool readSuccess, string data) = await _messageQueue.DequeueAsync();
+
+                if (!readSuccess)
+                {
+                    Debug.Log("Failed to read from queue");
+                    continue;
+                }
+
                 Socket sender = new Socket(_ipAddress.AddressFamily,
                         SocketType.Stream, ProtocolType.Tcp);
 
@@ -164,7 +165,18 @@ namespace ExternalUnityRendering.TcpIp
                     }
                     catch (ObjectDisposedException ode)
                     {
-                        Debug.LogError($"The socket has been closed.\n{ode}");
+                        Debug.LogError($"The sender socket has been closed.");
+                        if (_maxAttempts == connectionAttempts)
+                        {
+                            Debug.LogError($"Failed to connect. \n{ode}\nAborting...");
+                            break;
+                        }
+                        else
+                        {
+                            sender = new Socket(_ipAddress.AddressFamily,
+                                                SocketType.Stream, ProtocolType.Tcp);
+                            Debug.Log($"Tried {++connectionAttempts}/{_maxAttempts} times. Creating a new socket and retrying...");
+                        }
                     }
                     catch (System.Security.SecurityException se)
                     {
@@ -177,11 +189,17 @@ namespace ExternalUnityRendering.TcpIp
                             $"Listen(Int32).\n{ioe}");
                     }
                 }
+
+                if (_maxAttempts == connectionAttempts)
+                {
+                    Debug.LogError("Failed to connect. Discarding data.");
+                    continue;
+                }
                 
                 SendState state = new SendState
                 {
                     socket = sender,
-                    data = ConvertToBuffer(item),
+                    data = ConvertToBuffer(data),
                     flags = SocketFlags.None
                 };
 
@@ -191,6 +209,7 @@ namespace ExternalUnityRendering.TcpIp
                         {
                             return sender.BeginSend(state.data, state.flags, callback, callbackData);
                         }, SendDataCallback, state);
+                    Debug.Log($"Sent {data.Length} bytes to {sender.RemoteEndPoint} at {DateTime.Now}.");
                 }
                 catch (SocketException se)
                 {
@@ -204,7 +223,6 @@ namespace ExternalUnityRendering.TcpIp
                 }
             }
 
-            Debug.Log("Completing...");
             _queueClosed.Set();
         }
 
@@ -228,7 +246,7 @@ namespace ExternalUnityRendering.TcpIp
                 _ipAddress = _host.AddressList[0];
                 _remoteEndPoint = new IPEndPoint(_ipAddress, port);
 
-                InitializeSender();
+                Task.Run(InitializeSender);
             }
             catch (SocketException se)
             {
@@ -249,8 +267,7 @@ namespace ExternalUnityRendering.TcpIp
         /// <returns></returns>
         public bool QueueSend(string data)
         {
-            _queueClosed.Set();
-            return _dataToSend.Writer.TryWrite(data);
+            return _messageQueue.Enqueue(data);
         }
 
         /// <summary>
@@ -259,15 +276,13 @@ namespace ExternalUnityRendering.TcpIp
         public void FinishTransmissionsAndClose()
         {
             Debug.Log("Sending closing message.");
-            Task.WaitAll(_dataToSend.Writer.WriteAsync(
-                    Newtonsoft.Json.JsonConvert.SerializeObject(new SerializableScene()
+            string text_file = Newtonsoft.Json.JsonConvert.SerializeObject(new SerializableScene()
                         {
                             ContinueImporting = false
-                        })).AsTask()
-            );
-            
-            _dataToSend.Writer.TryComplete();
-            _queueClosed.WaitOne();
+                        });
+            _messageQueue.Enqueue(text_file);
+            _messageQueue.Finish();
+            _queueClosed.Wait();
             Debug.Log("Closed message queue. When queue is empty, the program will terminate.");
         }
     }

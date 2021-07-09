@@ -120,14 +120,18 @@ namespace ExternalUnityRendering.TcpIp
                     {
                         try
                         {
+                            int totalBytesRead = 0;
                             do
                             {
                                 // Incoming data from the client.
                                 int bytesReceived = handler.Receive(bytes);
+                                totalBytesRead += bytesReceived;
                                 cache.Write(bytes, 0, bytesReceived);
 
                             // until the client disconnects
                             } while (!(handler.Poll(1, SelectMode.SelectRead) && handler.Available == 0));
+
+                            Debug.Log($"Read {totalBytesRead} bytes from {handler.RemoteEndPoint} at {DateTime.Now}.");
 
                             handler.Close();
 

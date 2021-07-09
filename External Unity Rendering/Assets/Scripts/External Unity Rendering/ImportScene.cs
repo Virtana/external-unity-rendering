@@ -76,6 +76,12 @@ namespace ExternalUnityRendering
         /// <returns>Whether the receiver should continue receiving data or exit.</returns>
         public bool ImportCurrentScene(string json, DirectoryManager renderPath = null)
         {
+            if (string.IsNullOrEmpty(json))
+            {
+                Debug.Log("Empty json string provided. Will not attempt to deserialize.");
+                return true;
+            }
+
             Debug.Log("Beginning Import.");
 
             // TODO add objects to this list based on if they are new in importer.
@@ -139,15 +145,16 @@ namespace ExternalUnityRendering
                 // or replace blank state with null and add that as an exit now
                 SerializableScene state = JsonConvert.DeserializeObject<SerializableScene>(json, serializerSettings);
 
+                if (failed || state == null)
+                {
+                    Debug.Log(json);
+                    Debug.Log("Failed to deserialize.");
+                    return true;
+                }
+
                 if (!state.ContinueImporting)
                 {
                     return false;
-                }
-
-                if (failed || state == null)
-                {
-                    Debug.Log("Failed to deserialize.");
-                    return true;
                 }
 
                 state.SceneRoot.UnpackData(transform);

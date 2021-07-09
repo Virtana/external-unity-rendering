@@ -106,41 +106,41 @@ public class Init : MonoBehaviour
     {
         Collider[] colliders = FindObjectsOfType<Collider>();
 
-        foreach (Collider hit in colliders)
-        {
-            // addforce etc has no effect on inactive GameObjects
-            if (!hit.gameObject.activeInHierarchy)
-            {
-                continue;
-            }
-
-            // Handle non-convex mesh collider with non-kinematic rigidbody error
-            if (hit.gameObject.TryGetComponent(out MeshCollider _))
-            {
-                // meshcolliders are used with items that should be static
-                // in this test so skip for now otherwise assign out meshcollider
-                // and set mesh.convex to true
-                continue;
-            }
-
-            if (!hit.gameObject.TryGetComponent(out Rigidbody rb))
-            {
-                rb = hit.gameObject.AddComponent<Rigidbody>();
-            }
-
-            rb.mass = 10;
-            rb.interpolation = RigidbodyInterpolation.Interpolate;
-            rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
-            rb.AddForce(new Vector3(
-                        UnityEngine.Random.Range(-50, 50),
-                        UnityEngine.Random.Range(-50, 50),
-                        UnityEngine.Random.Range(-50, 50)),
-                        ForceMode.Impulse);
-        }
-
         // Keep running while not done and application is running
         for (int i = 0; i < totalExports && Application.isPlaying; i++)
         {
+            foreach (Collider hit in colliders)
+            {
+                // addforce etc has no effect on inactive GameObjects
+                if (!hit.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                // Handle non-convex mesh collider with non-kinematic rigidbody error
+                if (hit.gameObject.TryGetComponent(out MeshCollider _))
+                {
+                    // meshcolliders are used with items that should be static
+                    // in this test so skip for now otherwise assign out meshcollider
+                    // and set mesh.convex to true
+                    continue;
+                }
+
+                if (!hit.gameObject.TryGetComponent(out Rigidbody rb))
+                {
+                    rb = hit.gameObject.AddComponent<Rigidbody>();
+                }
+
+                rb.mass = 10;
+                rb.interpolation = RigidbodyInterpolation.Interpolate;
+                rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+                rb.AddForce(new Vector3(
+                            UnityEngine.Random.Range(-20, 20),
+                            UnityEngine.Random.Range(-20, 20),
+                            UnityEngine.Random.Range(-20, 20)),
+                            ForceMode.Impulse);
+            }
+
             exporter.ExportCurrentScene(afterExport, rendererOutputResolution,
                 rendererOutputFolder);
 
