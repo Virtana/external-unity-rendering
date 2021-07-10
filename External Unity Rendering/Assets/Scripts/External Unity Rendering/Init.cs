@@ -40,15 +40,15 @@ public class Init : MonoBehaviour
     private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs ccea)
     {
         ccea.Cancel = true;
-        Exit($"Received {ccea.SpecialKey}.", 0);
+        Exit($"Received {ccea.SpecialKey}.", 130);
     }
 
 #if PHYSICS
-    private class Time
+    private class TimeParser
     {
         public int Milliseconds { get; private set; }
 
-        public Time(string time)
+        public TimeParser(string time)
         {
             if (time.Length < 2)
             {
@@ -104,6 +104,7 @@ public class Init : MonoBehaviour
         ExportScene.PostExportAction afterExport, Vector2Int rendererOutputResolution,
         string rendererOutputFolder)
     {
+        TimeSpan timeBetweenExports = TimeSpan.FromMilliseconds(delay);
         Collider[] colliders = FindObjectsOfType<Collider>();
 
         // Keep running while not done and application is running
@@ -148,7 +149,7 @@ public class Init : MonoBehaviour
             // between renders. Rendering is a blocking task that "freezes" unity time,
             // so this does not represent the real time between two exports.
 
-            await Task.Delay(delay);
+            await Task.Delay(timeBetweenExports);
         }
 
         if ((afterExport & ExportScene.PostExportAction.Transmit) == ExportScene.PostExportAction.Transmit)
@@ -189,8 +190,8 @@ public class Init : MonoBehaviour
         }
 
         // HACK very hacky way of handling and parsing the arguments
-        Time delayArgument = null;
-        Time totalTimeArgument = null;
+        TimeParser delayArgument = null;
+        TimeParser totalTimeArgument = null;
         int totalExportsArgument = -1;
         ExportScene.PostExportAction exportAction = ExportScene.PostExportAction.Nothing;
         Vector2Int renderResolution = new Vector2Int();
@@ -208,14 +209,14 @@ public class Init : MonoBehaviour
                     {
                         Exit("Missing Delay argument. If it is not needed, exclude it.");
                     }
-                    delayArgument = new Time(commandLineArgs[j]);
+                    delayArgument = new TimeParser(commandLineArgs[j]);
                     break;
                 case "--time":
                     if (j == commandLineArgs.Length)
                     {
                         Exit("Missing time argument. If it is not needed, exclude it.");
                     }
-                    totalTimeArgument = new Time(commandLineArgs[j]);
+                    totalTimeArgument = new TimeParser(commandLineArgs[j]);
                     break;
                 case "--export":
                     if (j == commandLineArgs.Length)
@@ -328,7 +329,14 @@ public class Init : MonoBehaviour
             Exit("Missing Arguments to export.");
         }
 
-        Debug.Log($"TOTAL EXPORTS <[-:=|=:-]> {totalExports}");
+        if (delay < 10)
+        {
+            exporter.Sender.FinishTransmissionsAndClose();
+            Exit("Delay is less than 10 ms. Due to limitations of the Unity Engine, " +
+                "this will cause a segmentation fault. No Exports will be performed.", 1);
+        }
+
+        Debug.Log($"TOTAL EXPORTS <[-:=/| {totalExports} |\\=:-]>");
 
         // TODO add other options currently partly hardcoded
         exporter.ExportFolder = jsonPath.Path;
@@ -346,8 +354,7 @@ public class Init : MonoBehaviour
         }
 #else
         // TODO FIX render folder go to good one time blank default
-        Debug.LogError("Renderer or Physics is not defined. Will not do anything. Exiting...");
-        Application.Quit(1);
+        Exit("Renderer or Physics is not defined. Will not do anything. Exiting...", 1);
 #endif
     }
 }

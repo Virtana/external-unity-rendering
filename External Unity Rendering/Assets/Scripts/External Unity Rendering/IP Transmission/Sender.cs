@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AwaitableConcurrentQueue;
 using UnityEngine;
+using UnityEngine.Scripting;
 
 namespace ExternalUnityRendering.TcpIp
 {
@@ -16,106 +17,62 @@ namespace ExternalUnityRendering.TcpIp
     public class Sender
     {
         /// <summary>
-        /// Container for data to be passed to the async callback.
-        /// </summary>
-        private struct SendState
-        {
-            public SocketError errorCode;
-            public Socket socket;
-            public List<ArraySegment<byte>> data;
-            public SocketFlags flags;
-        }
-
-        /// <summary>
         /// Internal queue of data to be sent. Works asynchronously.
         /// </summary>
-        private readonly AwaitableConcurrentQueue<string> _messageQueue = new AwaitableConcurrentQueue<string>();
-
-        /// <summary>
-        /// The host that this class transmits to.
-        /// </summary>
-        private readonly IPHostEntry _host;
-
-        /// <summary>
-        /// The IP address of the host.
-        /// </summary>
-        private readonly IPAddress _ipAddress;
-
-        /// <summary>
-        /// An IPEndpoint consisting of the IP address and the port to communicate over.
-        /// </summary>
-        private readonly IPEndPoint _remoteEndPoint;
-
-
-        /// <summary>
-        /// The maximum number of attempts that the sender will try to send the
-        /// data if the connection is refused.
-        /// </summary>
-        private readonly int _maxAttempts;
-
-        /// <summary>
-        /// The size in bytes of each chunk of data.
-        /// </summary>
-        private readonly int _chunkSize = 50;
+        private readonly AwaitableConcurrentQueue<string> _messageQueue = 
+            new AwaitableConcurrentQueue<string>();
 
         /// <summary>
         /// Event internally used to signal the completion state of the queue.
         /// </summary>
-        private readonly ManualResetEventSlim _queueClosed = new ManualResetEventSlim(false);
+        private readonly ManualResetEventSlim _completedTransmission = 
+            new ManualResetEventSlim(false);
 
         /// <summary>
         /// Helper function to split a string into chunks of bytes.
         /// </summary>
         /// <param name="data">The string to be converted.</param>
         /// <returns>A list of array segments to be used during transmission.</returns>
-        private List<ArraySegment<byte>> ConvertToBuffer(string data)
+        private List<ArraySegment<byte>> ConvertToBuffer(string data, int chunkSize)
         {
             byte[] dataAsBytes = Encoding.ASCII.GetBytes(data);
 
             List<ArraySegment<byte>> buffer = new List<ArraySegment<byte>>();
 
-            for (int i = 0; i < dataAsBytes.Length; i += _chunkSize)
+            for (int i = 0; i < dataAsBytes.Length; i += chunkSize)
             {
-                buffer.Add(new ArraySegment<byte>(dataAsBytes, i, Math.Min(_chunkSize, dataAsBytes.Length - i)));
+                buffer.Add(new ArraySegment<byte>(
+                    dataAsBytes, i, Math.Min(chunkSize, dataAsBytes.Length - i)));
             }
 
             return buffer;
         }
 
         /// <summary>
-        /// Async callback to end connection.
-        /// </summary>
-        /// <param name="result">Represents the status of an asynchronous operation.</param>
-        private void SendDataCallback(IAsyncResult result)
-        {
-            // NOTE: need to investigate what to do if result.isCompleted is false.
-            SendState state = (SendState)result.AsyncState;
-
-
-            if (state.errorCode != SocketError.Success)
-            {
-                Debug.LogError($"Socket Error: {state.errorCode}");
-                return;
-            }
-            if (!result.IsCompleted)
-            {
-                Debug.LogWarning("Transmission is not completed. Data may not have been " +
-                    "handled correctly.");
-            }
-
-            Socket socket = state.socket;
-            socket.EndSend(result);
-            socket.Close();
-        }
-
-        /// <summary>
         /// Initialize the sending queue to send data asynchronously.
         /// </summary>
-        private async void InitializeSender()
+        private async void InitializeSender(IPAddress ipAddress, IPEndPoint remoteEndPoint, 
+            int maxAttempts, int chunkSize)
         {
             Debug.Log("Opening message queue.");
+
+            using (Socket pinger = new Socket(ipAddress.AddressFamily, SocketType.Stream, 
+                    ProtocolType.Tcp))
+            {
+                Task ping = pinger.ConnectAsync(remoteEndPoint);
+                if (await Task.WhenAny(ping, Task.Delay(5000)) != ping)
+                {
+                    Debug.Log("Failed to ping server within 5 seconds.");
+                    await pinger.ConnectAsync(remoteEndPoint);
+                }
+            }
+            
             while (_messageQueue.DataAvailable)
             {
+                // try to reduce GC effect on possibly important stuff. Normally unity will do this 
+                // based
+                //GarbageCollector.GCMode = GarbageCollector.Mode.Manual;
+                //GC.Collect();
                 (bool readSuccess, string data) = await _messageQueue.DequeueAsync();
 
                 if (!readSuccess)
@@ -124,106 +81,86 @@ namespace ExternalUnityRendering.TcpIp
                     continue;
                 }
 
-                Socket sender = new Socket(_ipAddress.AddressFamily,
-                        SocketType.Stream, ProtocolType.Tcp);
+                //Socket sender = new Socket(ipAddress.AddressFamily,
+                //        SocketType.Stream, ProtocolType.Tcp);
 
-                if (sender == null)
+                using (Socket sender = new Socket(ipAddress.AddressFamily, SocketType.Stream, 
+                    ProtocolType.Tcp))
                 {
-                    Debug.LogError("Cannot send data. No socket was assigned during initializaiton. " +
-                        "An error may have occured. Try reassigning the socket.");
-                    continue;
-                }
+                    int connectionAttempts = 0;
+                    while (connectionAttempts < maxAttempts)
+                    {
+                        try
+                        {
+                            await sender.ConnectAsync(remoteEndPoint);
+                            break;
+                        }
+                        catch (SocketException se)
+                        {
+                            Debug.LogError("Socket Exception occurred while trying to connect! " +
+                                $"Error: {se.SocketErrorCode}. " +
+                                $"Error Code: {se.ErrorCode}.");
 
-                int connectionAttempts = 0;
-                while (connectionAttempts < _maxAttempts)
-                {
+                            if (se.ErrorCode != 10061
+                                || se.ErrorCode != 10050
+                                || se.ErrorCode != 10057
+                                || maxAttempts == connectionAttempts)
+                            {
+                                // if error is not connection refused or has run out of attempts
+                                Debug.LogError("Aborting...");
+
+                                // try queueing again?
+
+                                break;
+                            }
+
+                            // add polling
+                            Debug.Log($"Tried {++connectionAttempts}/{maxAttempts} times. Retrying...");
+                            await Task.Delay(100);
+                            continue;
+                        }
+                        catch (ObjectDisposedException ode)
+                        {
+                            Debug.LogError($"The sender socket has been closed.\n{ode}\nAborting...");
+                        }
+                        catch (System.Security.SecurityException se)
+                        {
+                            Debug.LogError("A caller higher in the call stack does not have permission " +
+                                $"for the requested operation.\n{se}");
+                        }
+                        catch (InvalidOperationException ioe)
+                        {
+                            Debug.LogError("The socket has been placed in a listening state by calling " +
+                                $"Listen(Int32).\n{ioe}");
+                        }
+                        connectionAttempts = maxAttempts;
+                        break;
+                    }
+
+                    if (maxAttempts == connectionAttempts)
+                    {
+                        Debug.LogError("Failed to connect. Discarding data.");
+                        continue;
+                    }
+
                     try
                     {
-                        sender.Connect(_remoteEndPoint);
-                        break;
+                        await sender.SendAsync(ConvertToBuffer(data, chunkSize), SocketFlags.None);
+                        Debug.Log($"Sent {data.Length} bytes to {sender.RemoteEndPoint} "+ 
+                            $"at {DateTime.Now}.");
                     }
                     catch (SocketException se)
                     {
-                        Debug.LogError("Socket Exception occurred while trying to connect! " +
-                            $"Error: {se.SocketErrorCode}. " +
-                            $"Error Code: {se.ErrorCode}.");
-
-                        if (se.ErrorCode != 10061 || _maxAttempts == connectionAttempts)
-                        {
-                            // if error is not connection refused or has run out of attempts
-                            Debug.LogError("Aborting...");
-
-                            // try queueing again?
-
-                            break;
-                        }
-
-                        // add polling
-                        Debug.Log($"Tried {++connectionAttempts}/{_maxAttempts} times. Retrying...");
-                        await Task.Delay(100);
-                        continue;
+                        Debug.LogError($"Socket Error: {se.ErrorCode}");
                     }
                     catch (ObjectDisposedException ode)
                     {
-                        Debug.LogError($"The sender socket has been closed.");
-                        if (_maxAttempts == connectionAttempts)
-                        {
-                            Debug.LogError($"Failed to connect. \n{ode}\nAborting...");
-                            break;
-                        }
-                        else
-                        {
-                            sender = new Socket(_ipAddress.AddressFamily,
-                                                SocketType.Stream, ProtocolType.Tcp);
-                            Debug.Log($"Tried {++connectionAttempts}/{_maxAttempts} times. Creating a new socket and retrying...");
-                        }
+                        Debug.LogError($"The socket has been closed.\n{ode}");
                     }
-                    catch (System.Security.SecurityException se)
-                    {
-                        Debug.LogError("A caller higher in the call stack does not have permission " +
-                            $"for the requested operation.\n{se}");
-                    }
-                    catch (InvalidOperationException ioe)
-                    {
-                        Debug.LogError("The socket has been placed in a listening state by calling " +
-                            $"Listen(Int32).\n{ioe}");
-                    }
-                }
-
-                if (_maxAttempts == connectionAttempts)
-                {
-                    Debug.LogError("Failed to connect. Discarding data.");
-                    continue;
-                }
-                
-                SendState state = new SendState
-                {
-                    socket = sender,
-                    data = ConvertToBuffer(data),
-                    flags = SocketFlags.None
-                };
-
-                try
-                {
-                    await Task.Factory.FromAsync((callback, callbackData) =>
-                        {
-                            return sender.BeginSend(state.data, state.flags, callback, callbackData);
-                        }, SendDataCallback, state);
-                    Debug.Log($"Sent {data.Length} bytes to {sender.RemoteEndPoint} at {DateTime.Now}.");
-                }
-                catch (SocketException se)
-                {
-                    // handle according to
-                    // https://docs.microsoft.com/en-us/dotnet/api/system.net.sockets.socketerror?view=net-5.0
-                    Debug.LogError($"Socket Error: {se.ErrorCode}");
-                }
-                catch (ObjectDisposedException ode)
-                {
-                    Debug.LogError($"The socket has been closed.\n{ode}");
                 }
             }
 
-            _queueClosed.Set();
+            _completedTransmission.Set();
         }
 
         /// <summary>
@@ -233,20 +170,20 @@ namespace ExternalUnityRendering.TcpIp
         /// <param name="ipString">The string representing the IP address.</param>
         /// <param name="maxRetries">The maximum number of times to retry sending data
         /// after the connection has been refused.</param>
-        public Sender(int port = 11000, string ipString = "localhost", int maxRetries = 3)
+        public Sender(int port = 11000, string ipString = "localhost", 
+            int maxRetries = 3, int chunkSize = 50)
         {
             try
             {
-                _maxAttempts = maxRetries;
                 // Connect to a Remote server
                 // Get Host IP Address that is used to establish a connection
                 // In this case, we get one IP address of localhost that is IP : 127.0.0.1
                 // If a host has multiple addresses, you will get a list of addresses
-                _host = Dns.GetHostEntry(ipString);
-                _ipAddress = _host.AddressList[0];
-                _remoteEndPoint = new IPEndPoint(_ipAddress, port);
+                IPHostEntry host = Dns.GetHostEntry(ipString);
+                IPAddress ipAddress = host.AddressList[0];
+                IPEndPoint remoteEndPoint = new IPEndPoint(ipAddress, port);
 
-                Task.Run(InitializeSender);
+                Task.Run(() => InitializeSender(ipAddress, remoteEndPoint, maxRetries, chunkSize));
             }
             catch (SocketException se)
             {
@@ -282,7 +219,7 @@ namespace ExternalUnityRendering.TcpIp
                         });
             _messageQueue.Enqueue(text_file);
             _messageQueue.Finish();
-            _queueClosed.Wait();
+            _completedTransmission.Wait();
             Debug.Log("Closed message queue. When queue is empty, the program will terminate.");
         }
     }

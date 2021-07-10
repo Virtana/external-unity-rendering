@@ -35,8 +35,6 @@ namespace ExternalUnityRendering
             Receiver client = new Receiver();
 
             client.ProcessCallback((state) => ImportCurrentScene(state));
-            // non blocking async function
-            client.ReceiveMessages();
         }
 
         /// <summary>
