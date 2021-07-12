@@ -4,25 +4,6 @@ printfn() {
 	printf "$1\n"
 }
 
-# from https://stackoverflow.com/a/28333938
-trap_with_arg() {
-	local func="$1"
-	shift
-	for sig in "$@"; do
-		trap "$func $sig" "$sig"
-	done
-}
-
-stop() {
-	trap - SIGINT EXIT
-	printfn '\n%s\n' "received $1, killing child processes"
-	kill -s SIGINT 0
-}
-
-# maybe take out SIGHUP and make it do nothing
-trap_with_arg 'stop' EXIT SIGINT SIGTERM SIGHUP
-
-
 # get arguments
 while getopts i:e:d:h:w:o:r:s:B:m:tlb flag; do
 	case "$flag" in
@@ -170,24 +151,16 @@ rendererPath="$buildDir/Renderer/Renderer"
 physicsPath="$buildDir/Physics/Physics"
 
 if [ -n "$transmit" ]; then
-	DISPLAY=:0 exec "$rendererPath" -batchmode -logFile /dev/stdout &
-	renderer_pid=$!
+	DISPLAY=:0 eval "$rendererPath" -batchmode -logFile /dev/stdout &
+	renderer_pid=%%
 fi
 
-# VERY BIG HACK TO ENSURE PHYSICS LAUNCHES AFTER RENDERER IS READY
-# option, try pinging the socket?
-#sleep 0.5
-
 # run physics
-printf "%s" "$physicsPath" | xargs -I {} bash -c "{} \
-	-batchmode -nographics \
-	$jsonFolder $renderPath \
-	$renderHeight $renderWidth \
-	$transmit $logJson \
-	$exportCount $delayms $totalTime"
+
+eval "$physicsPath -batchmode -nographics $jsonFolder $renderPath $renderHeight $renderWidth $transmit $logJson $exportCount $delayms $totalTime"
 
 if [ -n "$transmit" ] && [[ $? -ne 0 ]]; then
 	kill -EXIT $renderer_pid
 fi
 
-wait
+wait $renderer_pid

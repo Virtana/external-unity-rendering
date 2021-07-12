@@ -100,7 +100,7 @@ namespace ExternalUnityRendering.TcpIp
 
                     int bytesReceived = 0;
                     int totalBytesReceived = 0;
-                    do 
+                    do
                     {
                         bytesReceived = await handler.ReceiveAsync(cache, SocketFlags.None);
                         totalBytesReceived += bytesReceived;
