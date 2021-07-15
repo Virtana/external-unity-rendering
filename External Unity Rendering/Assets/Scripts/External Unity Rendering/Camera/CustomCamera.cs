@@ -55,8 +55,8 @@ namespace ExternalUnityRendering.CameraUtilites
             // TODO Uncomment this and provide some sort of control to turn it on
             // should be off by default
             _camera.enabled = false;
-            _camera.targetTexture = new RenderTexture(1920, 1080, 24);
             image = new Texture2D(1920, 1080, TextureFormat.RGB24, false);
+            _camera.targetTexture = RenderTexture.GetTemporary(1920, 1080, 24);
         }
 
         /// <summary>
@@ -79,11 +79,9 @@ namespace ExternalUnityRendering.CameraUtilites
 
             file.WriteToFile(render);
             Debug.Log($"Saved render to { file.Path } at { DateTime.Now }.");
-
         }
 
         Texture2D image = null;
-        byte[] png = new byte[0];
 
         /// <summary>
         /// Renders the current view of the Camera.
@@ -99,36 +97,33 @@ namespace ExternalUnityRendering.CameraUtilites
                 new Vector2Int(int.MaxValue, int.MaxValue));
 
             _camera.enabled = false; // always disabling in case a script enables
-            //RenderTexture renderTexture = RenderTexture.GetTemporary(renderSize.x, renderSize.y, 24);
-            //_camera.targetTexture = renderTexture;
+
+            if (_camera.targetTexture.width != renderSize.x
+                || _camera.targetTexture.height != renderSize.y)
+            {
+                RenderTexture.ReleaseTemporary(_camera.targetTexture);
+                _camera.targetTexture = RenderTexture.GetTemporary(1920, 1080, 24);
+            }
+            if (image.width != renderSize.x
+                || image.height != renderSize.y)
+            {
+                image.Resize(renderSize.x, renderSize.y);
+            }
 
             // Render the camera's view.
             _camera.Render();
-            RenderTexture.active = _camera.targetTexture;//renderTexture;
+            RenderTexture.active = _camera.targetTexture;
 
             // Make a new texture and read the active Render Texture into it.
             image.ReadPixels(new Rect(0, 0, renderSize.x, renderSize.y), 0, 0);
             image.Apply();
 
-            // Replace the original active Render Texture.
-            //_camera.targetTexture = null;
-            //RenderTexture.active = null;
-            //RenderTexture.ReleaseTemporary(renderTexture);
-
 #if UNITY_EDITOR
             _camera.enabled = true;
 #endif
-            //System.Threading.Tasks.Task.Run(() =>
-            //{
-
-            //});
             // now image holds the image in texture2d form
-            png = ImageConversion.EncodeToPNG(image);
-
-            //Destroy(image);
-            // create a filename for the render
+            byte[] png = image.EncodeToPNG();
             SaveRender(png, exportTime);
-            Debug.Log($"{Texture.currentTextureMemory} {Texture.totalTextureMemory}");
         }
     }
 }
