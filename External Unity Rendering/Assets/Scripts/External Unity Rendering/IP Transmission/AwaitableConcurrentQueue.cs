@@ -105,12 +105,6 @@ namespace AwaitableConcurrentQueue
             });
 
             success = TryDequeue(out item);
-
-            if (Count == 0)
-            {
-
-            }
-
             return (success, item);
         }
 

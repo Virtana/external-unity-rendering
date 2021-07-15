@@ -205,25 +205,12 @@ namespace ExternalUnityRendering
 
                 string state = sb.ToString();
 
-                if (!succeeded || state == null || !state.EndsWith("}"))
+                if (!succeeded || state == null)
                 {
                     Debug.Log("Aborting Export. Failed to serialize. Check logs for cause.");
                     return;
                 }
 
-                if (!succeeded)
-                {
-                    Debug.Log("Aborting Export. Failed to serialize. See logs for cause.");
-                    return;
-                }
-
-                // NOTE a fancier way is Linq Aggregate
-                // bool success = _exportActions.Aggregate(true, (acc, kv) =>
-                //      ((kv.Key & exportMode) == kv.Key) && kv.Value.Invoke(state) && acc);
-
-                // for all the functions in export items
-                // check if the flag (key) is set, then invoke the function (value)
-                // if function returns false (i.e. failed)
                 foreach (KeyValuePair<PostExportAction, Func<string, bool>> item in _exportActions)
                 {
                     if ((item.Key & exportMode) == item.Key)

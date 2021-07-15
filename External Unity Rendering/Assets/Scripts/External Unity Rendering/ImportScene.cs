@@ -16,11 +16,7 @@ namespace ExternalUnityRendering
     /// </summary>
     public class ImportScene : MonoBehaviour
     {
-        // TODO Make cameras use this time as their names
-        /// <summary>
-        /// Represents when the most recently imported scene was exported. If null, then no import has occured.
-        /// </summary>
-        public DateTime? ExportTimestamp;
+        private readonly JsonSerializer _serializer = new JsonSerializer();
 
         /// <summary>
         /// Initialise all data.
@@ -156,20 +152,20 @@ namespace ExternalUnityRendering
                 }
 
                 state.SceneRoot.UnpackData(transform);
-                ExportTimestamp = state.ExportDate;
+                DateTime exportTimestamp = state.ExportDate;
                 SerializableScene.CameraSettings settings = state.RendererSettings;
 
                 // Reassign renderpath if override was provided
                 settings.RenderDirectory = renderPath?.Path ?? settings.RenderDirectory;
 
-                Debug.LogFormat($"Imported state that was generated at { ExportTimestamp }." +
+                Debug.Log($"Imported state that was generated at { exportTimestamp }." +
                     $"Camera settings are:\n\t{settings.RenderDirectory}\n\t" +
                     $"Resolution: {settings.RenderSize.x}x{settings.RenderSize.y}");
 
                 foreach (CustomCamera camera in customCameras)
                 {
                     camera.RenderPath = settings.RenderDirectory;
-                    camera.RenderImage(settings.RenderSize);
+                    camera.RenderImage(exportTimestamp, settings.RenderSize);
                 }
                 return true;
             }

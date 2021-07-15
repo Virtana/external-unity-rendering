@@ -18,6 +18,7 @@ public class BuildScript : MonoBehaviour
     {
         // Make renderer by default
         BuildConfigurations config = 0;
+        BuildTarget target = BuildTarget.StandaloneLinux64;
         string buildFolder = "";
 
         // Filter unity's command line args
@@ -43,6 +44,12 @@ public class BuildScript : MonoBehaviour
                 case "--renderer":
                     config = BuildConfigurations.Renderer;
                     break;
+                case "--win":
+                    target = BuildTarget.StandaloneWindows;
+                    break;
+                case "--win64":
+                    target = BuildTarget.StandaloneWindows64;
+                    break;
             }
         }
 
@@ -57,21 +64,42 @@ public class BuildScript : MonoBehaviour
             scenePaths[i] = scenePaths[i].Remove(0, Application.dataPath.Length - 6);
         }
 
-        BuildOptions buildOptions = BuildOptions.None;
+        BuildOptions buildOptions =  BuildOptions.None;
         if (config == BuildConfigurations.Physics)
         {
             buildOptions |= BuildOptions.EnableHeadlessMode;
         }
 
+        buildOptions |= BuildOptions.None
+            //| BuildOptions.Development
+            //| BuildOptions.ConnectWithProfiler
+            //| BuildOptions.AllowDebugging
+            //| BuildOptions.WaitForPlayerConnection
+            //| BuildOptions.BuildScriptsOnly
+            //| BuildOptions.EnableDeepProfilingSupport
+            //| BuildOptions.ConnectToHost
+            ;
+
+        string path = Path.GetFullPath(Path.Combine(buildFolder, outputName));
+        if (target == BuildTarget.StandaloneWindows || target == BuildTarget.StandaloneWindows64)
+        {
+            path = Path.Combine(path, outputName + ".exe");
+        }
+        else
+        {
+            path = Path.Combine(path, outputName);
+        }
 
         BuildPipeline.BuildPlayer(new BuildPlayerOptions
         {
             scenes = scenePaths,
-            locationPathName = Path.GetFullPath(Path.Combine(buildFolder, outputName, outputName)),
-            target = BuildTarget.StandaloneLinux64,
+            locationPathName = path,
+            target = target,
             targetGroup = BuildTargetGroup.Standalone,
             extraScriptingDefines = new string[] { outputName.ToUpperInvariant() },
             options = buildOptions
         });
+
+        // add exit if fail
     }
 }

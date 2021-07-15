@@ -61,14 +61,14 @@ namespace ExternalUnityRendering.TcpIp
             {
                 while (!pinger.Connected)
                 {
-                    try 
+                    try
                     {
                         pinger.Connect(remoteEndPoint);
                         await Task.Delay(100);
                     }
                     // catchall to prevent socketexceptions, need to handle better
                     catch (SocketException se)
-                    { 
+                    {
                         if (se.ErrorCode != 10050 && se.ErrorCode != 10061)
                         {
                             Debug.LogError($"While waiting for server to come online, received: {se.SocketErrorCode} {se.ErrorCode}");
@@ -79,10 +79,6 @@ namespace ExternalUnityRendering.TcpIp
 
             while (_messageQueue.DataAvailable)
             {
-                // try to reduce GC effect on possibly important stuff. Normally unity will do this
-                // based
-                //GarbageCollector.GCMode = GarbageCollector.Mode.Manual;
-                //GC.Collect();
                 (bool readSuccess, string data) = await _messageQueue.DequeueAsync();
 
                 if (!readSuccess)
@@ -90,10 +86,6 @@ namespace ExternalUnityRendering.TcpIp
                     Debug.Log("Failed to read from queue");
                     continue;
                 }
-
-                //Socket sender = new Socket(ipAddress.AddressFamily,
-                //        SocketType.Stream, ProtocolType.Tcp);
-
                 using (Socket sender = new Socket(ipAddress.AddressFamily, SocketType.Stream,
                     ProtocolType.Tcp))
                 {

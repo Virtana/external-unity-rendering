@@ -128,10 +128,10 @@ namespace ExternalUnityRendering.UnityEditor
 
             GUIContent label = new GUIContent("Number of Exports to perform: ");
             EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-            _exportCount = EditorGUILayout.IntSlider(label, _exportCount, 1, 100);
+            _exportCount = EditorGUILayout.IntSlider(label, _exportCount, 1, 10000);
             label = new GUIContent("Delay between exports: ");
             EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-            _millisecondsDelay = EditorGUILayout.IntSlider(label, _millisecondsDelay, 100, 10000);
+            _millisecondsDelay = EditorGUILayout.IntSlider(label, _millisecondsDelay, 10, 10000);
 
             GUIContent optionLabel = new GUIContent("Export Options: ");
             GUIContent optionListLabel =
@@ -357,6 +357,10 @@ namespace ExternalUnityRendering.UnityEditor
             }
 
             Collider[] colliders;
+
+            // Keep running while not done and editor is running
+            for (int i = 0; i < _exportCount && EditorApplication.isPlaying; i++)
+            {
             if (_useExplosion)
             {
                 // Using overlap sphere to avoid excess calculation. Explosion has
@@ -410,16 +414,13 @@ namespace ExternalUnityRendering.UnityEditor
                 }
             }
 
-            // Keep running while not done and editor is running
-            for (int i = 0; i < _exportCount && EditorApplication.isPlaying; i++)
-            {
                 export.ExportCurrentScene(_exportType, _rendererOutputResolution,
                     _rendererOutputFolder, true);
 
                 // should do nothing if customcameras empty
                 foreach (CustomCamera cam in customCameras)
                 {
-                    cam.RenderImage(_renderResolution);
+                    cam.RenderImage(System.DateTime.Now, _renderResolution);
                 }
 
                 // _millisecondsDelay is the amount of time that the physics system will

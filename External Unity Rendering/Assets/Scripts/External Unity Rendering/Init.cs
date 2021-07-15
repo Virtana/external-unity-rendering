@@ -7,12 +7,13 @@ using ExternalUnityRendering.PathManagement;
 using ExternalUnityRendering.TcpIp;
 using Newtonsoft.Json;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 // cant use init script functionality in editor play mode
 // use editor gui functions instead
 
 // Set to !UNITY_EDITOR when not testing code
-#if UNITY_2017_1_OR_NEWER //!UNITY_EDITOR
+#if UNITY_2017_1_OR_NEWER && !UNITY_EDITOR // remove !editor for code testing
 public class Init : MonoBehaviour
 {
     // TODO Initialize list
@@ -34,7 +35,11 @@ public class Init : MonoBehaviour
         {
             Debug.Log(message);
         }
-        Application.Quit(exitCode);
+        while (true)
+        {
+            // try to exit, or block until possible
+            Application.Quit(exitCode);
+        }
     }
 
     private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs ccea)
@@ -169,7 +174,7 @@ public class Init : MonoBehaviour
         // https://docs.unity3d.com/ScriptReference/ILogHandler.html
         // #:~:text=taking%20this%20survey.-,ILogHandler,-interface%20in%20UnityEngine
         Console.CancelKeyPress += Console_CancelKeyPress;
-
+        Debug.Log("Initializing...");
 #if PHYSICS
         string[] commandLineArgs = Environment.GetCommandLineArgs();
 
@@ -202,6 +207,7 @@ public class Init : MonoBehaviour
 
         for (int i = 0, j = 1; i < commandLineArgs.Length; i++, j++)
         {
+            Console.WriteLine(commandLineArgs[i]);
             switch (commandLineArgs[i])
             {
                 case "--delay":
@@ -331,7 +337,10 @@ public class Init : MonoBehaviour
 
         if (delay < 10)
         {
-            exporter.Sender.FinishTransmissionsAndClose();
+            if ((exportAction & ExportScene.PostExportAction.Transmit) == ExportScene.PostExportAction.Transmit)
+            {
+                exporter.Sender.FinishTransmissionsAndClose();
+            }
             Exit("Delay is less than 10 ms. Due to limitations of the Unity Engine, " +
                 "this will cause a segmentation fault. No Exports will be performed.", 1);
         }
@@ -353,8 +362,8 @@ public class Init : MonoBehaviour
             obj.AddComponent<ImportScene>();
         }
 #else
-        // TODO FIX render folder go to good one time blank default
-        Exit("Renderer or Physics is not defined. Will not do anything. Exiting...", 1);
+            // TODO FIX render folder go to good one time blank default
+            Exit("Renderer or Physics is not defined. Will not do anything. Exiting...", 1);
 #endif
     }
 }

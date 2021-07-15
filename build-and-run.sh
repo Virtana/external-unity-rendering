@@ -151,9 +151,11 @@ rendererPath="$buildDir/Renderer/Renderer"
 physicsPath="$buildDir/Physics/Physics"
 
 if [ -n "$transmit" ]; then
-	DISPLAY=:0 eval "$rendererPath" -batchmode -logFile /dev/stdout &
+	DISPLAY=:0 eval "$rendererPath" -profiler-enable -batchmode -logFile /dev/stdout &
 	renderer_pid=%%
 fi
+
+read -r
 
 # run physics
 
