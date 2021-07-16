@@ -10,7 +10,6 @@ using UnityEngine.SceneManagement;
 
 namespace ExternalUnityRendering
 {
-#if RENDERER || UNITY_EDITOR
     /// <summary>
     /// Component that manages importing a scene and rendering images.
     /// </summary>
@@ -184,5 +183,4 @@ namespace ExternalUnityRendering
             }
         }
     }
-#endif
 }

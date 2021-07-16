@@ -90,14 +90,14 @@ fi
 
 # validate export count
 if [ -n "$exportCount" ] && [[ $exportCount == +([0-9]) ]]; then
-	exportCount="--export $exportCount"
+	exportCount="--exportCount $exportCount"
 else
 	exportCount=
 fi
 
 # val1idate totalTime
 if [ -n "$totalTime" ] && [[ $totalTime == +([0-9])@(s|m|) ]]; then
-	totalTime="--time $totalTime"
+	totalTime="--totalTime $totalTime"
 else
 	totalTime=
 fi
@@ -155,10 +155,7 @@ if [ -n "$transmit" ]; then
 	renderer_pid=%%
 fi
 
-read -r
-
 # run physics
-
 eval "$physicsPath -batchmode -nographics $jsonFolder $renderPath $renderHeight $renderWidth $transmit $logJson $exportCount $delayms $totalTime"
 
 if [ -n "$transmit" ] && [[ $? -ne 0 ]]; then

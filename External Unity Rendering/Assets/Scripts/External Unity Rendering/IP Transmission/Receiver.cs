@@ -78,6 +78,7 @@ namespace ExternalUnityRendering.TcpIp
             // Exit the application in runtime, stop playing in editor.
             // If server is off, no point in render instance.
             Debug.Log("Finished importing.");
+            RenderTexture.active = null;
             Application.Quit(0);
         }
 
@@ -89,7 +90,7 @@ namespace ExternalUnityRendering.TcpIp
             StringBuilder sb = new StringBuilder();
             ArraySegment<byte> cache = new ArraySegment<byte>(new byte[1024]);
 
-            Socket handler = null;
+            Socket handler;
             // terminates on application exit, mayber replace??
             bool successfulReceipt = false;
             while (true)

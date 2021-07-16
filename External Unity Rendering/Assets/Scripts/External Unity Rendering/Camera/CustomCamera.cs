@@ -56,7 +56,6 @@ namespace ExternalUnityRendering.CameraUtilites
             // should be off by default
             _camera.enabled = false;
             image = new Texture2D(1920, 1080, TextureFormat.RGB24, false);
-            _camera.targetTexture = RenderTexture.GetTemporary(1920, 1080, 24);
         }
 
         /// <summary>
@@ -82,6 +81,7 @@ namespace ExternalUnityRendering.CameraUtilites
         }
 
         Texture2D image = null;
+        RenderTexture _renderTexture = RenderTexture.GetTemporary(1920, 1080, 24);
 
         /// <summary>
         /// Renders the current view of the Camera.
@@ -98,11 +98,14 @@ namespace ExternalUnityRendering.CameraUtilites
 
             _camera.enabled = false; // always disabling in case a script enables
 
-            if (_camera.targetTexture.width != renderSize.x
-                || _camera.targetTexture.height != renderSize.y)
+            _camera.targetTexture = _renderTexture;
+
+            if (_renderTexture.width != renderSize.x
+                || _renderTexture.height != renderSize.y)
             {
-                RenderTexture.ReleaseTemporary(_camera.targetTexture);
-                _camera.targetTexture = RenderTexture.GetTemporary(1920, 1080, 24);
+                RenderTexture.ReleaseTemporary(_renderTexture);
+                _renderTexture =
+                    RenderTexture.GetTemporary(renderSize.x, renderSize.y, 24);
             }
             if (image.width != renderSize.x
                 || image.height != renderSize.y)
@@ -110,9 +113,11 @@ namespace ExternalUnityRendering.CameraUtilites
                 image.Resize(renderSize.x, renderSize.y);
             }
 
+            _camera.targetTexture = _renderTexture;
+            RenderTexture.active = _renderTexture;
+
             // Render the camera's view.
             _camera.Render();
-            RenderTexture.active = _camera.targetTexture;
 
             // Make a new texture and read the active Render Texture into it.
             image.ReadPixels(new Rect(0, 0, renderSize.x, renderSize.y), 0, 0);
