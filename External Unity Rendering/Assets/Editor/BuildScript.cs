@@ -148,6 +148,7 @@ public class BuildScript : MonoBehaviour
                     case "-quit":
                     case "-batchmode":
                     case "-nographics":
+                    case "-noupm":
                         skipNext = false;
                         break;
                     case "-logfile":
