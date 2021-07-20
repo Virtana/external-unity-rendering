@@ -99,7 +99,8 @@ if ! readlink -e "${project_path}" > /dev/null; then
 elif ! readlink -e "${project_path}/Assets" > /dev/null \
     && ! readlink -e "${project_path}/ProjectSettings" > /dev/null \
     && ! readlink -e "${project_path}/Packages" > /dev/null; then
-    err "Missing project folders in \"${project_path}\". Ensure that this is a Unity project."
+    err "Missing project folders in \"${project_path}\". Ensure that this is \
+a Unity project."
 
 # Ensure Read permissions exist
 elif [[ ! -r $project_path ]]; then
@@ -107,9 +108,10 @@ elif [[ ! -r $project_path ]]; then
 
 # If a lockfile is present or the project directory is not writable, then 
 # use a temp path instead.
-elif [[ ! -e "${project_path}/Temp/UnityLockfile" ]] \
-    && [[ ! -w $project_path ]]; then
-    log warning "Missing write permissions for project folder. A temporary folder will be used instead."
+elif [[ -e "${project_path}/Temp/UnityLockfile" ]] \
+    || [[ ! -w $project_path ]]; then
+    log warning "Missing write permissions for project folder. A temporary \
+folder will be used instead."
     tmp_dir=$(mktemp -d -t Unity-EUR-XXXXXXXX)
     cp -r "${project_path}/Assets" "${tmp_dir}"
 	cp -r "${project_path}/ProjectSettings" "${tmp_dir}"
@@ -133,7 +135,8 @@ elif ! readlink -e "${output_path}" > /dev/null \
 # Check permissions for path
 elif [[ ! -r $output_path ]] || [[ ! -w $output_path ]] \
     || [[ ! -x $output_path ]]; then
-    err "Missing permissions for build output directory. Please ensure that you have the required permissions for this directory."
+    err "Missing permissions for build output directory. Please ensure that \
+you have the required permissions for this directory."
 
 # Resolve the path
 else
@@ -142,7 +145,8 @@ fi
 
 # Validate unity path
 if ! readlink -e "${unity}" > /dev/null; then
-    err "Path to Unity Editor is invalid. Ensure that ${unity} is the path to the Unity Editor executable."
+    err "Path to Unity Editor is invalid. Ensure that ${unity} is the path to \
+the Unity Editor executable."
 fi
 
 # Resolve the path
@@ -150,11 +154,14 @@ unity="$(readlink -e "${unity}")"
 
 # Ensure the editor is executable
 if [[ ! -x $unity ]]; then
-    err "Cannot execute unity editor. Ensure that you have the appropriate permissions."
+    err "Cannot execute unity editor. Ensure that you have the appropriate \
+permissions."
 
 # Check version and ensure it is valid
-elif [[ $($unity -version) != '2020.3.11f1' ]] && [[ $($unity -version) != '2020.1.8f1' ]]; then
-    log warning "Unity version is $("$unity" -version), which does not match the project version 2020.1.8f1. Are you sure you want to continue?"
+elif [[ $($unity -version) != '2020.3.11f1' ]] \
+    && [[ $($unity -version) != '2020.1.8f1' ]]; then
+    log warning "Unity version is $("$unity" -version), which does not match \
+the project version 2020.1.8f1. Are you sure you want to continue?"
     printf "(y/N) >"
     yn='N'
     while true; do
@@ -183,11 +190,15 @@ log verbose "Build Options: ${build_options}"
 log verbose "Build Windows: ${BUILD_WINDOWS}"
 log verbose "Verbose: ${VERBOSE}"
 
-args="-quit -batchmode -noUpm -nographics -projectPath \"${project_path}\" \
+args="-quit -batchmode -nographics -projectPath \"${project_path}\" \
 -executeMethod BuildScript.Build --build \"${output_path}\""
+if [[ $BUILD_WINDOWS == 'true' ]]; then
+    args="${args} --buildTarget \"StandaloneWindows64\""
+fi
+
 
 physics_args="--config Physics"
-renderer_args="--config Physics"
+renderer_args="--config Renderer"
 
 if [[ $VERBOSE == 'true' ]]; then
     physics_args="${physics_args} -logFile"

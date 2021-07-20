@@ -1,4 +1,5 @@
 #add kill on CTRL-C
+# add testpath for physicspath and rendererpath
 param (
     [Parameter(Mandatory, ValueFromPipeline)]
     [ValidateScript({ 
@@ -16,9 +17,6 @@ param (
 
     [Switch]
     [bool] $LogJson,
-
-    [Switch]
-    [bool] $DontPrettyPrint,
 
     [Parameter()]
     [ValidateScript({(Test-Path -LiteralPath $_ -PathType Container -IsValid)})]
@@ -58,7 +56,7 @@ $RenderPath = Resolve-Path -Path $RenderPath | Select-Object -ExpandProperty Pat
 if ($Transmit) {
     [System.Diagnostics.Process]$renderer = New-Object System.Diagnostics.Process
     $renderer.StartInfo.FileName = $ExecutablePath.RendererPath
-    $renderer.StartInfo.Arguments = "-batchmode -profiler-enable -logFile .\renderer_log.txt"
+    $renderer.StartInfo.Arguments = "-batchmode -logFile .\renderer_log.txt"
     if (!$renderer.Start()) {
         Write-Error "Failed to start Renderer." -ErrorAction Stop
     }
@@ -77,9 +75,6 @@ if ($Transmit) {
 }
 if ($LogJson) {
     $physics.StartInfo.Arguments += " --logExport"
-    if (!$DontPrettyPrint) {
-        $physics.StartInfo.Arguments += " --prettyPrint"
-    }
 }
 if ($ExportDelay -ne -1) {
     $physics.StartInfo.Arguments += " --delay $ExportDelay"
