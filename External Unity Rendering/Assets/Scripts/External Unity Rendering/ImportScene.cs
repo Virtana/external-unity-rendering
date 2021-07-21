@@ -1,10 +1,10 @@
-﻿using ExternalUnityRendering.CameraUtilites;
+﻿using System;
+using System.Collections.Generic;
+using ExternalUnityRendering.CameraUtilites;
 using ExternalUnityRendering.PathManagement;
 using ExternalUnityRendering.TcpIp;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-using System;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -15,11 +15,7 @@ namespace ExternalUnityRendering
     /// </summary>
     public class ImportScene : MonoBehaviour
     {
-        // TODO Make cameras use this time as their names
-        /// <summary>
-        /// Represents when the most recently imported scene was exported. If null, then no import has occured.
-        /// </summary>
-        public DateTime? ExportTimestamp;
+        private readonly JsonSerializer _serializer = new JsonSerializer();
 
         /// <summary>
         /// Initialise all data.
@@ -33,8 +29,7 @@ namespace ExternalUnityRendering
             Debug.Log("Awaiting Messages?");
             Receiver client = new Receiver();
 
-            // non blocking async function
-            client.ReceiveMessages((state) => ImportCurrentScene(state));
+            client.ProcessCallback((state) => ImportCurrentScene(state));
         }
 
         /// <summary>
@@ -74,6 +69,12 @@ namespace ExternalUnityRendering
         /// <returns>Whether the receiver should continue receiving data or exit.</returns>
         public bool ImportCurrentScene(string json, DirectoryManager renderPath = null)
         {
+            if (string.IsNullOrEmpty(json))
+            {
+                Debug.Log("Empty json string provided. Will not attempt to deserialize.");
+                return true;
+            }
+
             Debug.Log("Beginning Import.");
 
             // TODO add objects to this list based on if they are new in importer.
@@ -135,29 +136,35 @@ namespace ExternalUnityRendering
 
                 // add check if blank state exists and return immediately
                 // or replace blank state with null and add that as an exit now
-                SceneState state = JsonConvert.DeserializeObject<SceneState>(json, serializerSettings);
+                SerializableScene state = JsonConvert.DeserializeObject<SerializableScene>(json, serializerSettings);
 
                 if (failed || state == null)
                 {
+                    Debug.Log(json);
                     Debug.Log("Failed to deserialize.");
                     return true;
                 }
 
+                if (!state.ContinueImporting)
+                {
+                    return false;
+                }
+
                 state.SceneRoot.UnpackData(transform);
-                ExportTimestamp = state.ExportDate;
-                SceneState.CameraSettings settings = state.RendererSettings;
+                DateTime exportTimestamp = state.ExportDate;
+                SerializableScene.CameraSettings settings = state.RendererSettings;
 
                 // Reassign renderpath if override was provided
                 settings.RenderDirectory = renderPath?.Path ?? settings.RenderDirectory;
 
-                Debug.LogFormat($"Imported state that was generated at { ExportTimestamp }." +
+                Debug.Log($"Imported state that was generated at { exportTimestamp }." +
                     $"Camera settings are:\n\t{settings.RenderDirectory}\n\t" +
                     $"Resolution: {settings.RenderSize.x}x{settings.RenderSize.y}");
 
                 foreach (CustomCamera camera in customCameras)
                 {
                     camera.RenderPath = settings.RenderDirectory;
-                    camera.RenderImage(settings.RenderSize);
+                    camera.RenderImage(exportTimestamp, settings.RenderSize);
                 }
                 return true;
             }

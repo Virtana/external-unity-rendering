@@ -1,10 +1,10 @@
-﻿using ExternalUnityRendering.PathManagement;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using ExternalUnityRendering.PathManagement;
 using ExternalUnityRendering.TcpIp;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -69,6 +69,10 @@ namespace ExternalUnityRendering
         /// </summary>
         private Dictionary<PostExportAction, Func<string, bool>> _exportActions;
 
+        // TODO add compile options or assign when created
+        // for the port etc and exit if fatal error
+        public Sender Sender = new Sender();
+
         /// <summary>
         /// Initializes the state of the Exporter.
         /// </summary>
@@ -78,7 +82,7 @@ namespace ExternalUnityRendering
             _exportActions = new Dictionary<PostExportAction, Func<string, bool>>()
             {
                 {PostExportAction.Nothing, (state) => { return true; } },
-                {PostExportAction.Transmit, (state) => new Sender().SendAsync(state) },
+                {PostExportAction.Transmit, (state) => Sender.QueueSend(state) },
                 {PostExportAction.WriteToFile, (state) => WriteStateToFile(state) },
                 {PostExportAction.Log, (state) => { Debug.Log($"JSON Data = { state }"); return true; } },
             };
@@ -94,8 +98,8 @@ namespace ExternalUnityRendering
                 }
             };
 
-            _serializer.Converters.Add(new ObjectStateConverter());
-            _serializer.Converters.Add(new SceneStateConverter());
+            _serializer.Converters.Add(new SerializableGameobjectConverter());
+            _serializer.Converters.Add(new SerializableSceneConverter());
         }
 
         /// <summary>
@@ -158,11 +162,11 @@ namespace ExternalUnityRendering
                 exportObject.transform.SetParent(transform, true);
             }
 
-            SceneState.CameraSettings render =
-                new SceneState.CameraSettings(renderResolution, renderDirectory);
+            SerializableScene.CameraSettings render =
+                new SerializableScene.CameraSettings(renderResolution, renderDirectory);
 
             Debug.Log("Exporting...");
-            SceneState scene = new SceneState(transform, render);
+            SerializableScene scene = new SerializableScene(transform, render);
 
             Task.Run(() =>
             {
@@ -179,7 +183,7 @@ namespace ExternalUnityRendering
             Time.timeScale = 1;
         }
 
-        private void SerializeAndExport(SceneState scene, PostExportAction exportMode, bool prettyPrint)
+        private void SerializeAndExport(SerializableScene scene, PostExportAction exportMode, bool prettyPrint)
         {
             try
             {
@@ -197,44 +201,39 @@ namespace ExternalUnityRendering
                 {
                     _serializer.Serialize(writer, scene);
                 }
-                
+
                 string state = sb.ToString();
 
-                if (!succeeded || state == null || !state.EndsWith("}"))
+                if (!succeeded || state == null)
                 {
                     Debug.Log("Aborting Export. Failed to serialize. Check logs for cause.");
                     return;
                 }
 
-                if (!succeeded)
-                {
-                    Debug.Log("Aborting Export. Failed to serialize. See logs for cause.");
-                    return;
-                }
-
-                // NOTE a fancier way is Linq Aggregate
-                // bool success = _exportActions.Aggregate(true, (acc, kv) =>
-                //      ((kv.Key & exportMode) == kv.Key) && kv.Value.Invoke(state) && acc);
-
-                // for all the functions in export items
-                // check if the flag (key) is set, then invoke the function (value)
-                // if function returns false (i.e. failed)
                 foreach (KeyValuePair<PostExportAction, Func<string, bool>> item in _exportActions)
                 {
                     if ((item.Key & exportMode) == item.Key)
                     {
-                        succeeded &= item.Value.Invoke(state);
+                        bool success = item.Value.Invoke(state);
+                        if (item.Key == PostExportAction.Nothing)
+                        {
+                            continue;
+                        }
+                        if ((item.Key & exportMode) == PostExportAction.Transmit)
+                        {
+                            Debug.Log("Queued Data to be transmitted. See logs for status.");
+                        }
+                        else if (success)
+                        {
+                            // need to add consideration for async saying nope
+                            Debug.Log($"SUCCESS: Completed {item.Key & exportMode} at { DateTime.Now }.");
+                        }
+                        else
+                        {
+                            Debug.LogError($"FAILED: {item.Key & exportMode} at { DateTime.Now } failed to complete fully. " +
+                                "See logs for more details.");
+                        }
                     }
-                }
-
-                if (succeeded)
-                {
-                    Debug.Log($"SUCCESS: Completed export at { DateTime.Now }");
-                }
-                else
-                {
-                    Debug.LogError($"FAILED: Export at { DateTime.Now } failed to complete fully. " +
-                        "See logs for more details.");
                 }
             }
             catch (JsonException je)

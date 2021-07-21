@@ -44,8 +44,10 @@ namespace ExternalUnityRendering.UnityEditor
             if (GUILayout.Button("Import Now"))
             {
                 PathManagement.DirectoryManager render = new PathManagement.DirectoryManager(_renderFolder);
-                PathManagement.FileManager import = new PathManagement.FileManager(_importFile);
-                import.Path = _importFile;
+                PathManagement.FileManager import = new PathManagement.FileManager(_importFile)
+                {
+                    Path = _importFile
+                };
 
                 if (import.Path == null)
                 {
