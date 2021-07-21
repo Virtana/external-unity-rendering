@@ -3,6 +3,8 @@
 # Simplify building of Renderer and Physics instances, providing relevant
 # arguments.
 
+set -euxo pipefail
+
 #################################################
 # Variables
 #################################################
