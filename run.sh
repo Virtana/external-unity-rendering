@@ -59,7 +59,7 @@ w) <integer>
     can cause an out of VRAM issue.
 v)
     Activate verbose logging."
-    printf "%s" "${usage_info}"
+    printf "%s\n" "${usage_info}"
 }
 
 function cleanup() {
