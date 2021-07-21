@@ -7,8 +7,8 @@ public class BuildScript : MonoBehaviour
 {
     private enum BuildConfigurations
     {
-        Renderer = 0,
-        Physics = 1
+        Renderer,
+        Physics
     }
 
 // TODO replace with the kinda hack parser from the init script

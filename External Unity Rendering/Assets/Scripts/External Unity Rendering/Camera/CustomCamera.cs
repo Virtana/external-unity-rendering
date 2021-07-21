@@ -51,9 +51,6 @@ namespace ExternalUnityRendering.CameraUtilites
 
             // Importer will attach this to cameras right before importing.
             _camera = GetComponent<Camera>();
-
-            // TODO Uncomment this and provide some sort of control to turn it on
-            // should be off by default
             _camera.enabled = false;
             image = new Texture2D(1920, 1080, TextureFormat.RGB24, false);
         }

@@ -5,9 +5,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using AwaitableConcurrentQueue;
 using UnityEngine;
-using UnityEngine.Scripting;
 
 namespace ExternalUnityRendering.TcpIp
 {

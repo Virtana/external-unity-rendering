@@ -13,7 +13,7 @@ namespace ExternalUnityRendering
             {
                 GameObject obj = new GameObject
                 {
-                    name = "Scene State Importer"
+                    name = "SceneStateImporter"
                 };
 
                 obj.AddComponent<ImportScene>();

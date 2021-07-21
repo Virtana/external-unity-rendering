@@ -335,7 +335,7 @@ namespace ExternalUnityRendering
                 ? exporter.gameObject
                 : null ?? new GameObject
                 {
-                    name = "Physics Export Manager"
+                    name = "PhysicsExportManager"
                 };
 
             if (exporter == null)
