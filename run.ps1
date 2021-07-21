@@ -53,6 +53,9 @@ param (
 # .\build.ps1 -ProjectPath "D:\Virtana\External Unity Rendering\External Unity Rendering" -TempPath .\temp\ -BuildPath .\build\
 # .\run.ps1 -ExportDelay 100 -ExportCount 20 -RenderHeight 1080 -RenderWidth 1920 -RenderPath .\renders\ -Transmit 
 
+if (!(Test-Path -LiteralPath $_ -PathType Container)) {
+    New-Item -Path $RenderPath -ItemType Directory
+}
 $RenderPath = Resolve-Path -Path $RenderPath | Select-Object -ExpandProperty Path
 
 if ($Transmit) {
@@ -110,6 +113,8 @@ if ($physics.ExitCode -ne 0) {
         $renderer.Kill()
     }
     Exit $physics.ExitCode
+} else {
+    Write-Output "Physics Instance has completed successfully."
 }
 
 if ($Transmit) {
