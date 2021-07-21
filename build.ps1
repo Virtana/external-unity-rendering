@@ -4,24 +4,25 @@ param (
     [ValidateScript({Test-Path -LiteralPath $_ -PathType Container})]
     [string]$ProjectPath,
     
-    [Parameter(Mandatory,
-    HelpMessage="Enter the path to the temp path.")]
-    [ValidateScript({(Test-Path -LiteralPath $_ -PathType Container)})]
+    [Parameter(HelpMessage="Enter the path to the temp path.")]
+    [ValidateScript({(Test-Path -LiteralPath $_ -PathType Container -IsValid)})]
     [string]$TempPath,
     
     [Parameter(Mandatory,
     HelpMessage="Enter the path to the folder where to build files to.")]
-    [ValidateScript({Test-Path -LiteralPath $_ -PathType Container})]
+    [ValidateScript({Test-Path -LiteralPath $_ -PathType Container -IsValid})]
     [string]$BuildPath,
 
-    [Parameter(HelpMessage="Enter comma separated options for the build options (see ).")]
+    [Parameter(HelpMessage="Enter comma separated options for the build options `
+    (see https://docs.unity3d.com/ScriptReference/BuildOptions.html).")]
     [ValidateScript({
         $validOptions = @("none","development","autorunplayer","showbuiltplayer",
             "buildadditionalstreamedscenes","acceptexternalmodificationstoplayer",
-            "connectwithprofiler","allowdebugging","symlinklibraries","uncompressedassetbundle",
-            "connecttohost","enableheadlessmode","buildscriptsonly","patchpackage",
-            "forceenableassertions","compresswithlz4","compresswithlz4hc","strictmode",
-            "includetestassemblies","nouniqueidentifier","waitforplayerconnection","enablecodecoverage",
+            "connectwithprofiler","allowdebugging","symlinklibraries",
+            "uncompressedassetbundle","connecttohost","enableheadlessmode",
+            "buildscriptsonly","patchpackage","forceenableassertions","compresswithlz4",
+            "compresswithlz4hc","strictmode","includetestassemblies","
+            nouniqueidentifier","waitforplayerconnection","enablecodecoverage",
             "enabledeepprofilingsupport","detailedbuildreport","shaderlivelinksupport")
 
         $_.Split(",") | ForEach-Object {
@@ -40,21 +41,35 @@ param (
 )
 
 $ProjectPath = Resolve-Path -Path $ProjectPath | Select-Object -ExpandProperty Path
-$TempPath = Resolve-Path -Path $TempPath | Select-Object -ExpandProperty Path
+if ($TempPath) {
+    if (!(Test-Path -LiteralPath $TempPath)){
+        New-Item -Path $TempPath -ItemType Directory -ErrorAction Stop
+    }
+    $TempPath = Resolve-Path -Path $TempPath | Select-Object -ExpandProperty Path
+}
+if (!(Test-Path -LiteralPath $BuildPath)){
+    New-Item -Path $BuildPath -ItemType Directory -ErrorAction Stop
+}
 $BuildPath = Resolve-Path -Path $BuildPath | Select-Object -ExpandProperty Path
 
-Get-ChildItem -Path $TempPath | ForEach-Object {
-    Remove-Item -Path $_ -Recurse -Force -Confirm:$false
+if ($TempPath) {
+    Get-ChildItem -Path $TempPath | ForEach-Object {
+        Remove-Item -Path $_ -Recurse -Force -Confirm:$false
+    }
 }
 Get-ChildItem -Path $BuildPath | ForEach-Object {
     Remove-Item -Path $_ -Recurse -Force -Confirm:$false
 }
 
-Copy-Item -Path ("{0}\*" -f $ProjectPath) -Destination $TempPath -Recurse
+if ($TempPath) {
+    Copy-Item -Path ("{0}\*" -f $ProjectPath) -Destination $TempPath -Recurse
+    $ProjectPath = $TempPath
+}
 
 [System.Diagnostics.Process]$proc = New-Object System.Diagnostics.Process
 $proc.StartInfo.FileName = "C:\Programs\Unity\Editor\Unity.exe"
-$proc.StartInfo.Arguments = "-quit -batchmode -nographics -projectPath `"$TempPath`" -logFile `"./physics_build_log.txt`" -executeMethod BuildScript.Build
+$proc.StartInfo.Arguments = "-quit -batchmode -nographics -projectPath `"$ProjectPath`" `
+-logFile `"./physics_build_log.txt`" -executeMethod BuildScript.Build
 --config Physics --build `"$BuildPath`""
 if ($BuildOptions)
 {
@@ -80,7 +95,8 @@ if ($proc.ExitCode -ne 0) {
 }
 
 $proc.StartInfo.FileName = "C:\Programs\Unity\Editor\Unity.exe"
-$proc.StartInfo.Arguments = "-quit -batchmode -nographics -projectPath `"$TempPath`" -logFile `"./renderer_build_log.txt`" -executeMethod BuildScript.Build
+$proc.StartInfo.Arguments = "-quit -batchmode -nographics -projectPath `"$ProjectPath`" `
+-logFile `"./renderer_build_log.txt`" -executeMethod BuildScript.Build
 --config Renderer --build `"$BuildPath`""
 if ($BuildOptions)
 {

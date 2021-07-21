@@ -4,7 +4,9 @@ param (
     [Parameter(Mandatory, ValueFromPipeline)]
     [ValidateScript({ 
         foreach ($property in @("PhysicsPath","RendererPath")) {
-            if (!([bool](Get-Member -InputObject $_ -MemberType Properties -Name $property))) {
+            if (!([bool](Get-Member -InputObject $_ -MemberType Properties -Name $property))
+                || !(Get-Member -InputObject $_ -MemberType Properties -Name $property 
+                     | Test-Path -LiteralPath $_ -PathType Leaf)) {
                 return $false
             }
         }
@@ -23,7 +25,7 @@ param (
     [string] $JsonPath,
     
     [Parameter(Mandatory)]
-    [ValidateScript({(Test-Path -LiteralPath $_ -PathType Container)})]
+    [ValidateScript({(Test-Path -LiteralPath $_ -PathType Container -IsValid)})]
     [string] $RenderPath,
 
     [Parameter()]
