@@ -204,8 +204,8 @@ if [[ $VERBOSE == 'true' ]]; then
     physics_args="${physics_args} -logFile"
     renderer_args="${renderer_args} -logFile"
 else
-    physics_args="${physics_args} -logFile \"./physics_build_log.txt\""
-    renderer_args="${renderer_args} -logFile \"./renderer_build_log.txt\""
+    physics_args="${physics_args} -logFile \"./physics_build.log\""
+    renderer_args="${renderer_args} -logFile \"./renderer_build.log\""
 fi
 
 log verbose "Arguments for Physics instance:" "${physics_args}"

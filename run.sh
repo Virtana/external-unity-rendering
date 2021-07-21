@@ -304,8 +304,8 @@ fi
 run_physics+=("-logFile")
 run_renderer+=("-logFile")
 if [[ $VERBOSE != 'true' ]]; then
-    run_physics+=("\"./physics_log.txt\"")
-    run_renderer+=("\"./renderer_log.txt\"")
+    run_physics+=("\"./physics.log\"")
+    run_renderer+=("\"./renderer.log\"")
 else
     run_renderer+=("/dev/stdout")
 fi

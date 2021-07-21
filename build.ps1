@@ -69,7 +69,7 @@ if ($TempPath) {
 [System.Diagnostics.Process]$proc = New-Object System.Diagnostics.Process
 $proc.StartInfo.FileName = "C:\Programs\Unity\Editor\Unity.exe"
 $proc.StartInfo.Arguments = "-quit -batchmode -nographics -projectPath `"$ProjectPath`" `
--logFile `"./physics_build_log.txt`" -executeMethod BuildScript.Build
+-logFile `"./physics_build.log`" -executeMethod BuildScript.Build
 --config Physics --build `"$BuildPath`""
 if ($BuildOptions)
 {
@@ -96,7 +96,7 @@ if ($proc.ExitCode -ne 0) {
 
 $proc.StartInfo.FileName = "C:\Programs\Unity\Editor\Unity.exe"
 $proc.StartInfo.Arguments = "-quit -batchmode -nographics -projectPath `"$ProjectPath`" `
--logFile `"./renderer_build_log.txt`" -executeMethod BuildScript.Build
+-logFile `"./renderer_build.log`" -executeMethod BuildScript.Build
 --config Renderer --build `"$BuildPath`""
 if ($BuildOptions)
 {

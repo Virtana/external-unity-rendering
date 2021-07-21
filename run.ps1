@@ -61,7 +61,7 @@ $RenderPath = Resolve-Path -Path $RenderPath | Select-Object -ExpandProperty Pat
 if ($Transmit) {
     [System.Diagnostics.Process]$renderer = New-Object System.Diagnostics.Process
     $renderer.StartInfo.FileName = $ExecutablePath.RendererPath
-    $renderer.StartInfo.Arguments = "-batchmode -logFile .\renderer_log.txt"
+    $renderer.StartInfo.Arguments = "-batchmode -logFile .\renderer.log"
     if (!$renderer.Start()) {
         Write-Error "Failed to start Renderer." -ErrorAction Stop
     }
@@ -70,7 +70,7 @@ if ($Transmit) {
 
 [System.Diagnostics.Process]$physics = New-Object System.Diagnostics.Process
 $physics.StartInfo.FileName = $ExecutablePath.PhysicsPath
-$physics.StartInfo.Arguments = "-batchmode -quit -logFile `"./physics_log.txt`" -r `"$RenderPath`""
+$physics.StartInfo.Arguments = "-batchmode -quit -logFile `"./physics.log`" -r `"$RenderPath`""
 
 if ($JsonPath) {
     $physics.StartInfo.Arguments += " --writeToFile `"{0}`"" -f ($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($JsonPath))
