@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace ExternalUnityRendering.PathManagement
@@ -240,6 +241,61 @@ namespace ExternalUnityRendering.PathManagement
                 using (FileStream stream = _file.OpenWrite())
                 {
                     stream.Write(data, 0, data.Length);
+                }
+            }
+            catch (UnauthorizedAccessException uae)
+            {
+                Debug.LogError($"Name is read-only.\n{ uae }");
+            }
+            catch (DirectoryNotFoundException dnfe)
+            {
+                // Constructor enforces a valid directory, so this error must be due
+                // to some sort of lock or deletion
+                Debug.LogError($"The file directory may have been deleted.\n{ dnfe }");
+            }
+            catch (ArgumentOutOfRangeException aoore)
+            {
+                // normally would trigger when the second and/or third params to
+                // stream.Write are negative, but that **should** not be possible.
+                // Multithreading issue??
+                Debug.LogError($"Could not write data in array to stream.\n{ aoore }");
+            }
+            catch (ArgumentException ae)
+            {
+                // same as above but with generally invalid values e.g outside range of array
+                Debug.LogError($"Could not write data in array to stream.\n{ ae }");
+            }
+            catch (ObjectDisposedException ode)
+            {
+                Debug.LogError($"The stream is closed.\n{ ode }");
+            }
+            catch (NotSupportedException nse)
+            {
+                Debug.LogError("The StreamWriter buffer may full, and the contents of the " +
+                    "buffer cannot be written to the underlying fixed size stream because " +
+                    $"the StreamWriter is at the end the stream.\n{ nse }");
+            }
+            catch (IOException ioe)
+            {
+                Debug.LogError("An I/O error occurred or another thread may have caused " +
+                    "an unexpected change in the position of the operating system's file " +
+                    $"handle.\n{ ioe }");
+            }
+        }
+
+        public async Task WriteToFileAsync(byte[] data)
+        {
+            if (data == null)
+            {
+                Debug.LogError("Cannot write a null array to disk.");
+                return;
+            }
+
+            try
+            {
+                using (FileStream stream = _file.OpenWrite())
+                {
+                    await stream.WriteAsync(data, 0, data.Length);
                 }
             }
             catch (UnauthorizedAccessException uae)

@@ -1,7 +1,10 @@
-﻿using ExternalUnityRendering.PathManagement;
-using System;
+﻿using System;
 using System.IO;
+using System.Threading.Tasks;
+using ExternalUnityRendering.PathManagement;
+using Unity.Collections;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 
 namespace ExternalUnityRendering.CameraUtilites
 {
@@ -41,6 +44,26 @@ namespace ExternalUnityRendering.CameraUtilites
         }
 
         /// <summary>
+        /// Texture2D which stores the image after it has been rendered.
+        /// </summary>
+        private Texture2D _image;
+
+        /// <summary>
+        /// The graphics format of <see cref="_image"/>. Used for creating the png file.
+        /// </summary>
+        private GraphicsFormat _imageFormat;
+
+        /// <summary>
+        /// RenderTexture which <see cref="_camera"/> renders to.
+        /// </summary>
+        private RenderTexture _renderTexture;
+
+        /// <summary>
+        /// Byte cache for the raw texture data of <see cref="_image"/>. Used to reduce GC allocs.
+        /// </summary>
+        private byte[] _rawImageCache = null;
+
+        /// <summary>
         /// Executes when the CustomCamera is created. Used for initializing data.
         /// </summary>
         private void Awake()
@@ -49,19 +72,32 @@ namespace ExternalUnityRendering.CameraUtilites
             _renderPath = new DirectoryManager(
                 Path.Combine(Application.persistentDataPath, name), true);
 
-            // Importer will attach this to cameras right before importing.
+            // Grab the attached camera, set to false and make it render only to a
+            // rendertexture
             _camera = GetComponent<Camera>();
             _camera.enabled = false;
-            image = new Texture2D(1920, 1080, TextureFormat.RGB24, false);
+            _camera.forceIntoRenderTexture = true;
+
+            // Create the temp image, cache the format and get a rendertexture
+            _image = new Texture2D(1920, 1080, TextureFormat.RGBA32, false);
+            _imageFormat = _image.graphicsFormat;
+            _renderTexture = RenderTexture.GetTemporary(1920, 1080, 24);
         }
 
         /// <summary>
-        /// Write the image in <paramref name="render"/> to the render folder.
+        /// Write the image in <see cref="_rawImageCache"/> to the render folder.
         /// </summary>
         /// <param name="render">Bytes of the image to be saved.</param>
-        private void SaveRender(byte[] render, DateTime exportTime)
+        private async void SaveRender(DateTime exportTime, Vector2Int renderSize)
         {
-            string filename = $"Render-{ exportTime:yyyy-MM-dd-HH-mm-ss-fff-UTCzz}.png";
+            byte[] png = await Task.Run(() =>
+                {
+                    return ImageConversion.EncodeArrayToPNG(_rawImageCache, _imageFormat,
+                        (uint)renderSize.x, (uint)renderSize.y);
+                });
+
+            string filename = $"Render-{renderSize.x}x{renderSize.y}-" +
+                $"{exportTime:yyyy-MM-dd-HH-mm-ss-fff-UTCzz}.png";
             // will automatically rename if name collision occurs
             FileManager file = new FileManager(_renderPath, filename, true);
 
@@ -69,34 +105,34 @@ namespace ExternalUnityRendering.CameraUtilites
             if (file == null)
             {
                 file = new FileManager();
-                Debug.LogError($@"File {_renderPath.Path}/{filename} could not be " +
+                Debug.LogWarning($@"File {_renderPath.Path}/{filename} could not be " +
                     $"created. Using {file.Path} instead.");
             }
 
-            file.WriteToFile(render);
+            await file.WriteToFileAsync(png);
             Debug.Log($"Saved render to { file.Path } at { DateTime.Now }.");
         }
 
-        Texture2D image = null;
-        RenderTexture _renderTexture = RenderTexture.GetTemporary(1920, 1080, 24);
+        // TODO maybe figure out a way to not have crazy high values that will trigger a
+        // out of vram error
+        // ensure screenshot size is at least 300x300 in size.
+        // TODO find a way to catch out of vram exception
 
         /// <summary>
-        /// Renders the current view of the Camera.
+        /// Renders the current view of the <see cref="_camera"/>.
         /// </summary>
+        /// <param name="exportTime">The time at which the export was generated.</param>
         /// <param name="renderSize">The resolution of the rendered image.</param>
         public void RenderImage(DateTime exportTime,Vector2Int renderSize = default)
         {
-            // TODO maybe figure out a way to not have crazy high values that will trigger a
-            // out of vram error
-            // ensure screenshot size is at least 300x300 in size.
             renderSize.Clamp(
                 new Vector2Int(300, 300),
                 new Vector2Int(int.MaxValue, int.MaxValue));
 
-            _camera.enabled = false; // always disabling in case a script enables
+            // always disabling in case a script enables
+            _camera.enabled = false;
 
-            _camera.targetTexture = _renderTexture;
-
+            // Resize textures if necessary (currently not)
             if (_renderTexture.width != renderSize.x
                 || _renderTexture.height != renderSize.y)
             {
@@ -104,12 +140,13 @@ namespace ExternalUnityRendering.CameraUtilites
                 _renderTexture =
                     RenderTexture.GetTemporary(renderSize.x, renderSize.y, 24);
             }
-            if (image.width != renderSize.x
-                || image.height != renderSize.y)
+            if (_image.width != renderSize.x
+                || _image.height != renderSize.y)
             {
-                image.Resize(renderSize.x, renderSize.y);
+                _image.Resize(renderSize.x, renderSize.y);
             }
 
+            // Set render targets
             _camera.targetTexture = _renderTexture;
             RenderTexture.active = _renderTexture;
 
@@ -117,15 +154,20 @@ namespace ExternalUnityRendering.CameraUtilites
             _camera.Render();
 
             // Make a new texture and read the active Render Texture into it.
-            image.ReadPixels(new Rect(0, 0, renderSize.x, renderSize.y), 0, 0);
-            image.Apply();
+            _image.ReadPixels(new Rect(0, 0, renderSize.x, renderSize.y), 0, 0);
+            _image.Apply();
 
-#if UNITY_EDITOR
-            _camera.enabled = true;
-#endif
-            // now image holds the image in texture2d form
-            byte[] png = image.EncodeToPNG();
-            SaveRender(png, exportTime);
+            // Get the raw texture data directly in the buffer, and copy to
+            // the cache, only reallocating when necessary.
+            NativeArray<byte> rawImage = _image.GetRawTextureData<byte>();
+            if (_rawImageCache?.Length != rawImage.Length)
+            {
+                _rawImageCache = new byte[rawImage.Length];
+            }
+            rawImage.CopyTo(_rawImageCache);
+
+            // begin the export
+            SaveRender(exportTime, renderSize);
         }
     }
 }
