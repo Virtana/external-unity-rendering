@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using ExternalUnityRendering.Serialization;
 using UnityEngine;
 
 namespace ExternalUnityRendering.TcpIp
@@ -75,7 +76,7 @@ namespace ExternalUnityRendering.TcpIp
                 }
             }
 
-            while (_messageQueue.DataAvailable)
+            while (_messageQueue.QueueComplete)
             {
                 (bool readSuccess, string data) = await _messageQueue.DequeueAsync();
 
@@ -213,7 +214,7 @@ namespace ExternalUnityRendering.TcpIp
         public void FinishTransmissionsAndClose()
         {
             Debug.Log("Sending closing message.");
-            string text_file = Newtonsoft.Json.JsonConvert.SerializeObject(new SerializableScene()
+            string text_file = Newtonsoft.Json.JsonConvert.SerializeObject(new EURScene()
                         {
                             ContinueImporting = false
                         });

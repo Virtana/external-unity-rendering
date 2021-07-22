@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using ExternalUnityRendering.PathManagement;
+using ExternalUnityRendering.Serialization;
 using ExternalUnityRendering.TcpIp;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
@@ -98,8 +99,8 @@ namespace ExternalUnityRendering
                 }
             };
 
-            _serializer.Converters.Add(new SerializableGameobjectConverter());
-            _serializer.Converters.Add(new SerializableSceneConverter());
+            _serializer.Converters.Add(new EURGameObjectConverter());
+            _serializer.Converters.Add(new EURSceneConverter());
         }
 
         /// <summary>
@@ -162,11 +163,11 @@ namespace ExternalUnityRendering
                 exportObject.transform.SetParent(transform, true);
             }
 
-            SerializableScene.CameraSettings render =
-                new SerializableScene.CameraSettings(renderResolution, renderDirectory);
+            EURScene.CameraSettings render =
+                new EURScene.CameraSettings(renderResolution, renderDirectory);
 
             Debug.Log("Exporting...");
-            SerializableScene scene = new SerializableScene(transform, render);
+            EURScene scene = new EURScene(transform, render);
 
             Task.Run(() =>
             {
@@ -183,7 +184,7 @@ namespace ExternalUnityRendering
             Time.timeScale = 1;
         }
 
-        private void SerializeAndExport(SerializableScene scene, PostExportAction exportMode, bool prettyPrint)
+        private void SerializeAndExport(EURScene scene, PostExportAction exportMode, bool prettyPrint)
         {
             try
             {

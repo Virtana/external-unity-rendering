@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+
 using ExternalUnityRendering.CameraUtilites;
 using ExternalUnityRendering.PathManagement;
+using ExternalUnityRendering.Serialization;
 using ExternalUnityRendering.TcpIp;
+
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -15,22 +19,16 @@ namespace ExternalUnityRendering
     /// </summary>
     public class ImportScene : MonoBehaviour
     {
-        private readonly JsonSerializer _serializer = new JsonSerializer();
-
+#if UNITY_EDITOR
         /// <summary>
-        /// Initialise all data.
+        /// Initialise a receiver if in editor
         /// </summary>
         private void Awake()
         {
-            // Set timeScale to 0. Scene must always be static.
-            // will be updated on each import
-            Time.timeScale = 0;
-
+            new Receiver().ProcessCallbackAsync((state) => ImportCurrentScene(state));
             Debug.Log("Awaiting Messages?");
-            Receiver client = new Receiver();
-
-            client.ProcessCallback((state) => ImportCurrentScene(state));
         }
+#endif
 
         /// <summary>
         /// Import data from a file.
@@ -55,10 +53,6 @@ namespace ExternalUnityRendering
 
             ImportCurrentScene(json, renderFolder);
         }
-
-        // By default returns true. If fail, exporter just needs to ping server
-        // and check if connection is refused. if not, then send a mostly blank object with
-        // continue importing as false
 
         /// <summary>
         /// Import a scene from a json string.
@@ -136,7 +130,7 @@ namespace ExternalUnityRendering
 
                 // add check if blank state exists and return immediately
                 // or replace blank state with null and add that as an exit now
-                SerializableScene state = JsonConvert.DeserializeObject<SerializableScene>(json, serializerSettings);
+                EURScene state = JsonConvert.DeserializeObject<EURScene>(json, serializerSettings);
 
                 if (failed || state == null)
                 {
@@ -152,7 +146,7 @@ namespace ExternalUnityRendering
 
                 state.SceneRoot.UnpackData(transform);
                 DateTime exportTimestamp = state.ExportDate;
-                SerializableScene.CameraSettings settings = state.RendererSettings;
+                EURScene.CameraSettings settings = state.RendererSettings;
 
                 // Reassign renderpath if override was provided
                 settings.RenderDirectory = renderPath?.Path ?? settings.RenderDirectory;

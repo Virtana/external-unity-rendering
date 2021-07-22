@@ -3,6 +3,7 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 
@@ -43,7 +44,7 @@ namespace ExternalUnityRendering.TcpIp
                 _listener.Bind(localEndPoint);
                 _listener.Listen(5);
                 //Task.Run(ReceiveMessages);
-                Task.Run(() => BeginReceive(_listener));
+                Task.Run(() => ReceiveAsync(_listener));
                 Debug.Log("Waiting for a connection...");
             }
             catch (SocketException se)
@@ -58,11 +59,11 @@ namespace ExternalUnityRendering.TcpIp
             }
         }
 
-        public async void ProcessCallback(Func<string, bool> dataReceivedCallback)
+        public async void ProcessCallbackAsync(Func<string, bool> dataReceivedCallback)
         {
             bool continueReading = true;
 
-            while (continueReading && _messageQueue.DataAvailable)
+            while (continueReading && _messageQueue.QueueComplete)
             {
                 (bool readSuccess, string data) = await _messageQueue.DequeueAsync();
                 if (readSuccess)
@@ -71,20 +72,37 @@ namespace ExternalUnityRendering.TcpIp
                 }
                 else
                 {
-                    Debug.LogError("FAILED to read from internal channel");
+                    Debug.LogWarning("Failed to read from internal channel");
                 }
             }
+
             // Exit the application in runtime, stop playing in editor.
             // If server is off, no point in render instance.
             Debug.Log("Finished importing.");
-            RenderTexture.active = null;
-            Application.Quit(0);
+        }
+
+        public void ProcessCallback(Func<string, bool> dataReceivedCallback)
+        {
+            bool continueReading = true;
+            string data;
+            // after a few nanoseconds, should yield every time it checks, reducing cpu time wasted
+            SpinWait waiter = new SpinWait();
+            while (continueReading && _messageQueue.QueueComplete)
+            {
+                while (!_messageQueue.TryDequeue(out data))
+                {
+                    waiter.SpinOnce();
+                }
+                continueReading = dataReceivedCallback(data);
+            }
+
+            Debug.Log("Finished importing.");
         }
 
         /// <summary>
         /// Begin receiving data asynchronously.
         /// </summary>
-        public async void BeginReceive(Socket listener)
+        public async void ReceiveAsync(Socket listener)
         {
             StringBuilder sb = new StringBuilder();
             ArraySegment<byte> cache = new ArraySegment<byte>(new byte[1024]);
