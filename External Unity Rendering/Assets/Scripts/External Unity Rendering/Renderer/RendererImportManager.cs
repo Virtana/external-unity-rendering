@@ -41,7 +41,16 @@ namespace ExternalUnityRendering
 
             Receiver receiver = new Receiver(Arguments.ReceiverPort, Arguments.ReceiverIpAddress);
             Debug.Log("Awaiting Messages...");
-            receiver.ProcessCallback((state) => importer.ImportCurrentScene(state));
+
+            int importCount = 0;
+            receiver.ProcessCallback((state) =>
+            {
+                bool continueImporting = importer.ImportCurrentScene(state);
+                System.Console.WriteLine($"Imported {++importCount} scenes so far.");
+                return continueImporting;
+            });
+
+            Debug.Log($"Saved a total of {importCount - 2} scenes to disk. (false positives occur due to open and close signal).");
 
             RenderTexture.active = null;
             Application.Quit(0);
