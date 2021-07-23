@@ -25,7 +25,8 @@ namespace ExternalUnityRendering
         /// </summary>
         private void Awake()
         {
-            new Receiver().ProcessCallbackAsync((state) => ImportCurrentScene(state));
+            Debug.LogWarning("Improperly implemented automatic setup for editor");
+            new Server(11000, "localhost").ProcessCallbackAsync((state) => ImportCurrentScene(state));
             Debug.Log("Awaiting Messages?");
         }
 #endif

@@ -7,7 +7,7 @@ using UnityEngine;
 namespace ExternalUnityRendering
 {
     [Verb("physics", aliases: new string[] { "exporter", "export" },
-        HelpText = "Run the physics instance.")]
+         HelpText = "Run the physics instance.")]
     public class PhysicsArguments
     {
         private int _millisecondDelay = -1;
@@ -252,7 +252,6 @@ namespace ExternalUnityRendering
                 }
             }
         }
-
 
         [Option('p', "port", HelpText = "Port to connect to.", Default = (ushort)11000)]
         public ushort ReceiverPort { get; set; }

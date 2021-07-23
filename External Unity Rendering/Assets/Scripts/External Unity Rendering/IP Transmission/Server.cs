@@ -9,26 +9,17 @@ using UnityEngine;
 
 namespace ExternalUnityRendering.TcpIp
 {
-    public class Receiver
+    public class Server
     {
         private readonly AwaitableConcurrentQueue<string> _messageQueue = new AwaitableConcurrentQueue<string>();
-
-        /// <summary>
-        /// The socket that will listen and accept connections.
-        /// </summary>
-        private readonly Socket _listener;
-
         // TODO dispatch multiple listeners to collect data
-        // Each listener would write received data into a system.collections.concurrent
-        // maybe and have receivemessage check if there is data ready and run the callback
-        // hopefully won't die.
 
         /// <summary>
         /// Initialise a receiver and bind and listen on the socket.
         /// </summary>
         /// <param name="port">The port to listen on.</param>
         /// <param name="ipAddr">The IP address to listen on.</param>
-        public Receiver(int port = 11000, string ipAddr = "localhost")
+        public Server(int port, string ipAddr, int maxListeners = 5)
         {
             try
             {
@@ -39,13 +30,15 @@ namespace ExternalUnityRendering.TcpIp
                 IPAddress ipAddress = host.AddressList[0];
                 IPEndPoint localEndPoint = new IPEndPoint(ipAddress, port);
                 // Create a Socket that will use Tcp protocol
-                _listener = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                Socket listener = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
                 // A Socket must be associated with an endpoint using the Bind method
-                _listener.Bind(localEndPoint);
-                _listener.Listen(5);
-                //Task.Run(ReceiveMessages);
-                Task.Run(() => ReceiveAsync(_listener));
-                Debug.Log("Waiting for a connection...");
+                listener.Bind(localEndPoint);
+                listener.Listen(maxListeners);
+
+                //Task.Run(() => AcceptAsync(listener));
+                Task.Run(() => ReceiveAsync(listener));
+
+                Debug.Log($"Listening on {localEndPoint}. Waiting for a connection...");
             }
             catch (SocketException se)
             {
@@ -76,8 +69,6 @@ namespace ExternalUnityRendering.TcpIp
                 }
             }
 
-            // Exit the application in runtime, stop playing in editor.
-            // If server is off, no point in render instance.
             Debug.Log("Finished importing.");
         }
 
@@ -98,6 +89,8 @@ namespace ExternalUnityRendering.TcpIp
 
             Debug.Log("Finished importing.");
         }
+
+        // TODO test accept and delete receive
 
         /// <summary>
         /// Begin receiving data asynchronously.
@@ -135,7 +128,7 @@ namespace ExternalUnityRendering.TcpIp
                 }
                 catch (ObjectDisposedException ode)
                 {
-                    Debug.LogError($"The socket or memory stream has been closed.\n{ode}");
+                    Debug.LogError($"The socket has been closed.\n{ode}");
                 }
                 catch (InvalidOperationException ioe)
                 {
@@ -148,31 +141,9 @@ namespace ExternalUnityRendering.TcpIp
                     Debug.LogError("A caller higher in the call stack does not have permission " +
                     $"for the requested operation.\n{se}");
                 }
-                catch (ArgumentException ae)
-                {
-                    Debug.LogError("The memory stream is unable to read from the byte " +
-                    $"buffer.\n{ae}");
-                }
-                catch (NotSupportedException nse)
-                {
-                    Debug.LogError("An error has occurred that prevents writing to the " +
-                    $"memory stream.\n{nse}");
-                }
                 catch (IOException ioe)
                 {
                     Debug.LogError($"An I/O error has occurred.\n{ioe}");
-                }
-                catch (OutOfMemoryException oome)
-                {
-                // log but don't handle. Unity **should** handle this appropriately
-                // The following link (split in two)
-                // https://docs.microsoft.com/en-us/dotnet/api/system.outofmemoryexception?
-                // view=net-5.0#:~:text=This%20type%20of%20OutOfMemoryException,example%20does.
-                // says that Environment.FailFast() should be called, but unity should do that
-                // if unity doesn't do it well ¯\_(ツ)_/¯
-                Debug.LogError("Catastrophic error. Out of memory when trying to " +
-                    $"read from the cache.\n{ oome }");
-                    throw;
                 }
 
                 if (successfulReceipt)
@@ -183,6 +154,120 @@ namespace ExternalUnityRendering.TcpIp
                 sb.Clear();
                 successfulReceipt = false;
             }
+        }
+
+        /// <summary>
+        /// Begin receiving data asynchronously.
+        /// </summary>
+        public async void AcceptAsync(Socket listener)
+        {
+            while (true)
+            {
+                try
+                {
+                    ReceiveDataAsync(await listener.AcceptAsync());
+                }
+                catch (SocketException se)
+                {
+                    Debug.Log("An error occurred when attempting to access the socket." +
+                    $"ErrorCode: {se.SocketErrorCode}\n{se}");
+                }
+                catch (ObjectDisposedException ode)
+                {
+                    Debug.LogError($"The socket has been closed.\n{ode}");
+                }
+                catch (InvalidOperationException ioe)
+                {
+                    Debug.LogError("The accepting socket is not listening for connections." +
+                    " You must call Bind(EndPoint) and Listen(Int32) before calling " +
+                    $"Accept().\n{ioe}");
+                }
+                catch (System.Security.SecurityException se)
+                {
+                    Debug.LogError("A caller higher in the call stack does not have permission " +
+                    $"for the requested operation.\n{se}");
+                }
+                catch (IOException ioe)
+                {
+                    Debug.LogError($"An I/O error has occurred.\n{ioe}");
+                }
+            }
+        }
+
+        private async void ReceiveDataAsync(Socket handler)
+        {
+            ArraySegment<byte> cache = new ArraySegment<byte>(new byte[1024]);
+            string data = null;
+            bool successfulReceipt = false;
+            try
+            {
+                int bytesReceived = 0;
+                int totalBytesReceived = 0;
+                do
+                {
+                    bytesReceived = await handler.ReceiveAsync(cache, SocketFlags.None);
+                    totalBytesReceived += bytesReceived;
+                    data = Encoding.ASCII.GetString(cache.Array, 0, bytesReceived);
+                } while (!(handler.Poll(1, SelectMode.SelectRead) && handler.Available == 0));
+
+                Debug.Log($"Read {totalBytesReceived} bytes from {handler.RemoteEndPoint} at {DateTime.Now}.");
+                successfulReceipt = true;
+            }
+            catch (SocketException se)
+            {
+                Debug.Log("An error occurred when attempting to access the socket." +
+                $"ErrorCode: {se.SocketErrorCode}\n{se}");
+            }
+            catch (ObjectDisposedException ode)
+            {
+                Debug.LogError($"The socket or memory stream has been closed.\n{ode}");
+            }
+            catch (InvalidOperationException ioe)
+            {
+                Debug.LogError("The accepting socket is not listening for connections." +
+                " You must call Bind(EndPoint) and Listen(Int32) before calling " +
+                $"Accept().\n{ioe}");
+            }
+            catch (System.Security.SecurityException se)
+            {
+                Debug.LogError("A caller higher in the call stack does not have permission " +
+                $"for the requested operation.\n{se}");
+            }
+            catch (ArgumentException ae)
+            {
+                Debug.LogError("The memory stream is unable to read from the byte " +
+                $"buffer.\n{ae}");
+            }
+            catch (NotSupportedException nse)
+            {
+                Debug.LogError("An error has occurred that prevents writing to the " +
+                $"memory stream.\n{nse}");
+            }
+            catch (IOException ioe)
+            {
+                Debug.LogError($"An I/O error has occurred.\n{ioe}");
+            }
+            catch (OutOfMemoryException oome)
+            {
+                // log but don't handle. Unity **should** handle this appropriately
+                // The following link (split in two)
+                // https://docs.microsoft.com/en-us/dotnet/api/system.outofmemoryexception?
+                // view=net-5.0#:~:text=This%20type%20of%20OutOfMemoryException,example%20does.
+                // says that Environment.FailFast() should be called, but unity should do that
+                // if unity doesn't do it well ¯\_(ツ)_/¯
+                Debug.LogError("Catastrophic error. Out of memory when trying to " +
+                    $"read from the cache.\n{ oome }");
+                throw;
+            }
+
+            if (successfulReceipt)
+            {
+                _messageQueue.Enqueue(data);
+            }
+
+            handler.Shutdown(SocketShutdown.Both);
+            handler.Disconnect(false);
+            handler.Close();
         }
     }
 }

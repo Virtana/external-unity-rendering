@@ -13,7 +13,7 @@ namespace ExternalUnityRendering.TcpIp
     /// <summary>
     /// Class that manages socket transmission.
     /// </summary>
-    public class Sender
+    public class Client
     {
         /// <summary>
         /// Internal queue of data to be sent. Works asynchronously.
@@ -171,7 +171,7 @@ namespace ExternalUnityRendering.TcpIp
         /// <param name="ipString">The string representing the IP address.</param>
         /// <param name="maxRetries">The maximum number of times to retry sending data
         /// after the connection has been refused.</param>
-        public Sender(int port = 11000, string ipString = "localhost",
+        public Client(int port, string ipString,
             int maxRetries = 3, int chunkSize = 50)
         {
             try
@@ -222,6 +222,11 @@ namespace ExternalUnityRendering.TcpIp
             _messageQueue.Close();
             _completedTransmission.Wait();
             Debug.Log("Closed message queue. When queue is empty, the program will terminate.");
+        }
+
+        public bool IsDone()
+        {
+            return _completedTransmission.IsSet;
         }
     }
 }

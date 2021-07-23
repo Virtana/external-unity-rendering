@@ -72,7 +72,7 @@ namespace ExternalUnityRendering
 
         // TODO add compile options or assign when created
         // for the port etc and exit if fatal error
-        public Sender Sender = new Sender();
+        public Client Sender = null;
 
         /// <summary>
         /// Initializes the state of the Exporter.
@@ -88,7 +88,6 @@ namespace ExternalUnityRendering
                 {PostExportAction.Log, (state) => { Debug.Log($"JSON Data = { state }"); return true; } },
             };
 
-
             _serializer.NullValueHandling = NullValueHandling.Ignore;
             _serializer.Error += delegate (object sender, ErrorEventArgs args)
             {
@@ -101,6 +100,15 @@ namespace ExternalUnityRendering
 
             _serializer.Converters.Add(new EURGameObjectConverter());
             _serializer.Converters.Add(new EURSceneConverter());
+        }
+
+        private void Start()
+        {
+            if (Sender == null)
+            {
+                Debug.LogWarning("Creating default sender on [::1]:11000.");
+                Sender = new Client(11000, "localhost");
+            }
         }
 
         /// <summary>

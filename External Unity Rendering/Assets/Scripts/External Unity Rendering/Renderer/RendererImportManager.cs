@@ -39,7 +39,7 @@ namespace ExternalUnityRendering
                 importer = obj.AddComponent<ImportScene>();
             }
 
-            Receiver receiver = new Receiver(Arguments.ReceiverPort, Arguments.ReceiverIpAddress);
+            Server receiver = new Server(Arguments.ReceiverPort, Arguments.ReceiverIpAddress);
             Debug.Log("Awaiting Messages...");
 
             int importCount = 0;

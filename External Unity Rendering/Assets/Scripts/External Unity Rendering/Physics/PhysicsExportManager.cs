@@ -12,6 +12,8 @@ namespace ExternalUnityRendering
         private void Awake()
         {
 #if UNITY_EDITOR
+            // Cannot have this in the editor.
+            // Use the editor scripts instead.
             Destroy(this);
             return;
 #endif
@@ -34,6 +36,7 @@ namespace ExternalUnityRendering
             {
                 exporter = gameObject.AddComponent<ExportScene>();
             }
+            exporter.Sender = new TcpIp.Client(Arguments.ReceiverPort, Arguments.ReceiverIpAddress);
             StartCoroutine(ExportLoop(exporter));
         }
 
@@ -54,11 +57,41 @@ namespace ExternalUnityRendering
             if (Arguments.ExportActions.HasFlag(ExportScene.PostExportAction.Transmit))
             {
                 Debug.Log("Emptied queue and sending closing message.");
-                exporter.Sender.FinishTransmissionsAndClose();
+                if (Application.isBatchMode)
+                {
+                    exporter.Sender.FinishTransmissionsAndClose();
+                }
+                else
+                {
+                    while (!exporter.Sender.IsDone())
+                    {
+                        yield return null;
+                    }
+                }
             }
 
-            Debug.Log("Exiting Physics Instance...");
-            Application.Quit(0);
+            if (Application.isBatchMode)
+            {
+                Debug.Log("Exiting Physics Instance...");
+                Application.Quit(0);
+            }
+            else
+            {
+                Debug.Log("Automatic exporting is complete. Keyboard export not yet supported.");
+            }
+        }
+
+        private void OnApplicationQuit()
+        {
+            ExportScene exporter = FindObjectOfType<ExportScene>();
+            if (exporter != null)
+            {
+                if (!exporter.Sender.IsDone())
+                {
+                    Debug.Log("Waiting for exporter to close.");
+                    exporter.Sender.FinishTransmissionsAndClose();
+                }
+            }
         }
     }
 }
