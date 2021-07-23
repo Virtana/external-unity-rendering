@@ -6,7 +6,8 @@ using UnityEngine;
 
 namespace ExternalUnityRendering
 {
-    [Verb("physics", HelpText = "Run the physics instance.")]
+    [Verb("physics", aliases: new string[] { "exporter", "export" },
+        HelpText = "Run the physics instance.")]
     public class PhysicsArguments
     {
         private int _millisecondDelay = -1;
