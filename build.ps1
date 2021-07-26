@@ -4,124 +4,148 @@ param (
     [ValidateScript({Test-Path -LiteralPath $_ -PathType Container})]
     [string]$ProjectPath,
     
-    [Parameter(HelpMessage="Enter the path to the temp path.")]
-    [ValidateScript({(Test-Path -LiteralPath $_ -PathType Container -IsValid)})]
-    [string]$TempPath,
-    
     [Parameter(Mandatory,
     HelpMessage="Enter the path to the folder where to build files to.")]
     [ValidateScript({Test-Path -LiteralPath $_ -PathType Container -IsValid})]
     [string]$BuildPath,
 
-    [Parameter(HelpMessage="Enter comma separated options for the build options `
-    (see https://docs.unity3d.com/ScriptReference/BuildOptions.html).")]
-    [ValidateScript({
-        $validOptions = @("none","development","autorunplayer","showbuiltplayer",
-            "buildadditionalstreamedscenes","acceptexternalmodificationstoplayer",
-            "connectwithprofiler","allowdebugging","symlinklibraries",
-            "uncompressedassetbundle","connecttohost","enableheadlessmode",
-            "buildscriptsonly","patchpackage","forceenableassertions","compresswithlz4",
-            "compresswithlz4hc","strictmode","includetestassemblies","
-            nouniqueidentifier","waitforplayerconnection","enablecodecoverage",
-            "enabledeepprofilingsupport","detailedbuildreport","shaderlivelinksupport")
-
-        $_.Split(",") | ForEach-Object {
-            $option = $_.Trim().ToLower()
-            if (!$validOptions.Contains($option)) {
-                return $false;
-            }
-        }
-
-        return $true;
-    })]
-    [string]$BuildOptions,
-
     [switch]
-    [bool]$BuildWindows
+    [bool]$BuildLinux
 )
 
 $ProjectPath = Resolve-Path -Path $ProjectPath | Select-Object -ExpandProperty Path
-if ($TempPath) {
-    if (!(Test-Path -LiteralPath $TempPath)){
-        New-Item -Path $TempPath -ItemType Directory -ErrorAction Stop
-    }
-    $TempPath = Resolve-Path -Path $TempPath | Select-Object -ExpandProperty Path
-}
+
 if (!(Test-Path -LiteralPath $BuildPath)){
-    New-Item -Path $BuildPath -ItemType Directory -ErrorAction Stop
+    New-Item -Path $BuildPath -ItemType Directory -ErrorAction Stop | Out-Null
+    Write-Verbose "Created Directory : `"${BuildPath}`""
 }
-$BuildPath = Resolve-Path -Path $BuildPath | Select-Object -ExpandProperty Path
 
-if ($TempPath) {
-    Get-ChildItem -Path $TempPath | ForEach-Object {
-        Remove-Item -Path $_ -Recurse -Force -Confirm:$false
+$BuildPath = Resolve-Path -Path $BuildPath `
+    | Select-Object -ExpandProperty Path
+
+Write-Verbose "Resolved the output build path to `"${BuildPath}`""
+
+$Executable = New-Object System.IO.DirectoryInfo ".\External Unity Rendering\" `
+    | Select-Object -ExpandProperty Name
+if (!($BuildLinux))
+{
+    $Executable += ".exe"
+}
+
+Write-Verbose "Resolved executable name to ${Executable}"
+
+if ($ProjectPath | Join-Path -ChildPath "Temp/UnityLockfile" | Test-Path) {
+    $title    = 'UnityLockfile detected. Another editor may have this project open. Do you want to continue?'
+    $question = 'Are you sure you want to proceed?'
+    $choices  = '&Yes', '&No'
+
+    $decision = $Host.UI.PromptForChoice($title, $question, $choices, 1)
+    if ($decision -eq 0) {
+        Write-Host 'Using a temporary folder to open project.'
+    } else {
+        Write-Host 'Exiting Script.'
+        Exit 0
     }
-}
-Get-ChildItem -Path $BuildPath | ForEach-Object {
-    Remove-Item -Path $_ -Recurse -Force -Confirm:$false
-}
 
-if ($TempPath) {
-    Copy-Item -Path ("{0}\*" -f $ProjectPath) -Destination $TempPath -Recurse
+    $TempPath = Join-Path $Env:Temp ("build-$(New-Guid)")
+    New-Item -Type Directory -Path $TempPath | Out-Null
+    Write-Verbose "Created ${TempPath}"
+
+    foreach ($ProjectFolder in @("Assets", "Packages", "ProjectSettings")) {
+        $ProjectPath `
+        | Join-Path -ChildPath $ProjectFolder `
+        | Copy-Item -Destination $TempPath -Recurse
+        Write-Verbose "Copied $($ProjectPath | Join-Path -ChildPath $ProjectFolder) to $($TempPath | Join-Path -ChildPath $ProjectFolder)" 
+    }
+
     $ProjectPath = $TempPath
 }
 
 [System.Diagnostics.Process]$proc = New-Object System.Diagnostics.Process
 $proc.StartInfo.FileName = "C:\Programs\Unity\Editor\Unity.exe"
-$proc.StartInfo.Arguments = "-quit -batchmode -nographics -projectPath `"$ProjectPath`" `
--logFile `"./physics_build.log`" -executeMethod BuildScript.Build
---config Physics --build `"$BuildPath`""
-if ($BuildOptions)
+$proc.StartInfo.Arguments = "-quit -batchmode -nographics -projectPath `"${ProjectPath}`""
+
+# Imitate how Unity saves logs normally
+if (Test-Path -Path "./build-prev.log")
 {
-    $proc.StartInfo.Arguments += " --options `"$BuildOptions`""
+    Remove-Item -Path "./build-prev.log"
 }
-if ($BuildWindows) {
-    $proc.StartInfo.Arguments += " --buildTarget `"StandaloneWindows64`""
+if (Test-Path -Path "./build.log")
+{
+    Rename-Item -Path "./build.log" -NewName "build-prev.log"
 }
+
+$proc.StartInfo.Arguments += " -logFile `"build.log`""
+
+if ($BuildLinux) {
+    $proc.StartInfo.Arguments += " -buildLinux64Player `"$(Join-Path $BuildPath $Executable)`""
+}
+else 
+{
+    $proc.StartInfo.Arguments += " -buildWindows64Player `"$(Join-Path $BuildPath $Executable)`""
+}
+
+Write-Verbose "Launching Unity with the following arguments: $($proc.StartInfo.Arguments)"
 
 if (!$proc.Start()) {
     Write-Error "Failed to start Unity." -ErrorAction Stop
 }
 
-Write-Host "Starting Physics Build..."
-while (!$proc.HasExited) {
-    Write-Host "Waiting for Unity to exit..."
-    $proc.WaitForExit()
+Write-Host "Starting Build..."
+if (!($PSBoundParameters['Verbose']) -or ($VerbosePreference -eq 'Continue')) {
+    Write-Verbose "VERBOSE is set. Unity build log will be written to the console."
+    $fileReader = Start-Job { 
+        Get-Content ".\build.log" -Wait 
+    }
 }
 
-if ($proc.ExitCode -ne 0) {
-    Write-Error "Failed to build physics. See build log for details."
-    Exit $proc.ExitCode
+try {
+    [System.Console]::TreatControlCAsInput = $true
+    while (!$proc.WaitForExit(500)) {
+        if ([System.Console]::KeyAvailable)
+        {
+            $key = [System.Console]::ReadKey($true)
+            if (($key.modifiers -band [System.ConsoleModifiers]"control") -and ($key.key -eq "C"))
+            {
+                break;
+            }
+        }
+        if ($fileReader) 
+        {
+            $fileReader | Receive-Job | Write-Verbose
+        }
+    }
 }
-
-$proc.StartInfo.FileName = "C:\Programs\Unity\Editor\Unity.exe"
-$proc.StartInfo.Arguments = "-quit -batchmode -nographics -projectPath `"$ProjectPath`" `
--logFile `"./renderer_build.log`" -executeMethod BuildScript.Build
---config Renderer --build `"$BuildPath`""
-if ($BuildOptions)
+finally
 {
-    $proc.StartInfo.Arguments += " --options `"$BuildOptions`""
-}
-if ($BuildWindows) {
-    $proc.StartInfo.Arguments += " --buildTarget `"StandaloneWindows64`""
-}
+    if ($TempPath)
+    {
+        Write-Verbose "Clearing ${TempPath}"
+        Remove-Item -Path $TempPath -Recurse -Force
+    }
 
-if (!$proc.Start()) {
-    Write-Error "Failed to start Unity." -ErrorAction Stop
-}
-
-Write-Host "Starting Renderer Build..."
-while (!$proc.HasExited) {
-    Write-Host "Waiting for Unity to exit..."
-    $proc.WaitForExit()
+    if (!$proc.HasExited) {
+        Write-Warning "Detected force exit. Killing Build process."
+        $proc.Kill()
+        Exit 1
+    }
+    
+    if ($fileReader) {
+        Start-Sleep 0.5 # try to get remaining output
+        Stop-Job $fileReader
+        $fileReader | Receive-Job | Write-Verbose
+        Remove-Job $fileReader
+    }
 }
 
 if ($proc.ExitCode -ne 0) {
-    Write-Error "Failed to build renderer. See build log for details."
+    Write-Error "Failed to build successfully. See build log for details."
     Exit $proc.ExitCode
 }
 
-return [PSCustomObject]@{
-    PhysicsPath = Join-Path -Path $BuildPath -ChildPath 'Physics\Physics.exe'
-    RendererPath = Join-Path -Path $BuildPath -ChildPath 'Renderer\Renderer.exe'
+if (!($PSBoundParameters['Verbose']) -or ($VerbosePreference -eq 'Continue'))
+{
+    Write-Host "Unity has exited successfully. See build.log for more details."
 }
+
+return "$(Join-Path $BuildPath $Executable)"
