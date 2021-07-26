@@ -2,16 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using CommandLine;
-using CommandLine.Text;
 using UnityEngine;
 
 namespace ExternalUnityRendering
 {
     public class InitializeEUR
     {
-        private static void FilterArgs(string[] args, out List<string> filteredArgs)
-        {
-            Dictionary<string, int> unityStandaloneArgs =
+        private static readonly Dictionary<string, int> s_unityStandaloneArgs =
                 new Dictionary<string, int>
                 {
                     { "batchmode", 0 }, { "disable-gpu-skinning", 0 }, { "force-d3d11", 0 },
@@ -26,12 +23,28 @@ namespace ExternalUnityRendering
                     { "quit", 0 }
                 };
 
+        private static readonly Dictionary<Func<RendererArguments, bool>, string> s_rendererFailConditions =
+            new Dictionary<Func<RendererArguments, bool>, string>
+            {
+                { (_) => !Application.isBatchMode, "Renderer should only be run in batchmode" },
+                { (args) => args.ReceiverIpAddress == null, "Invalid IP address provided" }
+            };
+
+        private static readonly Dictionary<Func<PhysicsArguments, bool>, string> s_exporterFailConditions =
+            new Dictionary<Func<PhysicsArguments, bool>, string>
+            {
+                { (args) => !args.ValidTiming, "Automatic exporter timings provided." },
+                { (args) => args.ReceiverIpAddress == null, "Invalid IP address provided." }
+            };
+
+        private static void FilterArgs(string[] args, out List<string> filteredArgs)
+        {
             filteredArgs = new List<string>();
 
             for (int i = 1; i < args.Length; i++)
             {
                 // if the current arg is a unity argument
-                if (unityStandaloneArgs.TryGetValue(
+                if (s_unityStandaloneArgs.TryGetValue(
                     args[i].Substring(1), out int parameters))
                 {
                     // get the number of arguments it takes and advance
@@ -56,8 +69,8 @@ namespace ExternalUnityRendering
             var result =
                 parser.ParseArguments<PhysicsArguments, RendererArguments>(args);
             result
-                .WithParsed<PhysicsArguments>(LaunchPhysics)
-                .WithParsed<RendererArguments>(LaunchRenderer)
+                .WithParsed<PhysicsArguments>(Start)
+                .WithParsed<RendererArguments>(Start)
                 .WithNotParsed((errors) =>
                 {
 
@@ -106,12 +119,16 @@ namespace ExternalUnityRendering
                 });
         }
 
-        private static void LaunchRenderer(RendererArguments args)
+        private static void Start(RendererArguments args)
         {
-            if (!Application.isBatchMode)
+            foreach (KeyValuePair<Func<RendererArguments, bool>, string> kv
+                in s_rendererFailConditions)
             {
-                Debug.Log("Renderer should only be run in batchmode.");
-                Application.Quit(1);
+                if (kv.Key(args))
+                {
+                    Debug.LogError(kv.Value);
+                    Application.Quit(1);
+                }
             }
 
             RendererImportManager rendererManager =
@@ -128,12 +145,16 @@ namespace ExternalUnityRendering
             Debug.Log("Initialized Renderer Import Manager.");
         }
 
-        private static void LaunchPhysics(PhysicsArguments args)
+        private static void Start(PhysicsArguments args)
         {
-            if (!args.ValidTiming)
+            foreach (KeyValuePair<Func<PhysicsArguments, bool>, string> kv
+                in s_exporterFailConditions)
             {
-                Debug.LogError("Invalid export timings provided.");
-                Application.Quit(1);
+                if (kv.Key(args))
+                {
+                    Debug.LogError(kv.Value);
+                    Application.Quit(1);
+                }
             }
 
             PhysicsExportManager physicsManager =

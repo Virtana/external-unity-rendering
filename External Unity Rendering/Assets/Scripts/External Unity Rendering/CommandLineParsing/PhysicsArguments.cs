@@ -267,9 +267,11 @@ namespace ExternalUnityRendering
                 try
                 {
                     IPAddress[] localIPs = Dns.GetHostAddresses(Dns.GetHostName());
-                    if (Dns.GetHostAddresses(value).Any((hostIP) =>
-                        localIPs.Any((localIP) =>
-                            hostIP.Equals(localIP)) || IPAddress.IsLoopback(hostIP)))
+                    if ((Dns.GetHostAddresses(value).Any((hostIP) =>
+                            localIPs.Any((localIP) =>
+                                hostIP.Equals(localIP)) || IPAddress.IsLoopback(hostIP)))
+                        || (!string.IsNullOrWhiteSpace(value) && value.Count(c => c == '.') == 3 &&
+                        IPAddress.TryParse(value, out IPAddress _)))
                     {
                         _ipAddress = value;
                     }

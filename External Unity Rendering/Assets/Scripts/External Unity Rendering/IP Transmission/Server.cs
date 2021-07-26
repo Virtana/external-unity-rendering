@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -23,13 +24,27 @@ namespace ExternalUnityRendering.TcpIp
         {
             try
             {
-                // Get Host IP Address that is used to establish a connection
-                // In this case, we get one IP address of localhost that is IP : 127.0.0.1
-                // If a host has multiple addresses, you will get a list of addresses
-                IPHostEntry host = Dns.GetHostEntry(ipAddr);
-                IPAddress ipAddress = host.AddressList[0];
+                IPAddress ipAddress = null;
+                IPAddress[] localIPs = Dns.GetHostAddresses(Dns.GetHostName());
+                if (Dns.GetHostAddresses(ipAddr).Any((hostIP) =>
+                        localIPs.Any((localIP) =>
+                            hostIP.Equals(localIP)) || IPAddress.IsLoopback(hostIP)))
+                {
+                    IPHostEntry host = Dns.GetHostEntry(ipAddr);
+                    ipAddress = host.AddressList[0];
+                }
+                else
+                {
+                    // Get Host IP Address that is used to establish a connection
+                    // In this case, we get one IP address of localhost that is IP : 127.0.0.1
+                    // If a host has multiple addresses, you will get a list of addresses
+
+                    ipAddress = IPAddress.Parse(ipAddr);
+                    // Create a Socket that will use Tcp protocol
+                }
+
                 IPEndPoint localEndPoint = new IPEndPoint(ipAddress, port);
-                // Create a Socket that will use Tcp protocol
+
                 Socket listener = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
                 // A Socket must be associated with an endpoint using the Bind method
                 listener.Bind(localEndPoint);

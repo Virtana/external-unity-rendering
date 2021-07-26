@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -171,17 +172,31 @@ namespace ExternalUnityRendering.TcpIp
         /// <param name="ipString">The string representing the IP address.</param>
         /// <param name="maxRetries">The maximum number of times to retry sending data
         /// after the connection has been refused.</param>
-        public Client(int port, string ipString,
+        public Client(int port, string ipAddr,
             int maxRetries = 3, int chunkSize = 50)
         {
             try
             {
                 // Connect to a Remote server
                 // Get Host IP Address that is used to establish a connection
-                // In this case, we get one IP address of localhost that is IP : 127.0.0.1
-                // If a host has multiple addresses, you will get a list of addresses
-                IPHostEntry host = Dns.GetHostEntry(ipString);
-                IPAddress ipAddress = host.AddressList[0];
+                IPAddress ipAddress = null;
+                IPAddress[] localIPs = Dns.GetHostAddresses(Dns.GetHostName());
+                if (Dns.GetHostAddresses(ipAddr).Any((hostIP) =>
+                        localIPs.Any((localIP) =>
+                            hostIP.Equals(localIP)) || IPAddress.IsLoopback(hostIP)))
+                {
+                    IPHostEntry host = Dns.GetHostEntry(ipAddr);
+                    ipAddress = host.AddressList[0];
+                }
+                else
+                {
+                    // Get Host IP Address that is used to establish a connection
+                    // In this case, we get one IP address of localhost that is IP : 127.0.0.1
+                    // If a host has multiple addresses, you will get a list of addresses
+
+                    ipAddress = IPAddress.Parse(ipAddr);
+                    // Create a Socket that will use Tcp protocol
+                }
                 IPEndPoint remoteEndPoint = new IPEndPoint(ipAddress, port);
 
                 Task.Run(() => InitializeSender(ipAddress, remoteEndPoint, maxRetries, chunkSize));
