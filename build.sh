@@ -6,13 +6,15 @@
 set -euxo pipefail
 
 #################################################
-# Variables
+# Variables & Constants 
 #################################################
+
+valid_unity_versions=('2020.1.8f1' '2020.3.11f1')
+readonly valid_unity_versions
 
 unity=''
 project_path=''
 output_path=''
-build_options=''
 BUILD_WINDOWS='false'
 VERBOSE='false'
 
@@ -42,7 +44,7 @@ function log() {
 }
 
 function cleanup() {
-    if [[ -e $tmp_dir ]]; then
+    if [[ $tmp_dir ]] && [[ -e $tmp_dir ]]; then
         rm -rf "${tmp_dir}"
     fi
 }
@@ -53,16 +55,13 @@ trap cleanup EXIT
 #################################################
 # Getting and validating args
 #################################################
-while getopts :p:o:b:u:wv flag; do
+while getopts :p:o:u:wv flag; do
     case "$flag" in
         p)
             project_path="${OPTARG}"
             ;;
         o)
             output_path="${OPTARG}"
-            ;;
-        b)
-            build_options="${OPTARG}"
             ;;
         w)
             BUILD_WINDOWS='true'
@@ -160,10 +159,9 @@ if [[ ! -x $unity ]]; then
 permissions."
 
 # Check version and ensure it is valid
-elif [[ $($unity -version) != '2020.3.11f1' ]] \
-    && [[ $($unity -version) != '2020.1.8f1' ]]; then
+elif [[ $(echo "${valid_unity_versions[*]}" | grep -ow "$(unity -version)" | wc -w) -gt 0 ]]; then
     log warning "Unity version is $("$unity" -version), which does not match \
-the project version 2020.1.8f1. Are you sure you want to continue?"
+the tested project versions (${valid_unity_versions[*]}). Are you sure you want to continue?"
     printf "(y/N) >"
     yn='N'
     while true; do
@@ -185,46 +183,42 @@ the project version 2020.1.8f1. Are you sure you want to continue?"
     done
 fi
 
+# set the name of the project as the executable
+output_path="${output_path}/$(echo "${project_path}" | rev | cut -d/ -f1 | rev)"
+
 # logging args
 log verbose "Project Path: ${project_path}"
-log verbose "Build Path: ${output_path}"
-log verbose "Build Options: ${build_options}"
+log verbose "Output Build: ${output_path}"
 log verbose "Build Windows: ${BUILD_WINDOWS}"
-log verbose "Verbose: ${VERBOSE}"
 
-args="-quit -batchmode -nographics -projectPath \"${project_path}\" \
--executeMethod BuildScript.Build --build \"${output_path}\""
-if [[ $BUILD_WINDOWS == 'true' ]]; then
-    args="${args} --buildTarget \"StandaloneWindows64\""
+args="-quit -batchmode -nographics -projectPath \"${project_path}\""
+
+if readlink -e "./build-prev.log" > /dev/null; then
+    rm "./build-prev.log"
 fi
 
+if readlink -e "./build.log" > /dev/null; then
+    mv "./build.log" "./build-prev.log"
+fi
 
-physics_args="--config Physics"
-renderer_args="--config Renderer"
+if [[ $BUILD_WINDOWS == 'true' ]]; then
+    args="${args} -buildWindows64Player \"${output_path}.exe\""
+else
+    args="${args} -buildLinux64Player \"${output_path}\""
+fi
 
 if [[ $VERBOSE == 'true' ]]; then
-    physics_args="${physics_args} -logFile"
-    renderer_args="${renderer_args} -logFile"
+    args=" ${args} -logFile /dev/stdout"
 else
-    physics_args="${physics_args} -logFile \"./physics_build.log\""
-    renderer_args="${renderer_args} -logFile \"./renderer_build.log\""
+    args="${args} -logFile \"./build.log\""
 fi
 
-log verbose "Arguments for Physics instance:" "${physics_args}"
-log verbose "Arguments for Renderer instance:" "${renderer_args}"
-
-physics_build=("${unity}" "${args}" "${physics_args}")
-renderer_build=("${unity}" "${args}" "${renderer_args}")
+build=("${unity}" "${args}")
 
 # Running 
-log normal "Starting Physics Build"
-if ! eval "${physics_build[@]}"; then
+log normal "Starting Build"
+if ! eval "${build[@]}"; then
     err "Failed to build Physics instance successfully."
 fi
 
-log normal "Starting Renderer Build"
-if ! eval "${renderer_build[@]}"; then
-    err "Failed to build Renderer instance successfully."
-fi
-
-log normal "Completed builds successfully to ${output_path}/."
+log normal "Completed build successfully to ${output_path}/."
