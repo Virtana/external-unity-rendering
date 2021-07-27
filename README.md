@@ -31,89 +31,98 @@ Run two instances of Unity in parallel. The “main” instance is responsible f
   - Powershell (Windows) or Bash (GNU/Linux) (Optional for script usage)
 
 ## Usage
-Currently the project only runs a test scene with some random forces applied at runtime. The exporter and importer are accessible in the editor, and automatically run in a standalone build. The project can be built for Windows or Linux. Current implementation requires building and running with specific command line arguments, and scripts are provided which simplify this process. 
+Currently the project only runs a test scene with some random forces applied at runtime. The exporter and importer are accessible in the editor, and automatically run in a standalone build. The project can be built for Windows or Linux, and then run using command line. Scripts are provided (Powershell and Bash) which help automate this process.
 
 ### Using the scripts
 #### The Build Script
 
 `Usage: ./build.sh [options]` or `.\build.ps1 [options]`
 
-| Option| Option | Argument | Description |
-|----|----|---|---|
-| `‑ProjectPath`| `‑p` | `<path-to-unity-project>` | Path to the Unity project to be built. |
-| `‑BuildPath`| `‑o` | `<path-to-build-files-to>` | Path to where the built standalone executables should be saved. |
-| | `‑u` | `<path-to-the-unity-executable>` | Path to the Unity Editor executable |
-| `‑TempPath` | | `<path-to-copy-unity-project-to>` | (Optional) Path to copy Unity project files to. To be used in case write access is unavailable, or another editor is open with the project. |
-| `‑BuildOptions`| `‑b` |  `<unity-build-options>` | (Optional) Options for the Build Script. See the [Unity Script Reference](https://docs.unity3d.com/ScriptReference/BuildOptions.html) for valid options. The format is "Option1, Option2, Option3, ..." |
-| `‑BuildWindows`| `‑w` | `-` | Build a Windows Standalone instead of a Linux Standalone. |
-| `‑v` | `-` | Enable Verbose Logging. Redirects Unity build logs to console. |
+| Powershell Options | Bash Options | Argument | Description |
+|--------------|--------------|----------|-------------|
+| `‑ProjectPath` | `‑p` | `<path‑to‑project>` | (Required) Path to the unity project to build. Output executable is given the name of the project directory. |
+| `‑BuildPath` | `‑o` | `<path‑to‑output‑directory>` | (Required) Path to the directory where the build should be saved. |
+| `‑Unity` | `‑u` | `<path‑to‑unity‑editor>` | (Required) Path to the Unity Editor Executable to use to build the project. |
+| `‑PurgeCaches` | `‑c` | `‑` | Whether to remove all non‑essential project files to force Unity to regenerate all necessary files. |
+| `‑BuildLinux` | `‑` | `‑` | Build a linux64 executable instead of windows. |
+| `‑` | `‑w` | `‑` | Build a win64 executable instead of linux. |
+| `‑Verbose` | `‑v` | `‑` | Activate verbose mode. Also output unity build logs to console. |
 
-In the current directory, two log files are created, `physics_build.log` and `renderer_build.log` (unless -v in the bash script is provided). These files have the output of the Unity Editor, which can be checked if errors occur during the build process.
+#### The Main Instance Script
 
-The Powershell build script returns a PSCustomObject with the Properties PhysicsPath and RendererPath, which are paths to the built executables.
-
-The bash build script will:
-- check if write access to the project is missing, or a UnityLockfile is present, and will copy all the required project files to a temp folder, and delete it after completion.
-- check the unity editor version, and if an untested version is used, will ask for confirmation to continue. Using an untested Unity Editor version may cause issues during the build process or with the standalone executable.
-
-#### The Run Scripts
-
-`Usage: ./run.sh [options]` or `.\build.ps1 [options]`
+`Usage: ./run‑exporter.sh [options]` or `.\run-exporter.ps1 [options]`
 
 | Powershell Options | Bash Options | Argument | Description |
-|--------------------|--------------|----------|-------------|
-| `‑ExecutablePath`| | `<path-object>` | A PSCustomObject with the Properties PhysicsPath and RenderPath, which are the paths to the physics and renderer executables. (This is returned by the powershell build script, and the build script can be piped to this script. ) |
-| | `‑b` | `<path-to-executables>` | Where the built executables are. Should have subfolders named Physics and Renderer holding the respective executables. This should be the same directory specified to the build script. |
-| `‑Transmit`| `‑t` | `-` | (Optional) Whether to launch renderer and transmit scene states from physics instance. |
-| `‑LogJson`| `‑l` | `-` | (Optional) Whether the physics instance should print the serialized state to the console/log. |
-| `‑JsonPath`| `‑j` | `<path-to-json-export-directory>` | (Optional) The path to where the the serialized json should be exported to. If not specified, no files are saved. |
-| `‑RenderPath`| `‑r` | `<path-to-render-output>` | (Optional) The path to where renders are to be made. Required if the transmit option is set. |
-| `‑RenderHeight `| `‑h ` | `<height-of-rendered-image>` | (Optional) The pixel height of the renders. Minimum of 300. Extremely large values can cause an out of VRAM issue. |
-| `‑RenderWidth`| `‑w` | `<width-of-rendered-image>` | (Optional) The pixel width of the renders. Minimum of 300. Extremely large values can cause an out of VRAM issue. |
-| `‑ExportDelay` | `‑d` | `<time-between-exports>`[<sup>*</sup>](#time-note) | The delay between exports. Must be used with one of the other export specifiers. |
-| `‑ExportCount `| `‑e ` | `<n-exports>` | The number of exports to make. Must be used with one of the other export specifiers. |
-| `‑TotalExportTime` | `‑s` | `<time-to-spend-executing>`[<sup>*</sup>](#time-note) | The total amount of time to export for. Equal to delay * export count. Must be used with one of the other export specifiers. |
-| | `‑v` | `-` | Enable Verbose Logging. Redirects Unity logs to console. |
+|--------------|--------------|----------|-------------|
+| `‑ExecutablePath` | `‑e` | `<path‑to‑exporter>` | (Required) Path the the built executable. |
+| `‑BatchMode` | `‑b` | `-` | Whether to enable batchmode and nographics. Intended for automated exports. |
+| `‑RenderPath` | `‑r` | `<path‑to‑render‑output>` | Path to where the renders should be saved. Path is stored to the serialised json. Can be overriden by the renderer instance. |
+| `‑RenderHeight` | `‑h` | `<pixel‑height>` | Height of the image in pixels. |
+| `‑RenderWidth` | `‑w` | `<pixel‑width>` | Width of the image in pixels. |
+| `‑Transmit` | `‑t` | `-` | Whether the exporter should transmit the states to a renderer instance. |
+| `‑LogJson` | `‑l` | `-` | Whether the serialized scene state should be logged to the console. |
+| `‑JsonPath` | `‑j` | `<path‑to‑output‑json>` | Save the scene state as json files in the directory `<path‑to‑output‑json>`. |
+| `‑ExportCount` | `‑c` | `<export‑count>` | The number of exports to make. Must be combined with either the export delay or the total export time to automatically export.  |
+| `‑ExportDelay` | `‑d` | `<export‑delay>` | The delay between exports. Must be combined with either the export count or the total export time to automatically export. (Delay must be greater than at least 10ms.) |
+| `‑TotalExportTime` | `‑s` | `<total‑export‑time>` | The total amount of time to export for. Must be combined with either the export delay or export count to automatically export. Equal to export delay * export count. |
+| `‑Port` | `‑p` | `<port_number>` | IP address to transmit to. |
+| `‑Interface` | `‑i` | `<ip_address>` | Port to transmit to. |
+| `‑Verbose` | `‑v` | `‑` | Activate verbose mode. Also output unity logs to console. |
 
+#### The Renderer Script
+
+`Usage: ./run‑exporter.sh [options]` or `.\run-exporter.ps1 [options]`
+
+| Powershell Options | Bash Options | Argument | Description |
+|--------------|--------------|----------|-------------|
+| `‑ExecutablePath` | `‑e` | `<path‑to‑exporter>` | (Required) Path the the built executable. |
+| `‑RenderPath` | `‑r` | `<path‑to‑render‑output>` | Path to where the renders should be saved. Overrides the path saved in the json. |
+| `‑Port` | `‑p` | `<port_number>` | IP address to listen on for. |
+| `‑Interface` | `‑i` | `<ip_address>` | Port to listen on. |
+| `‑Verbose` | `‑v` | `‑` | Activate verbose mode. Also output unity logs to console. |
 
 ### Manually Building and Running
 
 #### Building using the Unity Editor
 
-`Usage: Unity -quit -batchmode -nographics -executeMethod BuildScript.Build [options]` or `Unity.exe -quit -batchmode -nographics -executeMethod BuildScript.Build [options]`
+Building is performed using the untiy editor. This can be performed through the GUI editor or command line. From command line, the project can be built using: 
+Usage: 
 
-(See the [Unity Docs](https://docs.unity3d.com/Manual/CommandLineArguments.html) for an explanation of the arguments specified above. BuildScript.Build is the included script which manages building the two instances of unity. Currently not optional but may be in future.)
+`Unity -quit -batchmode -nographics -projectPath <project-path> -logFile <path-to-logFile> [build-options] -(buildLinux64Player|buildLinux64Player) <path-to-output-executable>`
 
-| Option | Argument | Description |
-|--------|----------|-------------|
-| `‑b` or `-‑‑build` | `<path-to-build>`| The output directory for the project. |
-| `‑c` or `‑‑config` | `<configuration>`| Whether to build physics or a renderer instance. (Default is Renderer.) |
-| `‑t` or `‑‑buildTarget` | `<target>`| See the [Unity Script Reference](https://docs.unity3d.com/ScriptReference/BuildTarget.html) for valid options. |
-| `‑-options` | `<options>`| (Optional) Build options for Unity. See the [Unity Script Reference](https://docs.unity3d.com/ScriptReference/BuildOptions.html) for valid options. The format is "Option1, Option2, Option3, ...". Whitespace optional. |
+#### Running the Renderer
 
-#### Running the Executables Directly
-
-The renderer requires no special arguments other than `-batchmode` to run in headless mode. `-nographics` cannot be used, as rendering requires a GPU. 
-
-`Usage: <path-to-the-renderer-executable> -batchmode [unity-standalone-options]`
-
-The physics instance can be run as follows:
-
-`Usage: <path-to-physics-executable> -batchmode [options]`
+`Usage: <path-to-the-renderer-executable> render [options]`
 
 | Bash Options | Argument | Description |
 |--------------|----------|-------------|
-| `‑t` or `‑‑transmit` | `-` | (Optional) Whether to launch renderer and transmit scene states from physics instance. |
-| `‑‑logExport` | `-` | (Optional) Whether the physics instance should print the serialized state to the console/log. |
-| `‑‑writeToFile` | `<path-to-json-export-directory>` | (Optional) The path to where the the serialized json should be exported to. If not specified, no files are saved. |
-| `‑r` or `‑‑renderPath` | `<path-to-render-output>` | (Optional) The path to where renders are to be made. Required if the transmit option is set. |
-| `‑h ` or `‑‑renderHeight` | `<height-of-rendered-image>` | (Optional) The pixel height of the renders. Minimum of 300. Extremely large values can cause an out of VRAM issue. |
-| `‑w` or `‑‑renderWidth` | `<width-of-rendered-image>` | (Optional) The pixel width of the renders. Minimum of 300. Extremely large values can cause an out of VRAM issue. |
-| `‑d` or `‑‑delay` | `<time-between-exports>`[<sup>*</sup>](#time-note) | The delay between exports. Must be used with one of the other export specifiers. |
-| `‑e ` or `‑‑exportCount` | `<n-exports>` | The number of exports to make. Must be used with one of the other export specifiers. |
-| `‑s` or `‑‑totalTime`  | `<time-to-spend-executing>`[<sup>*</sup>](#time-note) | The total amount of time to export for. Equal to delay * export count. Must be used with one of the other export specifiers. |
+| `‑t` or `‑‑transmit` | `‑` | Whether to launch renderer and transmit scene states from physics instance. |
+| `‑r` or `‑‑renderPath` | `<path‑to‑render‑output>` | The path to where renders are to be made. |
+| `‑p` or `‑‑port` | `<port‑to‑listen‑on>` | The port on which the renderer should listen on. Defaults to 11000. |
+| `‑i` or `‑‑interface` | `<interface‑to‑listen‑on>` | The interface on which the renderer should listen on. Defaults to localhost. |
+
+#### Running the Main Instance
+The physics instance can be run as follows:
+
+`Usage: <path‑to‑physics‑executable> export [options]`
+
+| Bash Options | Argument | Description |
+|--------------|----------|-------------|
+| `‑t` or `‑‑transmit` | `‑` | Whether to launch renderer and transmit scene states from physics instance. |
+| `‑‑logExport` | `‑` | Whether the physics instance should print the serialized state to the console/log. |
+| `‑‑writeToFile` | `<path‑to‑json‑export‑directory>` | The path to where the the serialized json should be exported to. If not specified, no files are saved. |
+| `‑r` or `‑‑renderPath` | `<path‑to‑render‑output>` | The path to where renders are to be made. |
+| `‑h ` or `‑‑renderHeight` | `<height‑of‑rendered‑image>` | The pixel height of the renders. Minimum of 300. Extremely large values can cause an out of VRAM issue. |
+| `‑w` or `‑‑renderWidth` | `<width‑of‑rendered‑image>` | The pixel width of the renders. Minimum of 300. Extremely large values can cause an out of VRAM issue. |
+| `‑d` or `‑‑delay` | `<time‑between‑exports>`[<sup>*</sup>](#time-note) | The delay between exports. Must be used with one of the other export specifiers. |
+| `‑e ` or `‑‑exportCount` | `<n‑exports>` | The number of exports to make. Must be used with one of the other export specifiers. |
+| `‑s` or `‑‑totalTime`  | `<time‑to‑spend‑executing>`[<sup>*</sup>](#time-note) | The total amount of time to export for. Equal to delay * export count. Must be used with one of the other export specifiers. |
+| `‑p` or `‑‑port` | `<port‑to‑send‑to>` | The port on which the exporter should transmit to. Defaults to 11000. |
+| `‑i` or `‑‑interface` | `<interface‑to‑send‑to>` | The interface on which the renderer should transmit to. Defaults to localhost. |
 
 If transmit is specified, and a renderer is not launched, the physics instance may export all the scene states and queue them to be sent until renderer is launched.
+
+The instances can be used with other unity standalone arguments, but the renderer cannot be run with nographics, as it currently requires a GPU to render.
 
 <a class="anchor" id="time-note"></a>
 `*` Time can be specified in the format `^[0-9]+(s|m)?$`, a non-negative integer, optionally followed by an s or m. An input x will be read as x milliseconds, xs as x seconds and xm as x minutes.
