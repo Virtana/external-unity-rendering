@@ -8,12 +8,28 @@ param (
     HelpMessage="Enter the path to the folder where to build files to.")]
     [ValidateScript({Test-Path -LiteralPath $_ -PathType Container -IsValid})]
     [string]$BuildPath,
+    
+    [Parameter(Mandatory,
+    HelpMessage="Enter the path to the Unity Editor Executable.")]
+    [ValidateScript({Test-Path -LiteralPath $_ -PathType Leaf})]
+    [string]$Unity,
 
     [switch]
-    [bool]$BuildLinux
+    [bool]$BuildLinux,
+
+    [Switch]
+    [bool]$PurgeCaches
 )
 
+New-Variable -Option Constant -Name TestedUnityVersions -Value ([string[]]("2020.1.8f1", "2020.3.11f1"))
+
 $ProjectPath = Resolve-Path -Path $ProjectPath | Select-Object -ExpandProperty Path
+
+if ($PurgeCaches) {
+    $ProjectPath | Get-ChildItem -Exclude ("Assets","Packages","ProjectSettings") | ForEach-Object {
+        $_ | Remove-Item -Recurse -Force
+    }
+}
 
 if (!(Test-Path -LiteralPath $BuildPath)){
     New-Item -Path $BuildPath -ItemType Directory -ErrorAction Stop | Out-Null
@@ -32,7 +48,7 @@ if (!($BuildLinux))
     $Executable += ".exe"
 }
 
-Write-Verbose "Resolved executable name to ${Executable}"
+Write-Verbose "Resolved output executable name to ${Executable}"
 
 if ($ProjectPath | Join-Path -ChildPath "Temp/UnityLockfile" | Test-Path) {
     $title    = 'UnityLockfile detected. Another editor may have this project open. Do you want to continue?'
@@ -43,8 +59,8 @@ if ($ProjectPath | Join-Path -ChildPath "Temp/UnityLockfile" | Test-Path) {
     if ($decision -eq 0) {
         Write-Host 'Using a temporary folder to open project.'
     } else {
-        Write-Host 'Exiting Script.'
-        Exit 0
+        Write-Warning 'Exiting Script.'
+        Exit 1
     }
 
     $TempPath = Join-Path $Env:Temp ("build-$(New-Guid)")
@@ -62,7 +78,37 @@ if ($ProjectPath | Join-Path -ChildPath "Temp/UnityLockfile" | Test-Path) {
 }
 
 [System.Diagnostics.Process]$proc = New-Object System.Diagnostics.Process
-$proc.StartInfo.FileName = "C:\Programs\Unity\Editor\Unity.exe"
+$proc.StartInfo.FileName = "${Unity}"
+$proc.StartInfo.Arguments = "-version"
+$proc.StartInfo.RedirectStandardOutput = $true
+
+Write-Verbose "Launching Unity Editor to check version."
+
+if (!$proc.Start()) {
+    Write-Error "Failed to start Unity." -ErrorAction Stop
+}
+
+while (!$proc.HasExited)
+{
+    $Version = $proc.StandardOutput.ReadLine()
+    $proc.StandardOutput.ReadToEnd() | Out-Null
+    $proc.WaitForExit()
+}
+
+if (!($TestedUnityVersions.Contains($Version))) {
+    $title    = "Unity version (${Version}) does not match the Tested Unity Versions $($TestedUnityVersions | Join-String -Separator ',' -SingleQuote)"
+    $question = 'Are you sure you want to proceed?'
+    $choices  = '&Yes', '&No'
+
+    $decision = $Host.UI.PromptForChoice($title, $question, $choices, 1)
+    if ($decision -eq 0) {
+        Write-Host "Using a Unity Editor version (${Version}) to open project."
+    } else {
+        Write-Warning 'Exiting Script.'
+        Exit 1
+    }
+}
+
 $proc.StartInfo.Arguments = "-quit -batchmode -nographics -projectPath `"${ProjectPath}`""
 
 # Imitate how Unity saves logs normally
@@ -75,7 +121,7 @@ if (Test-Path -Path "./build.log")
     Rename-Item -Path "./build.log" -NewName "build-prev.log"
 }
 
-$proc.StartInfo.Arguments += " -logFile `"build.log`""
+$proc.StartInfo.Arguments += " -logFile `"$($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath("./build.log"))`""
 
 if ($BuildLinux) {
     $proc.StartInfo.Arguments += " -buildLinux64Player `"$(Join-Path $BuildPath $Executable)`""
