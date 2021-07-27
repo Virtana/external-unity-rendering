@@ -45,7 +45,7 @@ namespace ExternalUnityRendering
             int importCount = 0;
             receiver.ProcessCallback((state) =>
             {
-                bool continueImporting = importer.ImportCurrentScene(state);
+                bool continueImporting = importer.ImportCurrentScene(state, Arguments.RenderDirectory);
                 System.Console.WriteLine($"Imported {++importCount} scenes so far.");
                 return continueImporting;
             });

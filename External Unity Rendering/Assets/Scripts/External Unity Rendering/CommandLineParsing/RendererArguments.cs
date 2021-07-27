@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Net;
 using CommandLine;
+using ExternalUnityRendering.PathManagement;
 
 namespace ExternalUnityRendering
 {
@@ -11,6 +12,7 @@ namespace ExternalUnityRendering
     public class RendererArguments
     {
         private string _ipAddress = null;
+        private DirectoryManager _renderDirectory = null;
 
         [Option('p', "port", HelpText = "Port for the renderer to listen on. If not specified," +
             "defaults to 11000", Default = (ushort)11000)]
@@ -41,6 +43,27 @@ namespace ExternalUnityRendering
                 {
                     // Do nothing
                 }
+            }
+        }
+
+        [Option('r', "renderPath", HelpText = "The path to render the images to.")]
+        public string RenderPath
+        {
+            set
+            {
+                DirectoryManager pathValidator = new DirectoryManager(value);
+                if (System.IO.Path.GetFullPath(value) == pathValidator.Path)
+                {
+                    _renderDirectory = pathValidator;
+                }
+            }
+        }
+
+        public DirectoryManager RenderDirectory
+        {
+            get
+            {
+                return _renderDirectory;
             }
         }
     }

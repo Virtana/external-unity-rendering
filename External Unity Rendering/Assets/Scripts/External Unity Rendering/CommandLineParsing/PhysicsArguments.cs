@@ -178,8 +178,7 @@ namespace ExternalUnityRendering
             }
         }
 
-        [Option('r', "renderPath", HelpText = "The path to render the images to.",
-            Required = true)]
+        [Option('r', "renderPath", HelpText = "The path to render the images to.")]
         public string RenderPath
         {
             get
