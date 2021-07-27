@@ -70,10 +70,10 @@ least 10ms)
 or export count to automatically export. Equal to export delay * export count.
 
     -i <ip_address>
-        IP address to listen on for.
+        IP address to transmit to.
 
     -p <port_number>
-        Port to listen on.
+        Port to transmit to.
 
     -v
         Activate verbose logging.
