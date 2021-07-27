@@ -2,6 +2,10 @@ param (
     [Parameter(Mandatory, ValueFromPipeline)]
     [ValidateScript({(Test-Path -LiteralPath $_ -PathType Leaf)})]
     $ExecutablePath,
+    
+    [Parameter()]
+    [ValidateScript({(Test-Path -LiteralPath $_ -PathType Container -IsValid)})]
+    [string] $RenderPath,
 
     [Parameter()]
     [ushort] $Port,
@@ -9,6 +13,11 @@ param (
     [Parameter()]
     [string] $Interface
 )
+
+if (!(Test-Path -LiteralPath $RenderPath -PathType Container)) {
+    New-Item -Path $RenderPath -ItemType Directory
+}
+$RenderPath = Resolve-Path -Path $RenderPath | Select-Object -ExpandProperty Path
 
 [System.Diagnostics.Process]$renderer = New-Object System.Diagnostics.Process
 $renderer.StartInfo.FileName = $ExecutablePath
@@ -22,6 +31,10 @@ if ($Port)
 if ($Interface)
 {
     $renderer.StartInfo.Arguments += " --interface `"${Interface}`""
+}
+
+if ($RenderPath) {
+    $exporter.StartInfo.Arguments += " --renderPath `"$RenderPath`""
 }
 
 Write-Verbose "Launching ${ExecutablePath} as Renderer with the arguments: $($renderer.StartInfo.Arguments)"
