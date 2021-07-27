@@ -88,11 +88,11 @@ Currently the project only runs a test scene with some random forces applied at 
 Building is performed using the untiy editor. This can be performed through the GUI editor or command line. From command line, the project can be built using: 
 Usage: 
 
-`Unity -quit -batchmode -nographics -projectPath <project-path> -logFile <path-to-logFile> [build-options] -(buildLinux64Player|buildLinux64Player) <path-to-output-executable>`
+`Unity ‑quit ‑batchmode ‑nographics ‑projectPath <project‑path> ‑logFile <path‑to‑logFile> [build‑options] (‑buildLinux64Player|‑buildLinux64Player) <path‑to‑output‑executable>`
 
 #### Running the Renderer
 
-`Usage: <path-to-the-renderer-executable> render [options]`
+`Usage: <path‑to‑the‑renderer‑executable> render [options]`
 
 | Bash Options | Argument | Description |
 |--------------|----------|-------------|
