@@ -35,7 +35,7 @@ function usage() {
         Path the the built executable.
 
     -b 
-        batch_mode
+        Whether to enable batchmode and nographics. Intended for automated exports.
 
     -r <path-to-render-output>
         Path to where the renders should be saved. Is saved to the serialised json. \
