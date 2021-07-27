@@ -12,7 +12,7 @@ param (
 
 [System.Diagnostics.Process]$renderer = New-Object System.Diagnostics.Process
 $renderer.StartInfo.FileName = $ExecutablePath
-$renderer.StartInfo.Arguments = "-batchmode -logFile .\renderer.log renderer"
+$renderer.StartInfo.Arguments = "-batchmode -logFile `"$($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath("./renderer.log"))`" renderer"
 
 if ($Port)
 {

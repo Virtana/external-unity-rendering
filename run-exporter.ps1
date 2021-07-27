@@ -29,12 +29,12 @@ param (
     [string] $JsonPath,
 
     [Parameter()]
-    [ValidatePattern('^[0-9]+(s|m|)$')]
-    [string] $ExportDelay,
-
-    [Parameter()]
     [ValidateRange(1, [int]::MaxValue)]
     [int] $ExportCount = -1,
+
+    [Parameter()]
+    [ValidatePattern('^[0-9]+(s|m|)$')]
+    [string] $ExportDelay,
 
     [Parameter()]
     [ValidatePattern('^[0-9]+(s|m|)$')]
@@ -53,10 +53,14 @@ if ($BatchMode)
 {
     $exporter.StartInfo.Arguments = "-batchmode -nographics" 
 }
-$exporter.StartInfo.Arguments += " -logFile - export -r `"$RenderPath`""
+$exporter.StartInfo.Arguments += " -logFile `"$($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath("./exporter.log"))`" export"
+
+if ($RenderPath) {
+    $exporter.StartInfo.Arguments += " --renderPath `"$RenderPath`""
+}
 
 if ($JsonPath) {
-    $exporter.StartInfo.Arguments += " --writeToFile `"{0}`"" -f ($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($JsonPath))
+    $exporter.StartInfo.Arguments += " --writeToFile `"$($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($JsonPath))`""
 }
 if ($Transmit) {
     $exporter.StartInfo.Arguments += " --transmit"
