@@ -179,23 +179,32 @@ namespace ExternalUnityRendering.TcpIp
             {
                 // Connect to a Remote server
                 // Get Host IP Address that is used to establish a connection
+                //IPAddress ipAddress = null;
+                //IPAddress[] localIPs = Dns.GetHostAddresses(Dns.GetHostName());
+                //if (Dns.GetHostAddresses(ipAddr).Any((hostIP) =>
+                //        localIPs.Any((localIP) =>
+                //            hostIP.Equals(localIP)) || IPAddress.IsLoopback(hostIP)))
+                //{
+                //    IPHostEntry host = Dns.GetHostEntry(ipAddr);
+                //    ipAddress = host.AddressList[0];
+                //}
+                //else
+                //{
+                //    // Get Host IP Address that is used to establish a connection
+                //    // In this case, we get one IP address of localhost that is IP : 127.0.0.1
+                //    // If a host has multiple addresses, you will get a list of addresses
+
+                //    ipAddress = IPAddress.Parse(ipAddr);
+                //    // Create a Socket that will use Tcp protocol
+                //}
                 IPAddress ipAddress = null;
-                IPAddress[] localIPs = Dns.GetHostAddresses(Dns.GetHostName());
-                if (Dns.GetHostAddresses(ipAddr).Any((hostIP) =>
-                        localIPs.Any((localIP) =>
-                            hostIP.Equals(localIP)) || IPAddress.IsLoopback(hostIP)))
+                if (ipAddr == "localhost")
                 {
-                    IPHostEntry host = Dns.GetHostEntry(ipAddr);
-                    ipAddress = host.AddressList[0];
+                    ipAddress = IPAddress.Loopback;
                 }
                 else
                 {
-                    // Get Host IP Address that is used to establish a connection
-                    // In this case, we get one IP address of localhost that is IP : 127.0.0.1
-                    // If a host has multiple addresses, you will get a list of addresses
-
                     ipAddress = IPAddress.Parse(ipAddr);
-                    // Create a Socket that will use Tcp protocol
                 }
                 IPEndPoint remoteEndPoint = new IPEndPoint(ipAddress, port);
 

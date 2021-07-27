@@ -24,27 +24,37 @@ namespace ExternalUnityRendering.TcpIp
         {
             try
             {
+                // old resolution code, works not well on linux
+                //IPAddress ipAddress = null;
+                //IPAddress[] localIPs = Dns.GetHostAddresses(Dns.GetHostName());
+                //if (Dns.GetHostAddresses(ipAddr).Any((hostIP) =>
+                //        localIPs.Any((localIP) =>
+                //            hostIP.Equals(localIP)) || IPAddress.IsLoopback(hostIP)))
+                //{
+                //    // Get Host IP Address that is used to establish a connection
+                //    // In this case, we get one IP address of localhost that is IP : 127.0.0.1
+                //    // If a host has multiple addresses, you will get a list of addresses
+                //    Debug.Log("Local address detected. Attempting to match.");
+                //    IPHostEntry host = Dns.GetHostEntry(ipAddr);
+                //    ipAddress = host.AddressList[0];
+                //}
+                //else
+                //{
+                //    Debug.Log("Non local address detected. Attempting to parse.");
+                //    ipAddress = IPAddress.Parse(ipAddr);
+                //}
                 IPAddress ipAddress = null;
-                IPAddress[] localIPs = Dns.GetHostAddresses(Dns.GetHostName());
-                if (Dns.GetHostAddresses(ipAddr).Any((hostIP) =>
-                        localIPs.Any((localIP) =>
-                            hostIP.Equals(localIP)) || IPAddress.IsLoopback(hostIP)))
+                if (ipAddr == "localhost")
                 {
-                    IPHostEntry host = Dns.GetHostEntry(ipAddr);
-                    ipAddress = host.AddressList[0];
+                    ipAddress = IPAddress.Loopback;
                 }
                 else
                 {
-                    // Get Host IP Address that is used to establish a connection
-                    // In this case, we get one IP address of localhost that is IP : 127.0.0.1
-                    // If a host has multiple addresses, you will get a list of addresses
-
                     ipAddress = IPAddress.Parse(ipAddr);
-                    // Create a Socket that will use Tcp protocol
                 }
 
                 IPEndPoint localEndPoint = new IPEndPoint(ipAddress, port);
-
+                // Create a Socket that will use Tcp protocol
                 Socket listener = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
                 // A Socket must be associated with an endpoint using the Bind method
                 listener.Bind(localEndPoint);
