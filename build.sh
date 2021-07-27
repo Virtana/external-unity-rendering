@@ -15,6 +15,7 @@ readonly valid_unity_versions
 unity=''
 project_path=''
 output_path=''
+purge_cache='false'
 BUILD_WINDOWS='false'
 VERBOSE='false'
 
@@ -55,7 +56,7 @@ trap cleanup EXIT
 #################################################
 # Getting and validating args
 #################################################
-while getopts :p:o:u:wv flag; do
+while getopts :p:o:u:wvc flag; do
     case "$flag" in
         p)
             project_path="${OPTARG}"
@@ -71,6 +72,9 @@ while getopts :p:o:u:wv flag; do
             ;;
         u)
             unity="${OPTARG}"
+            ;;
+        c)
+            purge_cache='true'
             ;;
         \?)
             err "Invalid option: ${OPTARG}."
@@ -109,7 +113,12 @@ elif [[ ! -r $project_path ]]; then
 
 # If a lockfile is present or the project directory is not writable, then 
 # use a temp path instead.
-elif [[ -e "${project_path}/Temp/UnityLockfile" ]] \
+fi
+
+executable=$([[ $project_path == */ ]] && echo "${project_path%?}" || echo "${project_path}") 
+executable=$(echo "$executable" | awk -F/ '{print $NF}')
+
+if [[ -e "${project_path}/Temp/UnityLockfile" ]] \
     || [[ ! -w $project_path ]]; then
     log warning "Missing write permissions for project folder. A temporary \
 folder will be used instead."
@@ -122,6 +131,12 @@ folder will be used instead."
 # Otherwise just use the path directly
 else
     project_path=$(readlink -e "${project_path}")
+fi
+
+if [[ $purge_cache == 'true' ]]; then
+    for file in $( ls ./test1/ | grep -E -v "(Assets)|(ProjectSettings)|(Packages)" ); do
+        rm -r "$(readlink -e "$file")"
+    done
 fi
 
 # Validate output path
@@ -159,7 +174,7 @@ if [[ ! -x $unity ]]; then
 permissions."
 
 # Check version and ensure it is valid
-elif [[ $(echo "${valid_unity_versions[*]}" | grep -ow "$(unity -version)" | wc -w) -gt 0 ]]; then
+elif [[ $(echo "${valid_unity_versions[*]}" | grep -ow "$($unity -version)" | wc -w) -eq 0 ]]; then
     log warning "Unity version is $("$unity" -version), which does not match \
 the tested project versions (${valid_unity_versions[*]}). Are you sure you want to continue?"
     printf "(y/N) >"
@@ -183,15 +198,18 @@ the tested project versions (${valid_unity_versions[*]}). Are you sure you want 
     done
 fi
 
-# set the name of the project as the executable
-output_path="${output_path}/$(echo "${project_path}" | rev | cut -d/ -f1 | rev)"
-
 # logging args
 log verbose "Project Path: ${project_path}"
 log verbose "Output Build: ${output_path}"
 log verbose "Build Windows: ${BUILD_WINDOWS}"
 
 args="-quit -batchmode -nographics -projectPath \"${project_path}\""
+# set the name of the project as the executable
+if [[ $BUILD_WINDOWS == 'true' ]]; then
+    args="${args} -buildWindows64Player \"${output_path}/${executable}.exe\""
+else
+    args="${args} -buildLinux64Player \"${output_path}/${executable}\""
+fi
 
 if readlink -e "./build-prev.log" > /dev/null; then
     rm "./build-prev.log"
@@ -199,12 +217,6 @@ fi
 
 if readlink -e "./build.log" > /dev/null; then
     mv "./build.log" "./build-prev.log"
-fi
-
-if [[ $BUILD_WINDOWS == 'true' ]]; then
-    args="${args} -buildWindows64Player \"${output_path}.exe\""
-else
-    args="${args} -buildLinux64Player \"${output_path}\""
 fi
 
 if [[ $VERBOSE == 'true' ]]; then
