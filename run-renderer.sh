@@ -33,9 +33,9 @@ function log() {
 
 function usage() {
     local usage_info="Arguments:
-    -i or --interface <ip_address>
+    -i <ip_address>
         IP address to listen on for.
-    -p or --port <port_number>
+    -p <port_number>
         Port to listen on.
     -v
         Activate verbose logging."

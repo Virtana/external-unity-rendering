@@ -30,9 +30,56 @@ function log() {
 }
 
 function usage() {
-    local usage_info=" Arguments:
--v
-    Activate verbose logging."
+    local usage_info="Arguments:
+    -e <path-to-exporter>
+        Path the the built executable.
+
+    -b 
+        batch_mode
+
+    -r <path-to-render-output>
+        Path to where the renders should be saved. Is saved to the serialised json. \
+Can be overriden by the renderer instance.
+
+    -h <pixel-height>
+        Height of the image in pixels.
+
+    -w <pixel-width>
+        Width of the image in pixels.
+
+    -t 
+        Whether the exporter should transmit the states to a renderer instance.
+
+    -l 
+        Whether the serialized scene state should be logged to the console.
+
+    -j <path-to-output-json>
+        Save the scene state as json files in the directory <path-to-output-json>.
+
+    -c <export-count>
+        The number of exports to make. Must be combined with either the export delay \
+or the total export time to automatically export. 
+
+    -d <export-delay>
+        The delay between exports. Must be combined with either the export count \
+or the total export time to automatically export. (Delay must be greater than at \
+least 10ms)
+
+    -s <total-export-time>
+        The total amount of time to export for. Must be combined with either the export delay \
+or export count to automatically export. Equal to export delay * export count.
+
+    -i <ip_address>
+        IP address to listen on for.
+
+    -p <port_number>
+        Port to listen on.
+
+    -v
+        Activate verbose logging.
+        
+    --help 
+        Shows this help."
     printf "%s\n" "${usage_info}"
 }
 
@@ -65,6 +112,11 @@ interface=''
 #################################################
 # Collecting args
 #################################################
+
+if [[ $1 == '--help' ]]; then
+    usage
+    exit 0
+fi
 
 while getopts :e:r:h:w:j:c:d:s:p:i:btlv flag; do
     case "$flag" in
