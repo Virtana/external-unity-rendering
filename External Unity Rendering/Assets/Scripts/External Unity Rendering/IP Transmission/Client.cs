@@ -17,13 +17,13 @@ namespace ExternalUnityRendering.TcpIp
     public class Client
     {
         /// <summary>
-        /// Internal queue of data to be sent. Works asynchronously.
+        /// Internal queue of data to be sent. Used to transmit messages in a non blocking manner.
         /// </summary>
         private readonly AwaitableConcurrentQueue<string> _messageQueue =
             new AwaitableConcurrentQueue<string>();
 
         /// <summary>
-        /// Event internally used to signal the completion state of the queue.
+        /// Event internally used to signal when all the data has been sent.
         /// </summary>
         private readonly ManualResetEventSlim _completedTransmission =
             new ManualResetEventSlim(false);
@@ -49,10 +49,10 @@ namespace ExternalUnityRendering.TcpIp
         }
 
         /// <summary>
-        /// Initialize data for the socket transmission.
+        /// Create a client to manage sending data to a server over a socket.
         /// </summary>
-        /// <param name="port">The port to send data over.</param>
-        /// <param name="ipString">The string representing the IP address.</param>
+        /// <param name="port">The port to send data to.</param>
+        /// <param name="ipString">The IP address to send data to.</param>
         /// <param name="maxRetries">The maximum number of times to retry sending data
         /// after the connection has been refused.</param>
         public Client(int port, string ipAddr,
@@ -86,8 +86,13 @@ namespace ExternalUnityRendering.TcpIp
         }
 
         /// <summary>
-        /// Initialize the sending queue to send data asynchronously.
+        /// Read messages from the queue and transmit them to <paramref name="remoteEndPoint"/>.
         /// </summary>
+        /// <param name="ipAddress">The IP address to send data to.</param>
+        /// <param name="remoteEndPoint">The remote endpoint to send data to.</param>
+        /// <param name="maxAttempts">The max number of attempts to retry connection after being
+        /// rejected. </param>
+        /// <param name="chunkSize">The size of each chunk of data to send.</param>
         private async void InitializeSender(IPAddress ipAddress, IPEndPoint remoteEndPoint,
             int maxAttempts, int chunkSize)
         {
@@ -205,15 +210,15 @@ namespace ExternalUnityRendering.TcpIp
         /// <summary>
         /// Add a string to the queue of data to be sent.
         /// </summary>
-        /// <param name="data"></param>
-        /// <returns></returns>
+        /// <param name="data">String to be sent.</param>
+        /// <returns>Wheter the data was successfully enqueued.</returns>
         public bool QueueSend(string data)
         {
             return _messageQueue.Enqueue(data);
         }
 
         /// <summary>
-        /// Queue a closing message to the server and wait until it has been sent.
+        /// Wait for all messages to finish sending .
         /// </summary>
         public void FinishTransmissionsAndClose()
         {
@@ -228,6 +233,10 @@ namespace ExternalUnityRendering.TcpIp
             Debug.Log("Closed message queue. When queue is empty, the program will terminate.");
         }
 
+        /// <summary>
+        /// Get whether all the messages have been sent.
+        /// </summary>
+        /// <returns>Whether all the messages have been sent.</returns>
         public bool IsDone()
         {
             return _completedTransmission.IsSet;

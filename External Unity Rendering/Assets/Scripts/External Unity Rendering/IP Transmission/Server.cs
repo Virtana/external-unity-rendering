@@ -12,7 +12,11 @@ namespace ExternalUnityRendering.TcpIp
 {
     public class Server
     {
-        private readonly AwaitableConcurrentQueue<string> _messageQueue = new AwaitableConcurrentQueue<string>();
+        /// <summary>
+        /// Internal queue holding all received messages.
+        /// </summary>
+        private readonly AwaitableConcurrentQueue<string> _messageQueue =
+            new AwaitableConcurrentQueue<string>();
         // TODO dispatch multiple listeners to collect data
 
         /// <summary>
@@ -20,6 +24,8 @@ namespace ExternalUnityRendering.TcpIp
         /// </summary>
         /// <param name="port">The port to listen on.</param>
         /// <param name="ipAddr">The IP address to listen on.</param>
+        /// <param name="maxListeners"> The maximum number of sockets that can be accepted, or
+        /// queued to be accepted, at any point in time.</param>
         public Server(int port, string ipAddr, int maxListeners = 5)
         {
             try
@@ -57,6 +63,11 @@ namespace ExternalUnityRendering.TcpIp
             }
         }
 
+        /// <summary>
+        /// Asynchronously process data received by the <see cref="Server"/>.
+        /// </summary>
+        /// <param name="dataReceivedCallback">Function to pass the received data. Returns whether
+        /// to keep processing or stop.</param>
         public async void ProcessCallbackAsync(Func<string, bool> dataReceivedCallback)
         {
             bool continueReading = true;
@@ -70,13 +81,18 @@ namespace ExternalUnityRendering.TcpIp
                 }
                 else
                 {
-                    Debug.LogWarning("Failed to read from internal channel");
+                    Debug.LogWarning("Failed to read from internal channel.");
                 }
             }
 
             Debug.Log("Finished importing.");
         }
 
+        /// <summary>
+        /// Synchronously process data received by the <see cref="Server"/>.
+        /// </summary>
+        /// <param name="dataReceivedCallback">Function to pass the received data. Returns whether
+        /// to keep processing or stop.</param>
         public void ProcessCallback(Func<string, bool> dataReceivedCallback)
         {
             bool continueReading = true;
@@ -98,6 +114,9 @@ namespace ExternalUnityRendering.TcpIp
         /// <summary>
         /// Begin receiving data asynchronously.
         /// </summary>
+        /// <param name="listener">
+        /// Socket that is currently listening for sockets to connect.
+        /// </param>
         private async void ReceiveAsync(Socket listener)
         {
             Socket handler;
