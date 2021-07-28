@@ -65,7 +65,7 @@ namespace ExternalUnityRendering
         /// <param name="exporter">The exporter to export the current scene with.</param>
         /// <returns>IEnumerator to use for <see cref="MonoBehaviour.StartCoroutine(IEnumerator)"/>.
         /// </returns>
-        IEnumerator ExportLoop(Exporter exporter)
+        private IEnumerator ExportLoop(Exporter exporter)
         {
             exporter.ExportFolder = Arguments.JsonPath;
             float delaySeconds = Arguments.MillisecondsDelay / 1000f;

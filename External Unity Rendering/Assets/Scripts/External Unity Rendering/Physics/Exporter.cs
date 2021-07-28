@@ -48,9 +48,31 @@ namespace ExternalUnityRendering
         };
 
         /// <summary>
+        /// Singleton for this <see cref="Exporter"/>.
+        /// </summary>
+        private static Exporter s_instance = null;
+
+        /// <summary>
+        /// Serialization settings for Newtonsoft.Json
+        /// </summary>
+        private readonly JsonSerializer _serializer = new JsonSerializer();
+
+        /// <summary>
         /// Manager for the folder where states will be written to file.
         /// </summary>
         private DirectoryManager _exportFolder;
+
+        /// <summary>
+        /// Dictionary relating the PostExportActions to the actions they represent.
+        /// </summary>
+        private Dictionary<PostExportAction, Func<string, bool>> _exportActions;
+
+        /// <summary>
+        /// Sender to use when
+        /// <see cref="ExportCurrentScene(PostExportAction, Vector2Int, string, bool)"/> is called
+        /// with the flag <see cref="PostExportAction.Transmit"/>.
+        /// </summary>
+        public Client Sender = null;
 
         /// <summary>
         /// Property to manage the export folder.
@@ -66,28 +88,6 @@ namespace ExternalUnityRendering
                 _exportFolder = new DirectoryManager(value);
             }
         }
-
-        /// <summary>
-        /// Serialization settings for Newtonsoft.Json
-        /// </summary>
-        private readonly JsonSerializer _serializer = new JsonSerializer();
-
-        /// <summary>
-        /// Dictionary relating the PostExportActions to the actions they represent.
-        /// </summary>
-        private Dictionary<PostExportAction, Func<string, bool>> _exportActions;
-
-        /// <summary>
-        /// Sender to use when
-        /// <see cref="ExportCurrentScene(PostExportAction, Vector2Int, string, bool)"/> is called
-        /// with the flag <see cref="PostExportAction.Transmit"/>.
-        /// </summary>
-        public Client Sender = null;
-
-        /// <summary>
-        /// Singleton for this <see cref="Exporter"/>.
-        /// </summary>
-        private static Exporter s_instance = null;
 
         /// <summary>
         /// Early initialization of the Exporter.
@@ -109,8 +109,10 @@ namespace ExternalUnityRendering
                 // Minify the json for transmitting
                 {PostExportAction.Transmit, (state) =>
                     Sender.Send(JToken.Parse(state).ToString(Formatting.None)) },
-                {PostExportAction.WriteToFile, (state) => WriteStateToFile(state) },
-                {PostExportAction.Log, (state) => { Debug.Log($"JSON Data = { state }"); return true; } },
+                {PostExportAction.WriteToFile, (state) =>
+                    WriteStateToFile(state) },
+                {PostExportAction.Log, (state) =>
+                    { Debug.Log($"JSON Data = { state }"); return true; } },
             };
 
             _serializer.NullValueHandling = NullValueHandling.Ignore;
@@ -129,7 +131,7 @@ namespace ExternalUnityRendering
         }
 
         /// <summary>
-        /// Late inititialization of the Exporter.
+        /// Late initialization of the Exporter.
         /// </summary>
         private void Start()
         {
@@ -163,12 +165,10 @@ namespace ExternalUnityRendering
         /// Export the current scene state.
         /// </summary>
         /// <param name="exportMode">What to do with the state of the scene.</param>
-        /// <param name="renderResolution">The resolution for the renders produced by
-        /// the external renderer.</param>
-        /// <param name="renderDirectory">The directory to write the JSON files to
-        /// if the WriteToFile flag is set.</param>
-        /// <param name="prettyPrint">Whether to format the JSON to be more human
-        /// readable.</param>
+        /// <param name="renderResolution">The resolution for the renders produced by the external
+        /// renderer.</param>
+        /// <param name="renderDirectory">The directory to write the JSON files to if the
+        /// WriteToFile flag is set.</param>
         public void ExportCurrentScene(PostExportAction exportMode,
             Vector2Int renderResolution = default, string renderDirectory = "")
         {
@@ -273,12 +273,13 @@ namespace ExternalUnityRendering
                         else if (success)
                         {
                             // need to add consideration for async saying nope
-                            Debug.Log($"SUCCESS: Completed {item.Key & exportMode} at { DateTime.Now }.");
+                            Debug.Log($"SUCCESS: Completed {item.Key & exportMode} at " +
+                                $"{ DateTime.Now }.");
                         }
                         else
                         {
-                            Debug.LogError($"FAILED: {item.Key & exportMode} at { DateTime.Now } failed to complete fully. " +
-                                "See logs for more details.");
+                            Debug.LogError($"FAILED: {item.Key & exportMode} at { DateTime.Now } " +
+                                $"failed to complete fully. See logs for more details.");
                         }
                     }
                 }

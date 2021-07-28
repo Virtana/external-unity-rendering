@@ -19,98 +19,6 @@ namespace ExternalUnityRendering.TcpIp
         // TODO dispatch multiple listeners to collect data
 
         /// <summary>
-        /// Initialise a receiver and bind and listen on the socket.
-        /// </summary>
-        /// <param name="port">The port to listen on.</param>
-        /// <param name="ipAddr">The IP address to listen on.</param>
-        /// <param name="maxListeners"> The maximum number of sockets that can be accepted, or
-        /// queued to be accepted, at any point in time.</param>
-        public Server(int port, string ipAddr, int maxListeners = 5)
-        {
-            try
-            {
-                IPAddress ipAddress = null;
-                if (ipAddr == "localhost")
-                {
-                    ipAddress = IPAddress.Loopback;
-                }
-                else
-                {
-                    ipAddress = IPAddress.Parse(ipAddr);
-                }
-
-                IPEndPoint localEndPoint = new IPEndPoint(ipAddress, port);
-                // Create a Socket that will use Tcp protocol
-                Socket listener = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-                // A Socket must be associated with an endpoint using the Bind method
-                listener.Bind(localEndPoint);
-                listener.Listen(maxListeners);
-
-                Task.Run(() => ReceiveAsync(listener));
-
-                Debug.Log($"Listening on {localEndPoint}. Waiting for a connection...");
-            }
-            catch (SocketException se)
-            {
-                Debug.LogError("An error occured while trying to initialise the socket. " +
-                       $"The error code is {se.SocketErrorCode}.\n{se}");
-            }
-            catch (ArgumentException ae)
-            {
-                Debug.LogError("An error occurred while trying to resolve the host. " +
-                    $"\n{ae}");
-            }
-        }
-
-        /// <summary>
-        /// Asynchronously process data received by the <see cref="Server"/>.
-        /// </summary>
-        /// <param name="dataReceivedCallback">Function to pass the received data. Returns whether
-        /// to keep processing or stop.</param>
-        public async void ProcessCallbackAsync(Func<string, bool> dataReceivedCallback)
-        {
-            bool continueReading = true;
-
-            while (continueReading && _messageQueue.QueueComplete)
-            {
-                (bool readSuccess, string data) = await _messageQueue.DequeueAsync();
-                if (readSuccess)
-                {
-                    continueReading = dataReceivedCallback(data);
-                }
-                else
-                {
-                    Debug.LogWarning("Failed to read from internal channel.");
-                }
-            }
-
-            Debug.Log("Finished importing.");
-        }
-
-        /// <summary>
-        /// Synchronously process data received by the <see cref="Server"/>.
-        /// </summary>
-        /// <param name="dataReceivedCallback">Function to pass the received data. Returns whether
-        /// to keep processing or stop.</param>
-        public void ProcessCallback(Func<string, bool> dataReceivedCallback)
-        {
-            bool continueReading = true;
-            string data;
-            // after a few nanoseconds, should yield every time it checks, reducing cpu time wasted
-            SpinWait waiter = new SpinWait();
-            while (continueReading && _messageQueue.QueueComplete)
-            {
-                while (!_messageQueue.TryDequeue(out data))
-                {
-                    waiter.SpinOnce();
-                }
-                continueReading = dataReceivedCallback(data);
-            }
-
-            Debug.Log("Finished importing.");
-        }
-
-        /// <summary>
         /// Begin receiving data asynchronously.
         /// </summary>
         /// <param name="listener">
@@ -183,6 +91,98 @@ namespace ExternalUnityRendering.TcpIp
                 ms.Capacity = 0;
                 successfulReceipt = false;
             }
+        }
+
+        /// <summary>
+        /// Initialise a receiver and bind and listen on the socket.
+        /// </summary>
+        /// <param name="port">The port to listen on.</param>
+        /// <param name="ipAddr">The IP address to listen on.</param>
+        /// <param name="maxListeners"> The maximum number of sockets that can be accepted, or
+        /// queued to be accepted, at any point in time.</param>
+        public Server(int port, string ipAddr, int maxListeners = 5)
+        {
+            try
+            {
+                IPAddress ipAddress = null;
+                if (ipAddr == "localhost")
+                {
+                    ipAddress = IPAddress.Loopback;
+                }
+                else
+                {
+                    ipAddress = IPAddress.Parse(ipAddr);
+                }
+
+                IPEndPoint localEndPoint = new IPEndPoint(ipAddress, port);
+                // Create a Socket that will use Tcp protocol
+                Socket listener = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                // A Socket must be associated with an endpoint using the Bind method
+                listener.Bind(localEndPoint);
+                listener.Listen(maxListeners);
+
+                Task.Run(() => ReceiveAsync(listener));
+
+                Debug.Log($"Listening on {localEndPoint}. Waiting for a connection...");
+            }
+            catch (SocketException se)
+            {
+                Debug.LogError("An error occured while trying to initialise the socket. " +
+                       $"The error code is {se.SocketErrorCode}.\n{se}");
+            }
+            catch (ArgumentException ae)
+            {
+                Debug.LogError("An error occurred while trying to resolve the host. " +
+                    $"\n{ae}");
+            }
+        }
+
+        /// <summary>
+        /// Synchronously process data received by the <see cref="Server"/>.
+        /// </summary>
+        /// <param name="dataReceivedCallback">Function to pass the received data. Returns whether
+        /// to keep processing or stop.</param>
+        public void ProcessCallback(Func<string, bool> dataReceivedCallback)
+        {
+            bool continueReading = true;
+            string data;
+            // after a few nanoseconds, should yield every time it checks, reducing cpu time wasted
+            SpinWait waiter = new SpinWait();
+            while (continueReading && _messageQueue.QueueComplete)
+            {
+                while (!_messageQueue.TryDequeue(out data))
+                {
+                    waiter.SpinOnce();
+                }
+                continueReading = dataReceivedCallback(data);
+            }
+
+            Debug.Log("Finished importing.");
+        }
+
+        /// <summary>
+        /// Asynchronously process data received by the <see cref="Server"/>.
+        /// </summary>
+        /// <param name="dataReceivedCallback">Function to pass the received data. Returns whether
+        /// to keep processing or stop.</param>
+        public async void ProcessCallbackAsync(Func<string, bool> dataReceivedCallback)
+        {
+            bool continueReading = true;
+
+            while (continueReading && _messageQueue.QueueComplete)
+            {
+                (bool readSuccess, string data) = await _messageQueue.DequeueAsync();
+                if (readSuccess)
+                {
+                    continueReading = dataReceivedCallback(data);
+                }
+                else
+                {
+                    Debug.LogWarning("Failed to read from internal channel.");
+                }
+            }
+
+            Debug.Log("Finished importing.");
         }
     }
 }

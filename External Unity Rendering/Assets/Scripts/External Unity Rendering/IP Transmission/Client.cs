@@ -61,42 +61,6 @@ namespace ExternalUnityRendering.TcpIp
         }
 
         /// <summary>
-        /// Create a client to manage sending data to a server over a socket.
-        /// </summary>
-        /// <param name="port">The port to send data to.</param>
-        /// <param name="ipString">The IP address to send data to.</param>
-        /// <param name="maxRetries">The maximum number of times to retry sending data
-        /// after the connection has been refused.</param>
-        public Client(int port, string ipAddr, int maxRetries = 3, int chunkSize = 1024)
-        {
-            try
-            {
-                IPAddress ipAddress = null;
-                if (ipAddr == "localhost")
-                {
-                    ipAddress = IPAddress.Loopback;
-                }
-                else
-                {
-                    ipAddress = IPAddress.Parse(ipAddr);
-                }
-                IPEndPoint remoteEndPoint = new IPEndPoint(ipAddress, port);
-
-                Task.Run(() => SendAsync(remoteEndPoint, maxRetries, chunkSize));
-            }
-            catch (SocketException se)
-            {
-                Debug.LogError("An error occured while trying to initialise the socket. " +
-                    $"The error code is {se.SocketErrorCode}.\n{se}");
-            }
-            catch (ArgumentException ae)
-            {
-                Debug.LogError("An error occurred while trying to resolve the host. " +
-                    $"\n{ae}");
-            }
-        }
-
-        /// <summary>
         /// Read messages from the queue and transmit them to <paramref name="remoteEndPoint"/>.
         /// </summary>
         /// <param name="remoteEndPoint">The remote endpoint to send data to.</param>
@@ -214,6 +178,42 @@ namespace ExternalUnityRendering.TcpIp
             }
 
             _completedTransmission.Set();
+        }
+
+        /// <summary>
+        /// Create a client to manage sending data to a server over a socket.
+        /// </summary>
+        /// <param name="port">The port to send data to.</param>
+        /// <param name="ipString">The IP address to send data to.</param>
+        /// <param name="maxRetries">The maximum number of times to retry sending data
+        /// after the connection has been refused.</param>
+        public Client(int port, string ipAddr, int maxRetries = 3, int chunkSize = 1024)
+        {
+            try
+            {
+                IPAddress ipAddress = null;
+                if (ipAddr == "localhost")
+                {
+                    ipAddress = IPAddress.Loopback;
+                }
+                else
+                {
+                    ipAddress = IPAddress.Parse(ipAddr);
+                }
+                IPEndPoint remoteEndPoint = new IPEndPoint(ipAddress, port);
+
+                Task.Run(() => SendAsync(remoteEndPoint, maxRetries, chunkSize));
+            }
+            catch (SocketException se)
+            {
+                Debug.LogError("An error occured while trying to initialise the socket. " +
+                    $"The error code is {se.SocketErrorCode}.\n{se}");
+            }
+            catch (ArgumentException ae)
+            {
+                Debug.LogError("An error occurred while trying to resolve the host. " +
+                    $"\n{ae}");
+            }
         }
 
         /// <summary>

@@ -12,6 +12,35 @@ using System.Threading.Tasks;
 public class AwaitableConcurrentQueue<T> : ConcurrentQueue<T>
 {
     /// <summary>
+    /// Event that is signaled whenever data is available to be read in the queue.
+    /// </summary>
+    public readonly AutoResetEvent DataAvailable = new AutoResetEvent(false);
+
+    /// <summary>
+    /// Maximum number of elements to keep in the queue.
+    /// </summary>
+    private readonly int _maxCount = 0;
+
+    /// <summary>
+    /// The bool representing whether the queue has been closed. After closing, no more
+    /// data can be written to the queue.
+    /// </summary>
+    private bool _closed = false;
+
+    /// <summary>
+    /// Gets whether data can be read from the queue.
+    /// </summary>
+    /// <value>
+    /// true if there are items in the queue, or the queue is not closed, otherwise false.
+    /// </value>
+    public bool QueueComplete {
+        get
+        {
+            return Count > 0 || !_closed;
+        }
+    }
+
+    /// <summary>
     /// Create an unbounded <see cref="AwaitableConcurrentQueue{T}"/>.
     /// </summary>
     /// <seealso cref="ConcurrentQueue{T}.ConcurrentQueue"/>
@@ -57,32 +86,31 @@ public class AwaitableConcurrentQueue<T> : ConcurrentQueue<T>
     }
 
     /// <summary>
-    /// Event that is signaled whenever data is available to be read in the queue.
+    /// Get the value at the top of the queue.
     /// </summary>
-    public readonly AutoResetEvent DataAvailable = new AutoResetEvent(false);
-
-    /// <summary>
-    /// Maximum number of elements to keep in the queue.
-    /// </summary>
-    private readonly int _maxCount = 0;
-
-    /// <summary>
-    /// The bool representing whether the queue has been closed. After closing, no more
-    /// data can be written to the queue.
-    /// </summary>
-    private bool _closed = false;
-
-    /// <summary>
-    /// Gets whether data can be read from the queue.
-    /// </summary>
-    /// <value>
-    /// true if there are items in the queue, or the queue is not closed, otherwise false.
-    /// </value>
-    public bool QueueComplete {
-        get
+    /// <returns> A Task wrapping a tuple of <see cref="bool"/> success and <typeparamref name="T"/>
+    /// value. If success is true then value is the dequeued item. If false, it is the default value
+    /// of <typeparamref name="T"/>.</returns>
+    public async Task<(bool success, T value)> DequeueAsync()
+    {
+        bool success;
+        T item;
+        if (_closed && Count == 0)
         {
-            return Count > 0 || !_closed;
+            return (false, default(T));
         }
+        else if (Count > 0)
+        {
+            success = TryDequeue(out item);
+            return (success, item);
+        }
+
+        await Task.Run(() => {
+            DataAvailable.WaitOne();
+        });
+
+        success = TryDequeue(out item);
+        return (success, item);
     }
 
     /// <summary>
@@ -113,34 +141,6 @@ public class AwaitableConcurrentQueue<T> : ConcurrentQueue<T>
         base.Enqueue(item);
         DataAvailable.Set();
         return true;
-    }
-
-    /// <summary>
-    /// Get the value at the top of the queue.
-    /// </summary>
-    /// <returns> A Task wrapping a tuple of <see cref="bool"/> success and <typeparamref name="T"/>
-    /// value. If success is true then value is the dequeued item. If false, it is the default value
-    /// of <typeparamref name="T"/>.</returns>
-    public async Task<(bool success, T value)> DequeueAsync()
-    {
-        bool success;
-        T item;
-        if (_closed && Count == 0)
-        {
-            return (false, default(T));
-        }
-        else if (Count > 0)
-        {
-            success = TryDequeue(out item);
-            return (success, item);
-        }
-
-        await Task.Run(() => {
-            DataAvailable.WaitOne();
-        });
-
-        success = TryDequeue(out item);
-        return (success, item);
     }
 
     /// <summary>
