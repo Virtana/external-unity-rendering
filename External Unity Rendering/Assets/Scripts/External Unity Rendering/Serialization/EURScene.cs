@@ -13,11 +13,19 @@ namespace ExternalUnityRendering.Serialization
     public class EURScene
     {
         /// <summary>
-        /// Struct that represents settings for the CustomCameras
+        /// Struct that represents settings for a <see cref="CameraUtilites.CustomCamera"/>
         /// </summary>
         public struct CameraSettings
         {
+            /// <summary>
+            /// Resolution for the <see cref="CameraUtilites.CustomCamera"/>
+            /// to render.
+            /// </summary>
             public Vector2Int RenderSize;
+
+            /// <summary>
+            /// String path where renders should be saved.
+            /// </summary>
             public string RenderDirectory;
 
             public CameraSettings(Vector2Int size, string directory)
