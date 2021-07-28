@@ -48,7 +48,7 @@ param (
 )
 
 [System.Diagnostics.Process]$exporter = New-Object System.Diagnostics.Process
-$exporter.StartInfo.FileName = $ExecutablePath
+$exporter.StartInfo.FileName = Resolve-Path -Path $ExecutablePath | Select-Object -ExpandProperty Path
 if ($BatchMode)
 {
     $exporter.StartInfo.Arguments = "-batchmode -nographics" 
@@ -56,7 +56,7 @@ if ($BatchMode)
 $exporter.StartInfo.Arguments += " -logFile `"$($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath("./exporter.log"))`" export"
 
 if ($RenderPath) {
-    $exporter.StartInfo.Arguments += " --renderPath `"$RenderPath`""
+    $exporter.StartInfo.Arguments += " --renderPath `"$($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath("$RenderPath"))`""
 }
 
 if ($JsonPath) {
