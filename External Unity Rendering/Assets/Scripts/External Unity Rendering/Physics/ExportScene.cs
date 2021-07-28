@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using ExternalUnityRendering.PathManagement;
+using ExternalUnityRendering.Serialization;
 using ExternalUnityRendering.TcpIp;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
@@ -71,7 +72,7 @@ namespace ExternalUnityRendering
 
         // TODO add compile options or assign when created
         // for the port etc and exit if fatal error
-        public Sender Sender = new Sender();
+        public Client Sender = null;
 
         /// <summary>
         /// Initializes the state of the Exporter.
@@ -87,7 +88,6 @@ namespace ExternalUnityRendering
                 {PostExportAction.Log, (state) => { Debug.Log($"JSON Data = { state }"); return true; } },
             };
 
-
             _serializer.NullValueHandling = NullValueHandling.Ignore;
             _serializer.Error += delegate (object sender, ErrorEventArgs args)
             {
@@ -98,8 +98,17 @@ namespace ExternalUnityRendering
                 }
             };
 
-            _serializer.Converters.Add(new SerializableGameobjectConverter());
-            _serializer.Converters.Add(new SerializableSceneConverter());
+            _serializer.Converters.Add(new EURGameObjectConverter());
+            _serializer.Converters.Add(new EURSceneConverter());
+        }
+
+        private void Start()
+        {
+            if (Sender == null)
+            {
+                Debug.LogWarning("Creating default sender on [::1]:11000.");
+                Sender = new Client(11000, "localhost");
+            }
         }
 
         /// <summary>
@@ -162,11 +171,11 @@ namespace ExternalUnityRendering
                 exportObject.transform.SetParent(transform, true);
             }
 
-            SerializableScene.CameraSettings render =
-                new SerializableScene.CameraSettings(renderResolution, renderDirectory);
+            EURScene.CameraSettings render =
+                new EURScene.CameraSettings(renderResolution, renderDirectory);
 
             Debug.Log("Exporting...");
-            SerializableScene scene = new SerializableScene(transform, render);
+            EURScene scene = new EURScene(transform, render);
 
             Task.Run(() =>
             {
@@ -183,7 +192,7 @@ namespace ExternalUnityRendering
             Time.timeScale = 1;
         }
 
-        private void SerializeAndExport(SerializableScene scene, PostExportAction exportMode, bool prettyPrint)
+        private void SerializeAndExport(EURScene scene, PostExportAction exportMode, bool prettyPrint)
         {
             try
             {

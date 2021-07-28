@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using ExternalUnityRendering.Serialization;
 using UnityEngine;
 
 namespace ExternalUnityRendering.TcpIp
@@ -12,7 +14,7 @@ namespace ExternalUnityRendering.TcpIp
     /// <summary>
     /// Class that manages socket transmission.
     /// </summary>
-    public class Sender
+    public class Client
     {
         /// <summary>
         /// Internal queue of data to be sent. Works asynchronously.
@@ -75,7 +77,7 @@ namespace ExternalUnityRendering.TcpIp
                 }
             }
 
-            while (_messageQueue.DataAvailable)
+            while (_messageQueue.QueueComplete)
             {
                 (bool readSuccess, string data) = await _messageQueue.DequeueAsync();
 
@@ -170,17 +172,40 @@ namespace ExternalUnityRendering.TcpIp
         /// <param name="ipString">The string representing the IP address.</param>
         /// <param name="maxRetries">The maximum number of times to retry sending data
         /// after the connection has been refused.</param>
-        public Sender(int port = 11000, string ipString = "localhost",
+        public Client(int port, string ipAddr,
             int maxRetries = 3, int chunkSize = 50)
         {
             try
             {
                 // Connect to a Remote server
                 // Get Host IP Address that is used to establish a connection
-                // In this case, we get one IP address of localhost that is IP : 127.0.0.1
-                // If a host has multiple addresses, you will get a list of addresses
-                IPHostEntry host = Dns.GetHostEntry(ipString);
-                IPAddress ipAddress = host.AddressList[0];
+                //IPAddress ipAddress = null;
+                //IPAddress[] localIPs = Dns.GetHostAddresses(Dns.GetHostName());
+                //if (Dns.GetHostAddresses(ipAddr).Any((hostIP) =>
+                //        localIPs.Any((localIP) =>
+                //            hostIP.Equals(localIP)) || IPAddress.IsLoopback(hostIP)))
+                //{
+                //    IPHostEntry host = Dns.GetHostEntry(ipAddr);
+                //    ipAddress = host.AddressList[0];
+                //}
+                //else
+                //{
+                //    // Get Host IP Address that is used to establish a connection
+                //    // In this case, we get one IP address of localhost that is IP : 127.0.0.1
+                //    // If a host has multiple addresses, you will get a list of addresses
+
+                //    ipAddress = IPAddress.Parse(ipAddr);
+                //    // Create a Socket that will use Tcp protocol
+                //}
+                IPAddress ipAddress = null;
+                if (ipAddr == "localhost")
+                {
+                    ipAddress = IPAddress.Loopback;
+                }
+                else
+                {
+                    ipAddress = IPAddress.Parse(ipAddr);
+                }
                 IPEndPoint remoteEndPoint = new IPEndPoint(ipAddress, port);
 
                 Task.Run(() => InitializeSender(ipAddress, remoteEndPoint, maxRetries, chunkSize));
@@ -213,7 +238,7 @@ namespace ExternalUnityRendering.TcpIp
         public void FinishTransmissionsAndClose()
         {
             Debug.Log("Sending closing message.");
-            string text_file = Newtonsoft.Json.JsonConvert.SerializeObject(new SerializableScene()
+            string text_file = Newtonsoft.Json.JsonConvert.SerializeObject(new EURScene()
                         {
                             ContinueImporting = false
                         });
@@ -221,6 +246,11 @@ namespace ExternalUnityRendering.TcpIp
             _messageQueue.Close();
             _completedTransmission.Wait();
             Debug.Log("Closed message queue. When queue is empty, the program will terminate.");
+        }
+
+        public bool IsDone()
+        {
+            return _completedTransmission.IsSet;
         }
     }
 }

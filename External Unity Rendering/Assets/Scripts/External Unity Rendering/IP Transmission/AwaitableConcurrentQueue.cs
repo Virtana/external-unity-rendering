@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 /// <summary>
-/// Wrapper for Concurrent Queue from System.Collections.Generic.
+/// Wrapper for <see cref="System.Collections.Generic.ConcurrentQueue"/>.
 /// Represents a thread-safe first in-first out (FIFO) collection.
 /// </summary>
 /// <typeparam name="T">Datatype that is stored in the Queue.</typeparam>
@@ -28,12 +28,7 @@ public class AwaitableConcurrentQueue<T> : ConcurrentQueue<T>
     /// <summary>
     /// Event that is signaled whenever data is available to be read in the queue.
     /// </summary>
-    private readonly AutoResetEvent _available = new AutoResetEvent(false);
-
-    /// <summary>
-    /// Event that is signaled whenever the queue becomes empty.
-    /// </summary>
-    private readonly AutoResetEvent _empty = new AutoResetEvent(false);
+    public readonly AutoResetEvent DataAvailable = new AutoResetEvent(false);
 
     /// <summary>
     /// The bool representing whether the Queue has been closed. After closing, no more
@@ -47,7 +42,7 @@ public class AwaitableConcurrentQueue<T> : ConcurrentQueue<T>
     /// <value>
     /// true if there are items in the queue, or the queue is not closed, otherwise false.
     /// </value>
-    public bool DataAvailable {
+    public bool QueueComplete {
         get
         {
             return Count > 0 || !_closed;
@@ -71,7 +66,7 @@ public class AwaitableConcurrentQueue<T> : ConcurrentQueue<T>
         }
 
         base.Enqueue(item);
-        _available.Set();
+        DataAvailable.Set();
         return true;
     }
 
@@ -95,7 +90,7 @@ public class AwaitableConcurrentQueue<T> : ConcurrentQueue<T>
         }
 
         await Task.Run(() => {
-            _available.WaitOne();
+            DataAvailable.WaitOne();
         });
 
         success = TryDequeue(out item);
