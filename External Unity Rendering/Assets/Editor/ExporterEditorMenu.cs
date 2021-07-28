@@ -26,7 +26,7 @@ namespace ExternalUnityRendering.UnityEditor
         /// <summary>
         /// The radius for the explosion
         /// </summary>
-        private ExportScene.PostExportAction _exportType = ExportScene.PostExportAction.Nothing;
+        private Exporter.PostExportAction _exportType = Exporter.PostExportAction.Nothing;
 
         /// <summary>
         /// The path where scene states (json) will be saved if the write to file
@@ -146,11 +146,11 @@ namespace ExternalUnityRendering.UnityEditor
 
             label = new GUIContent("How to export Scene State: ");
             EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-            _exportType = (ExportScene.PostExportAction)
+            _exportType = (Exporter.PostExportAction)
                 EditorGUILayout.EnumFlagsField(label, _exportType);
 
-            if ((_exportType & ExportScene.PostExportAction.WriteToFile)
-                == ExportScene.PostExportAction.WriteToFile)
+            if ((_exportType & Exporter.PostExportAction.WriteToFile)
+                == Exporter.PostExportAction.WriteToFile)
             {
                 if (GUILayout.Button("Select Export folder"))
                 {
@@ -243,8 +243,8 @@ namespace ExternalUnityRendering.UnityEditor
                 }
 
                 DirectoryManager exportFolder = new DirectoryManager(_exportFolder);
-                if (((_exportType & ExportScene.PostExportAction.WriteToFile)
-                    == ExportScene.PostExportAction.WriteToFile)
+                if (((_exportType & Exporter.PostExportAction.WriteToFile)
+                    == Exporter.PostExportAction.WriteToFile)
                     && exportFolder.Path == Application.persistentDataPath)
                 {
                     Debug.Log("Failed to get access to the export folder.");
@@ -269,8 +269,8 @@ namespace ExternalUnityRendering.UnityEditor
                 options.AppendLine("Number of Exports: " + _exportCount);
                 options.AppendLine("Delay between Exports: " + _millisecondsDelay);
                 options.AppendLine("Scene State Export: " + _exportType);
-                if ((_exportType & ExportScene.PostExportAction.WriteToFile)
-                    == ExportScene.PostExportAction.WriteToFile)
+                if ((_exportType & Exporter.PostExportAction.WriteToFile)
+                    == Exporter.PostExportAction.WriteToFile)
                 {
                     options.AppendLine("Export Folder: " + _exportFolder);
                 }
@@ -318,14 +318,14 @@ namespace ExternalUnityRendering.UnityEditor
         private async void ExplodeAndRecord()
         {
             // Grab the exporter if it exists
-            ExportScene export = FindObjectOfType<ExportScene>();
+            Exporter export = FindObjectOfType<Exporter>();
             if (export == null)
             {
                 GameObject gameObject = new GameObject
                 {
                     name = "Exporter-" + GUID.Generate()
                 };
-                export = gameObject.AddComponent<ExportScene>();
+                export = gameObject.AddComponent<Exporter>();
             }
 
             // All folders should be valid if being used.

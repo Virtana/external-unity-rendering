@@ -18,8 +18,8 @@ namespace ExternalUnityRendering
         private int _totalExportTime = -1;
         private Vector2Int _resolution = Vector2Int.zero;
         private string _renderPath = null;
-        private ExportScene.PostExportAction _exportActions =
-            ExportScene.PostExportAction.Nothing;
+        private Exporter.PostExportAction _exportActions =
+            Exporter.PostExportAction.Nothing;
         private string _jsonSavePath = null;
         private string _ipAddress = null;
 
@@ -233,7 +233,7 @@ namespace ExternalUnityRendering
         /// <summary>
         /// What the exporter should do after serializing the scene.
         /// </summary>
-        public ExportScene.PostExportAction ExportActions
+        public Exporter.PostExportAction ExportActions
         {
             get
             {
@@ -253,7 +253,7 @@ namespace ExternalUnityRendering
                 DirectoryManager pathValidator = new DirectoryManager(value);
                 if (System.IO.Path.GetFullPath(value) == pathValidator.Path)
                 {
-                    _exportActions |= ExportScene.PostExportAction.WriteToFile;
+                    _exportActions |= Exporter.PostExportAction.WriteToFile;
                     _jsonSavePath = pathValidator.Path;
                 }
             }
@@ -270,11 +270,11 @@ namespace ExternalUnityRendering
             {
                 if (value)
                 {
-                    _exportActions |= ExportScene.PostExportAction.Transmit;
+                    _exportActions |= Exporter.PostExportAction.Transmit;
                 }
                 else
                 {
-                    _exportActions &= ~ExportScene.PostExportAction.Transmit;
+                    _exportActions &= ~Exporter.PostExportAction.Transmit;
                 }
             }
         }
@@ -290,11 +290,11 @@ namespace ExternalUnityRendering
             {
                 if (value)
                 {
-                    _exportActions |= ExportScene.PostExportAction.Log;
+                    _exportActions |= Exporter.PostExportAction.Log;
                 }
                 else
                 {
-                    _exportActions &= ~ExportScene.PostExportAction.Log;
+                    _exportActions &= ~Exporter.PostExportAction.Log;
                 }
             }
         }

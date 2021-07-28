@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+
 using ExternalUnityRendering.PathManagement;
 using ExternalUnityRendering.Serialization;
 using ExternalUnityRendering.TcpIp;
+
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -14,7 +17,7 @@ namespace ExternalUnityRendering
     /// <summary>
     /// Component that manages exporting the scene.
     /// </summary>
-    public class ExportScene : MonoBehaviour
+    public class Exporter : MonoBehaviour
     {
         /// <summary>
         /// Flags for what the Exporter should do after serializing the scene.
@@ -55,6 +58,7 @@ namespace ExternalUnityRendering
         {
             get
             {
+                // TODO fix possible null reference exception
                 return _exportFolder.Path;
             }
             set
@@ -63,6 +67,9 @@ namespace ExternalUnityRendering
             }
         }
 
+        /// <summary>
+        /// Serialization settings for Newtonsoft.Json
+        /// </summary>
         private readonly JsonSerializer _serializer = new JsonSerializer();
 
         /// <summary>
@@ -70,12 +77,15 @@ namespace ExternalUnityRendering
         /// </summary>
         private Dictionary<PostExportAction, Func<string, bool>> _exportActions;
 
-        // TODO add compile options or assign when created
-        // for the port etc and exit if fatal error
+        /// <summary>
+        /// Sender to use when
+        /// <see cref="ExportCurrentScene(PostExportAction, Vector2Int, string, bool)"/> is called
+        /// with the flag <see cref="PostExportAction.Transmit"/>.
+        /// </summary>
         public Client Sender = null;
 
         /// <summary>
-        /// Initializes the state of the Exporter.
+        /// Early initialization of the Exporter.
         /// </summary>
         private void Awake()
         {
@@ -102,6 +112,9 @@ namespace ExternalUnityRendering
             _serializer.Converters.Add(new EURSceneConverter());
         }
 
+        /// <summary>
+        /// Late inititialization of the Exporter.
+        /// </summary>
         private void Start()
         {
             if (Sender == null)
@@ -192,6 +205,13 @@ namespace ExternalUnityRendering
             Time.timeScale = 1;
         }
 
+        /// <summary>
+        /// Convert the <see cref="EURScene"/> to json and perform the necessary export actions.
+        /// </summary>
+        /// <param name="scene">The <see cref="EURScene"/> to serialize. </param>
+        /// <param name="exportMode">The Export Actions to perform. The flags will be searched in
+        /// <see cref="_exportActions"/> for the appropriate actions. </param>
+        /// <param name="prettyPrint">Whether to format the json.</param>
         private void SerializeAndExport(EURScene scene, PostExportAction exportMode, bool prettyPrint)
         {
             try

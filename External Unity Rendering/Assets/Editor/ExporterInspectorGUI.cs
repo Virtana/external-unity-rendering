@@ -4,11 +4,11 @@ using UnityEngine;
 namespace ExternalUnityRendering.UnityEditor
 {
     // TODO Decide if removing
-    [CustomEditor(typeof(ExportScene))]
+    [CustomEditor(typeof(Exporter))]
     public class ExporterInspectorGUI : Editor
     {
         private string _exportFolder = "";
-        private ExportScene.PostExportAction _export = ExportScene.PostExportAction.Nothing;
+        private Exporter.PostExportAction _export = Exporter.PostExportAction.Nothing;
 
         public override void OnInspectorGUI()
         {
@@ -20,13 +20,13 @@ namespace ExternalUnityRendering.UnityEditor
                 "WriteToFile: Write to file in a specified folder (or the persistent data path).\n\t" +
                 "Log: Write to the console.", MessageType.Info);
 
-            _export = (ExportScene.PostExportAction)
+            _export = (Exporter.PostExportAction)
                 EditorGUILayout.EnumFlagsField("How to export Scene State: ", _export);
 
             // TODO add editor options for different export types
             // could have if statement with the different states and add the options
-            if ((_export & ExportScene.PostExportAction.WriteToFile)
-                == ExportScene.PostExportAction.WriteToFile)
+            if ((_export & Exporter.PostExportAction.WriteToFile)
+                == Exporter.PostExportAction.WriteToFile)
             {
                 if (GUILayout.Button("Select Export folder"))
                 {
@@ -35,12 +35,12 @@ namespace ExternalUnityRendering.UnityEditor
                 }
             }
 
-            ExportScene currentExporter = target as ExportScene;
+            Exporter currentExporter = target as Exporter;
 
             if (GUILayout.Button("Export Now"))
             {
-                if ((_export & ExportScene.PostExportAction.WriteToFile)
-                    == ExportScene.PostExportAction.WriteToFile)
+                if ((_export & Exporter.PostExportAction.WriteToFile)
+                    == Exporter.PostExportAction.WriteToFile)
                 {
                     currentExporter.ExportFolder = _exportFolder;
                     if (currentExporter.ExportFolder == Application.persistentDataPath) {
