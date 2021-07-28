@@ -8,7 +8,7 @@ namespace ExternalUnityRendering
         /// <summary>
         /// The singleton representing the current <see cref="ExporterManager"/>.
         /// </summary>
-        private static ExporterManager _instance = null;
+        private static ExporterManager s_instance = null;
 
         /// <summary>
         /// The <see cref="ExporterArguments"/> for this manager.
@@ -27,14 +27,14 @@ namespace ExternalUnityRendering
             return;
 #endif
 #pragma warning disable CS0162 // unreachable code warning when UNITY_EDITOR is set
-            if (_instance != null && _instance != this)
+            if (s_instance != null && s_instance != this)
             {
                 Debug.LogError($"Cannot have multiple instances of {nameof(ExporterManager)}");
                 Destroy(this);
                 return;
             }
 
-            _instance = this;
+            s_instance = this;
 #pragma warning restore
         }
 

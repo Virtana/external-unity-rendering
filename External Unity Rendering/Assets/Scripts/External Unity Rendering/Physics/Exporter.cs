@@ -7,6 +7,7 @@ using ExternalUnityRendering.Serialization;
 using ExternalUnityRendering.TcpIp;
 
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 
 using UnityEngine;
@@ -58,7 +59,6 @@ namespace ExternalUnityRendering
         {
             get
             {
-                // TODO fix possible null reference exception
                 return _exportFolder.Path;
             }
             set
@@ -85,15 +85,30 @@ namespace ExternalUnityRendering
         public Client Sender = null;
 
         /// <summary>
+        /// Singleton for this <see cref="Exporter"/>.
+        /// </summary>
+        private static Exporter s_instance = null;
+
+        /// <summary>
         /// Early initialization of the Exporter.
         /// </summary>
         private void Awake()
         {
+            if (s_instance != null && s_instance != this)
+            {
+                Debug.LogError($"Cannot have more than one {nameof(Exporter)} in the scene.");
+                Destroy(this);
+                return;
+            }
+            s_instance = this;
+
             _exportFolder = new DirectoryManager();
+
             _exportActions = new Dictionary<PostExportAction, Func<string, bool>>()
             {
-                {PostExportAction.Nothing, (state) => { return true; } },
-                {PostExportAction.Transmit, (state) => Sender.Send(state) },
+                // Minify the json for transmitting
+                {PostExportAction.Transmit, (state) =>
+                    Sender.Send(JToken.Parse(state).ToString(Formatting.None)) },
                 {PostExportAction.WriteToFile, (state) => WriteStateToFile(state) },
                 {PostExportAction.Log, (state) => { Debug.Log($"JSON Data = { state }"); return true; } },
             };
@@ -110,6 +125,7 @@ namespace ExternalUnityRendering
 
             _serializer.Converters.Add(new EURGameObjectConverter());
             _serializer.Converters.Add(new EURSceneConverter());
+            _serializer.Formatting = Formatting.Indented;
         }
 
         /// <summary>
@@ -154,8 +170,7 @@ namespace ExternalUnityRendering
         /// <param name="prettyPrint">Whether to format the JSON to be more human
         /// readable.</param>
         public void ExportCurrentScene(PostExportAction exportMode,
-            Vector2Int renderResolution = default, string renderDirectory = "",
-            bool prettyPrint = false)
+            Vector2Int renderResolution = default, string renderDirectory = "")
         {
             // ensure this gameobject is a root object.
             transform.parent = null;
@@ -192,7 +207,7 @@ namespace ExternalUnityRendering
 
             Task.Run(() =>
             {
-                SerializeAndExport(scene, exportMode, prettyPrint);
+                SerializeAndExport(scene, exportMode);
             });
 
             // unparent all gameobject so that exporting can be preformed
@@ -212,12 +227,10 @@ namespace ExternalUnityRendering
         /// <param name="exportMode">The Export Actions to perform. The flags will be searched in
         /// <see cref="_exportActions"/> for the appropriate actions. </param>
         /// <param name="prettyPrint">Whether to format the json.</param>
-        private void SerializeAndExport(EURScene scene, PostExportAction exportMode, bool prettyPrint)
+        private void SerializeAndExport(EURScene scene, PostExportAction exportMode)
         {
             try
             {
-                _serializer.Formatting = prettyPrint ? Formatting.Indented : Formatting.None;
-
                 bool succeeded = true;
                 _serializer.Error += delegate (object sender, ErrorEventArgs args)
                 {
@@ -231,24 +244,29 @@ namespace ExternalUnityRendering
                     _serializer.Serialize(writer, scene);
                 }
 
-                string state = sb.ToString();
 
-                if (!succeeded || state == null)
+
+                if (!succeeded)
                 {
                     Debug.Log("Aborting Export. Failed to serialize. Check logs for cause.");
                     return;
                 }
 
+                if (exportMode == PostExportAction.Nothing)
+                {
+                    Debug.Log("No export action was specified. Serialization completed " +
+                        "successfully.");
+                    return;
+                }
+
+                string state = sb.ToString();
+
                 foreach (KeyValuePair<PostExportAction, Func<string, bool>> item in _exportActions)
                 {
-                    if ((item.Key & exportMode) == item.Key)
+                    if (exportMode.HasFlag(item.Key))
                     {
                         bool success = item.Value.Invoke(state);
-                        if (item.Key == PostExportAction.Nothing)
-                        {
-                            continue;
-                        }
-                        if ((item.Key & exportMode) == PostExportAction.Transmit)
+                        if (item.Key == PostExportAction.Transmit)
                         {
                             Debug.Log("Queued Data to be transmitted. See logs for status.");
                         }
