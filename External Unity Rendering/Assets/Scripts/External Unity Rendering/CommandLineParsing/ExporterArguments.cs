@@ -6,9 +6,12 @@ using UnityEngine;
 
 namespace ExternalUnityRendering
 {
+    /// <summary>
+    /// Class representing arguments for the exporter instance.
+    /// </summary>
     [Verb("physics", aliases: new string[] { "exporter", "export" },
          HelpText = "Run the physics instance.")]
-    public class PhysicsArguments
+    public class ExporterArguments
     {
         private int _millisecondDelay = -1;
         private int _exportCount = -1;
@@ -20,6 +23,9 @@ namespace ExternalUnityRendering
         private string _jsonSavePath = null;
         private string _ipAddress = null;
 
+        /// <summary>
+        /// Whether the timing values provided are valid.
+        /// </summary>
         public bool ValidTiming
         {
             get
@@ -37,6 +43,9 @@ namespace ExternalUnityRendering
             }
         }
 
+        /// <summary>
+        /// Delay between exports in milliseconds. (Read Only)
+        /// </summary>
         public int MillisecondsDelay
         {
             get
@@ -48,6 +57,9 @@ namespace ExternalUnityRendering
                 return _millisecondDelay;
             }
         }
+        /// <summary>
+        /// Delay between exports. (Write Only)
+        /// </summary>
         [Option('d', "delay", HelpText = "The delay between exports of the scene.")]
         public string Delay
         {
@@ -91,6 +103,10 @@ namespace ExternalUnityRendering
                 }
             }
         }
+        /// <summary>
+        /// Total amount of time to spend delaying. Equal to
+        /// <see cref="Exports"/> times <see cref="MillisecondsDelay"/>.
+        /// </summary>
         [Option('s', "totalTime", HelpText = "The total time to export for.")]
         public string TotalExportTime
         {
@@ -134,6 +150,9 @@ namespace ExternalUnityRendering
                 }
             }
         }
+        /// <summary>
+        /// Number of exports to make.
+        /// </summary>
         [Option('e', "exportCount", HelpText = "The number of exports to make.")]
         public int Exports
         {
@@ -154,6 +173,9 @@ namespace ExternalUnityRendering
             }
         }
 
+        /// <summary>
+        /// Render Resolution to save for the importer. (Read Only)
+        /// </summary>
         public Vector2Int RenderResolution
         {
             get
@@ -161,6 +183,10 @@ namespace ExternalUnityRendering
                 return _resolution;
             }
         }
+
+        /// <summary>
+        /// Height of the rendered image.
+        /// </summary>
         [Option('h', "renderHeight", HelpText = "The height of the rendered image.")]
         public int RenderHeight
         {
@@ -169,6 +195,10 @@ namespace ExternalUnityRendering
                 _resolution.y = value;
             }
         }
+
+        /// <summary>
+        /// Width of the rendered image.
+        /// </summary>
         [Option('w', "renderWidth", HelpText = "The height of the rendered image.")]
         public int RenderWidth
         {
@@ -178,6 +208,11 @@ namespace ExternalUnityRendering
             }
         }
 
+        // TODO set _renderpath to a relative path, only check if valid name
+        // TODO return absolute path if localhost, otherwise relative.
+        /// <summary>
+        /// Path to where renders will be saved.
+        /// </summary>
         [Option('r', "renderPath", HelpText = "The path to render the images to.")]
         public string RenderPath
         {
@@ -195,6 +230,9 @@ namespace ExternalUnityRendering
             }
         }
 
+        /// <summary>
+        /// What the exporter should do after serializing the scene.
+        /// </summary>
         public ExportScene.PostExportAction ExportActions
         {
             get
@@ -202,6 +240,7 @@ namespace ExternalUnityRendering
                 return _exportActions;
             }
         }
+
         [Option("writeToFile", HelpText = "The path to save json file states to.")]
         public string JsonPath
         {
@@ -219,6 +258,10 @@ namespace ExternalUnityRendering
                 }
             }
         }
+
+        /// <summary>
+        /// Where json files should be saved.
+        /// </summary>
         [Option('t', "transmit", HelpText = "Send data to a renderer instance using TCP/IP.",
             Default = false)]
         public bool Transmit
@@ -235,6 +278,10 @@ namespace ExternalUnityRendering
                 }
             }
         }
+
+        /// <summary>
+        /// Whether to write the serialised state to the console.
+        /// </summary>
         [Option("logExport", HelpText = "Write the Json Scene State to Console.",
             Default = false)]
         public bool LogJson
@@ -252,8 +299,15 @@ namespace ExternalUnityRendering
             }
         }
 
+        /// <summary>
+        /// The port to transmit data to.
+        /// </summary>
         [Option('p', "port", HelpText = "Port to connect to.", Default = (ushort)11000)]
         public ushort ReceiverPort { get; set; }
+
+        /// <summary>
+        /// The IP address that the exporter should transmit states to.
+        /// </summary>
         [Option('i', "interface", HelpText = "IP Address to connect to.", Default = "localhost")]
         public string ReceiverIpAddress
         {

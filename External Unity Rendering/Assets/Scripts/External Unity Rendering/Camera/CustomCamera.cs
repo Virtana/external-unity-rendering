@@ -20,6 +20,16 @@ namespace ExternalUnityRendering.CameraUtilites
         private DirectoryManager _renderPath;
 
         /// <summary>
+        /// <see cref="Texture2D"/> holding the rendered image from the <see cref="_camera"/>.
+        /// </summary>
+        private Texture2D _renderedImage = null;
+
+        /// <summary>
+        /// <see cref="RenderTexture"/> which the <see cref="_camera"/> renders to.
+        /// </summary>
+        private RenderTexture _renderTexture = null;
+
+        /// <summary>
         /// Path where this custom camera will output renders.
         /// </summary>
         public string RenderPath
@@ -30,9 +40,6 @@ namespace ExternalUnityRendering.CameraUtilites
             }
             set
             {
-                // HACK Export to same folders for same name
-                // Can't differentiate between folders created by this and folders
-                // created by something else
                 if (!string.IsNullOrEmpty(value))
                 {
                     _renderPath = new DirectoryManager(Path.Combine(value, name));
@@ -52,7 +59,8 @@ namespace ExternalUnityRendering.CameraUtilites
             // Importer will attach this to cameras right before importing.
             _camera = GetComponent<Camera>();
             _camera.enabled = false;
-            image = new Texture2D(1920, 1080, TextureFormat.RGB24, false);
+            _renderedImage = new Texture2D(1920, 1080, TextureFormat.RGB24, false);
+            _renderTexture = RenderTexture.GetTemporary(1920, 1080, 24);
         }
 
         /// <summary>
@@ -76,9 +84,6 @@ namespace ExternalUnityRendering.CameraUtilites
             file.WriteToFile(render);
             Debug.Log($"Saved render to { file.Path } at { DateTime.Now }.");
         }
-
-        Texture2D image = null;
-        RenderTexture _renderTexture = RenderTexture.GetTemporary(1920, 1080, 24);
 
         /// <summary>
         /// Renders the current view of the Camera.
@@ -104,10 +109,10 @@ namespace ExternalUnityRendering.CameraUtilites
                 _renderTexture =
                     RenderTexture.GetTemporary(renderSize.x, renderSize.y, 24);
             }
-            if (image.width != renderSize.x
-                || image.height != renderSize.y)
+            if (_renderedImage.width != renderSize.x
+                || _renderedImage.height != renderSize.y)
             {
-                image.Resize(renderSize.x, renderSize.y);
+                _renderedImage.Resize(renderSize.x, renderSize.y);
             }
 
             _camera.targetTexture = _renderTexture;
@@ -117,14 +122,18 @@ namespace ExternalUnityRendering.CameraUtilites
             _camera.Render();
 
             // Make a new texture and read the active Render Texture into it.
-            image.ReadPixels(new Rect(0, 0, renderSize.x, renderSize.y), 0, 0);
-            image.Apply();
+            _renderedImage.ReadPixels(new Rect(0, 0, renderSize.x, renderSize.y), 0, 0);
+            _renderedImage.Apply();
 
 #if UNITY_EDITOR
-            _camera.enabled = true;
+            if (Camera.main == _camera)
+            {
+                _camera.enabled = true;
+                _camera.targetTexture = null;
+            }
 #endif
             // now image holds the image in texture2d form
-            byte[] png = image.EncodeToPNG();
+            byte[] png = _renderedImage.EncodeToPNG();
             SaveRender(png, exportTime);
         }
     }

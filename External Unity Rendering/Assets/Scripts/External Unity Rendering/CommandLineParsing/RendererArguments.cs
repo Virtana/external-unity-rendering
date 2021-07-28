@@ -5,18 +5,27 @@ using ExternalUnityRendering.PathManagement;
 
 namespace ExternalUnityRendering
 {
-    // TODO
-    // Add exclusive option for pointing to a folder and looping over the *.json contents
-    // importing all
-    [Verb("renderer", aliases: new string[] { "render" }, HelpText = "Receive data using TCP/IP or read from a list of json files.")]
+    // TODO Add option for importing json files from a folder
+    /// <summary>
+    /// Class storing arguments for the renderer.
+    /// </summary>
+    [Verb("renderer", aliases: new string[] { "render" },
+        HelpText = "Receive data using TCP/IP or read from a list of json files.")]
     public class RendererArguments
     {
         private string _ipAddress = null;
         private DirectoryManager _renderDirectory = null;
 
+        /// <summary>
+        /// The port the renderer should listen on for incoming messages.
+        /// </summary>
         [Option('p', "port", HelpText = "Port for the renderer to listen on. If not specified," +
             "defaults to 11000", Default = (ushort)11000)]
         public ushort ReceiverPort { get; set; }
+
+        /// <summary>
+        /// The address the renderer should listen on incoming messages.
+        /// </summary>
         [Option('i', "interface", HelpText = "IP Address to listen on.", Default = "localhost")]
         public string ReceiverIpAddress
         {
@@ -46,6 +55,10 @@ namespace ExternalUnityRendering
             }
         }
 
+        // TODO if !localhost, log a warning if not specified
+        /// <summary>
+        /// The Path where the renderer should save renders to. Overrides the path in the json file.
+        /// </summary>
         [Option('r', "renderPath", HelpText = "The path to render the images to.")]
         public string RenderPath
         {
@@ -59,6 +72,9 @@ namespace ExternalUnityRendering
             }
         }
 
+        /// <summary>
+        /// A <see cref="DirectoryManager"/> for <see cref="RenderPath"/>
+        /// </summary>
         public DirectoryManager RenderDirectory
         {
             get

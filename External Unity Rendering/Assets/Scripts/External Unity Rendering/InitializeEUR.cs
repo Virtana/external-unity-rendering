@@ -6,37 +6,76 @@ using UnityEngine;
 
 namespace ExternalUnityRendering
 {
+    /// <summary>
+    /// Class which parses command line arguments and initializes the exporter or renderer
+    /// instances.
+    /// </summary>
     public class InitializeEUR
     {
-        private static readonly Dictionary<string, int> s_unityStandaloneArgs =
-                new Dictionary<string, int>
-                {
-                    { "batchmode", 0 }, { "disable-gpu-skinning", 0 }, { "force-d3d11", 0 },
-                    { "force-d3d11-singlethreaded", 0 }, { "force-d3d12", 0 },
-                    { "force-metal", 0 }, { "force-glcore", 0 }, { "force-glcoreXY", 0 },
-                    { "force-vulkan", 0 }, { "force-clamped", 0 }, { "force-low-power-device", 0 },
-                    { "force-wayland", 0 }, { "nographics", 0 }, { "nolog", 0 },
-                    { "no-stereo-rendering", 0 }, { "popupwindow", 0 }, { "screen-fullscreen", 0 },
-                    { "screen-height", 0 }, { "screen-width", 0 }, { "screen-quality", 0 },
-                    { "single-instance", 0 }, { "window-mode", 0 }, { "force-device-index", 1 },
-                    { "parentHWND", 2 }, { "vrmode", 1 }, { "monitor", 1 }, { "logFile", 1},
-                    { "quit", 0 }
-                };
+        /// <summary>
+        /// All the error types which the command line parserr may generate. Used for creating
+        /// error messages.
+        /// </summary>
+        private static readonly Type[] s_parserErrors =
+            new Type[]
+            {
+                typeof(BadFormatConversionError), typeof(BadFormatTokenError),
+                typeof(BadVerbSelectedError), typeof(HelpRequestedError),
+                typeof(HelpVerbRequestedError) , typeof(InvalidAttributeConfigurationError),
+                typeof(MissingRequiredOptionError), typeof(MissingValueOptionError),
+                typeof(MutuallyExclusiveSetError), typeof(NamedError), typeof(NoVerbSelectedError),
+                typeof(RepeatedOptionError), typeof(SequenceOutOfRangeError),
+                typeof(SetValueExceptionError), typeof(TokenError), typeof(UnknownOptionError),
+                typeof(VersionRequestedError),
+            };
 
-        private static readonly Dictionary<Func<RendererArguments, bool>, string> s_rendererFailConditions =
-            new Dictionary<Func<RendererArguments, bool>, string>
+        /// <summary>
+        /// List of unity arguments and the number of parameters they take. Used to filter out
+        /// the unity player's arguments before parsing.
+        /// </summary>
+        private static readonly Dictionary<string, int> s_unityStandaloneArgs =
+            new Dictionary<string, int>
+            {
+                { "batchmode", 0 }, { "disable-gpu-skinning", 0 }, { "force-d3d11", 0 },
+                { "force-d3d11-singlethreaded", 0 }, { "force-d3d12", 0 },
+                { "force-metal", 0 }, { "force-glcore", 0 }, { "force-glcoreXY", 0 },
+                { "force-vulkan", 0 }, { "force-clamped", 0 }, { "force-low-power-device", 0 },
+                { "force-wayland", 0 }, { "nographics", 0 }, { "nolog", 0 },
+                { "no-stereo-rendering", 0 }, { "popupwindow", 0 }, { "screen-fullscreen", 0 },
+                { "screen-height", 0 }, { "screen-width", 0 }, { "screen-quality", 0 },
+                { "single-instance", 0 }, { "window-mode", 0 }, { "force-device-index", 1 },
+                { "parentHWND", 2 }, { "vrmode", 1 }, { "monitor", 1 }, { "logFile", 1},
+                { "quit", 0 }
+            };
+
+        /// <summary>
+        /// Dictionary of fail functions and error messages for the renderer. If any of the
+        /// functions return true, then the application should exit.
+        /// </summary>
+        private static readonly Dictionary<Func<RendererArguments, bool>, string>
+            s_rendererFailConditions = new Dictionary<Func<RendererArguments, bool>, string>
             {
                 { (_) => !Application.isBatchMode, "Renderer should only be run in batchmode" },
                 { (args) => args.ReceiverIpAddress == null, "Invalid IP address provided" }
             };
 
-        private static readonly Dictionary<Func<PhysicsArguments, bool>, string> s_exporterFailConditions =
-            new Dictionary<Func<PhysicsArguments, bool>, string>
+        /// <summary>
+        /// Dictionary of fail functions and error messages for the exporter. If any of the
+        /// functions return true, then the application should exit.
+        /// </summary>
+        private static readonly Dictionary<Func<ExporterArguments, bool>, string>
+            s_exporterFailConditions = new Dictionary<Func<ExporterArguments, bool>, string>
             {
                 { (args) => !args.ValidTiming, "Automatic exporter timings provided." },
                 { (args) => args.ReceiverIpAddress == null, "Invalid IP address provided." }
             };
 
+        /// <summary>
+        /// Removes the unity args and returns the arguments which should be passed to the
+        /// renderer/exporter.
+        /// </summary>
+        /// <param name="args">The array of arguments passed to the program.</param>
+        /// <param name="filteredArgs">The arguments to be passed to the renderer.</param>
         private static void FilterArgs(string[] args, out List<string> filteredArgs)
         {
             filteredArgs = new List<string>();
@@ -58,7 +97,13 @@ namespace ExternalUnityRendering
             }
         }
 
+        /// <summary>
+        /// Process command line arguments and launch the appropriate mode or exit. Only runs in
+        /// Standalone builds.
+        /// </summary>
+#if !UNITY_EDITOR
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+#endif
         public static void Initialize()
         {
             string[] commandLineArguments = Environment.GetCommandLineArgs();
@@ -66,41 +111,21 @@ namespace ExternalUnityRendering
 
             Parser parser = new Parser(with => with.HelpWriter = Console.Out);
 
-            var result =
-                parser.ParseArguments<PhysicsArguments, RendererArguments>(args);
+            ParserResult<object> result =
+                parser.ParseArguments<ExporterArguments, RendererArguments>(args);
+
             result
-                .WithParsed<PhysicsArguments>(Start)
+                .WithParsed<ExporterArguments>(Start)
                 .WithParsed<RendererArguments>(Start)
                 .WithNotParsed((errors) =>
                 {
-
-                    Type[] errorTypes =
-                        new Type[]
-                        {
-                            typeof(BadFormatConversionError),
-                            typeof(BadFormatTokenError),
-                            typeof(BadVerbSelectedError),
-                            typeof(HelpRequestedError),
-                            typeof(HelpVerbRequestedError),
-                            typeof(InvalidAttributeConfigurationError),
-                            typeof(MissingRequiredOptionError),
-                            typeof(MissingValueOptionError),
-                            typeof(MutuallyExclusiveSetError),
-                            typeof(NamedError),
-                            typeof(NoVerbSelectedError),
-                            typeof(RepeatedOptionError),
-                            typeof(SequenceOutOfRangeError),
-                            typeof(SetValueExceptionError),
-                            typeof(TokenError),
-                            typeof(UnknownOptionError),
-                            typeof(VersionRequestedError)
-                        };
-
                     StringBuilder sb = new StringBuilder();
 
+                    // For all the errors, match the error with its type and using reflection, get
+                    // its properties
                     foreach(Error error in errors)
                     {
-                        foreach (Type errorType in errorTypes)
+                        foreach (Type errorType in s_parserErrors)
                         {
                             if (error.GetType() == errorType)
                             {
@@ -110,6 +135,7 @@ namespace ExternalUnityRendering
                                     sb.AppendLine($"{property.Name}: {property.GetValue(error)}");
                                 }
                                 sb.AppendLine();
+                                break;
                             }
                         }
                     }
@@ -119,6 +145,11 @@ namespace ExternalUnityRendering
                 });
         }
 
+        /// <summary>
+        /// Using the provided renderer arguments, add a <see cref="RendererImportManager"/> to the
+        /// scene.
+        /// </summary>
+        /// <param name="args">The parsed renderer arguments.</param>
         private static void Start(RendererArguments args)
         {
             foreach (KeyValuePair<Func<RendererArguments, bool>, string> kv
@@ -145,9 +176,14 @@ namespace ExternalUnityRendering
             Debug.Log("Initialized Renderer Import Manager.");
         }
 
-        private static void Start(PhysicsArguments args)
+        /// <summary>
+        /// Using the provided exporter arguments, add a <see cref="ExporterManager"/> to the
+        /// scene.
+        /// </summary>
+        /// <param name="args">The parsed exporter arguments.</param>
+        private static void Start(ExporterArguments args)
         {
-            foreach (KeyValuePair<Func<PhysicsArguments, bool>, string> kv
+            foreach (KeyValuePair<Func<ExporterArguments, bool>, string> kv
                 in s_exporterFailConditions)
             {
                 if (kv.Key(args))
@@ -157,17 +193,17 @@ namespace ExternalUnityRendering
                 }
             }
 
-            PhysicsExportManager physicsManager =
-                UnityEngine.Object.FindObjectOfType<PhysicsExportManager>();
-            if (physicsManager == null)
+            ExporterManager exportManager =
+                UnityEngine.Object.FindObjectOfType<ExporterManager>();
+            if (exportManager == null)
             {
                 GameObject manager = new GameObject
                 {
-                    name = nameof(PhysicsExportManager)
+                    name = nameof(ExporterManager)
                 };
-                physicsManager = manager.AddComponent<PhysicsExportManager>();
+                exportManager = manager.AddComponent<ExporterManager>();
             }
-            physicsManager.Arguments = args;
+            exportManager.Arguments = args;
             Debug.Log("Initialized Physics Export Manager.");
         }
     }
