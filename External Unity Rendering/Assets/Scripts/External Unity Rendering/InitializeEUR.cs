@@ -52,8 +52,8 @@ namespace ExternalUnityRendering
         /// Dictionary of fail functions and error messages for the renderer. If any of the
         /// functions return true, then the application should exit.
         /// </summary>
-        private static readonly Dictionary<Func<RendererArguments, bool>, string>
-            s_rendererFailConditions = new Dictionary<Func<RendererArguments, bool>, string>
+        private static readonly Dictionary<Func<ImporterArguments, bool>, string>
+            s_rendererFailConditions = new Dictionary<Func<ImporterArguments, bool>, string>
             {
                 { (_) => !Application.isBatchMode, "Renderer should only be run in batchmode" },
                 { (args) => args.ReceiverIpAddress == null, "Invalid IP address provided" }
@@ -112,11 +112,11 @@ namespace ExternalUnityRendering
             Parser parser = new Parser(with => with.HelpWriter = Console.Out);
 
             ParserResult<object> result =
-                parser.ParseArguments<ExporterArguments, RendererArguments>(args);
+                parser.ParseArguments<ExporterArguments, ImporterArguments>(args);
 
             result
                 .WithParsed<ExporterArguments>(Start)
-                .WithParsed<RendererArguments>(Start)
+                .WithParsed<ImporterArguments>(Start)
                 .WithNotParsed((errors) =>
                 {
                     StringBuilder sb = new StringBuilder();
@@ -146,13 +146,13 @@ namespace ExternalUnityRendering
         }
 
         /// <summary>
-        /// Using the provided renderer arguments, add a <see cref="RendererImportManager"/> to the
+        /// Using the provided renderer arguments, add a <see cref="ImporterManager"/> to the
         /// scene.
         /// </summary>
         /// <param name="args">The parsed renderer arguments.</param>
-        private static void Start(RendererArguments args)
+        private static void Start(ImporterArguments args)
         {
-            foreach (KeyValuePair<Func<RendererArguments, bool>, string> kv
+            foreach (KeyValuePair<Func<ImporterArguments, bool>, string> kv
                 in s_rendererFailConditions)
             {
                 if (kv.Key(args))
@@ -162,15 +162,15 @@ namespace ExternalUnityRendering
                 }
             }
 
-            RendererImportManager rendererManager =
-                UnityEngine.Object.FindObjectOfType<RendererImportManager>();
+            ImporterManager rendererManager =
+                UnityEngine.Object.FindObjectOfType<ImporterManager>();
             if (rendererManager == null)
             {
                 GameObject manager = new GameObject
                 {
-                    name = nameof(RendererImportManager)
+                    name = nameof(ImporterManager)
                 };
-                rendererManager = manager.AddComponent<RendererImportManager>();
+                rendererManager = manager.AddComponent<ImporterManager>();
             }
             rendererManager.Arguments = args;
             Debug.Log("Initialized Renderer Import Manager.");

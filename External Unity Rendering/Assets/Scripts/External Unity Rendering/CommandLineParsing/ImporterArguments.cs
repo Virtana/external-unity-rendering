@@ -11,7 +11,7 @@ namespace ExternalUnityRendering
     /// </summary>
     [Verb("renderer", aliases: new string[] { "render" },
         HelpText = "Receive data using TCP/IP or read from a list of json files.")]
-    public class RendererArguments
+    public class ImporterArguments
     {
         private string _ipAddress = null;
         private DirectoryManager _renderDirectory = null;
