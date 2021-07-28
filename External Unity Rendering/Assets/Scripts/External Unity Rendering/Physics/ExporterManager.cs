@@ -84,11 +84,11 @@ namespace ExternalUnityRendering
                 Debug.Log("Emptied queue and sending closing message.");
                 if (Application.isBatchMode)
                 {
-                    exporter.Sender.FinishTransmissionsAndClose();
+                    exporter.Sender.Close();
                 }
                 else
                 {
-                    yield return new WaitUntil(exporter.Sender.IsDone);
+                    yield return new WaitUntil(() => exporter.Sender.IsDone);
                 }
             }
 
@@ -112,10 +112,10 @@ namespace ExternalUnityRendering
             Exporter exporter = FindObjectOfType<Exporter>();
             if (exporter != null
                 && Arguments.ExportActions.HasFlag(Exporter.PostExportAction.Transmit)
-                && !exporter.Sender.IsDone())
+                && !exporter.Sender.IsDone)
             {
                 Debug.Log("Waiting for exporter to close.");
-                exporter.Sender.FinishTransmissionsAndClose();
+                exporter.Sender.Close();
             }
         }
     }

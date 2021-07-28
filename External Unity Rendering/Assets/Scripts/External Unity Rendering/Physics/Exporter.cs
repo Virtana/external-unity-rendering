@@ -93,7 +93,7 @@ namespace ExternalUnityRendering
             _exportActions = new Dictionary<PostExportAction, Func<string, bool>>()
             {
                 {PostExportAction.Nothing, (state) => { return true; } },
-                {PostExportAction.Transmit, (state) => Sender.QueueSend(state) },
+                {PostExportAction.Transmit, (state) => Sender.Send(state) },
                 {PostExportAction.WriteToFile, (state) => WriteStateToFile(state) },
                 {PostExportAction.Log, (state) => { Debug.Log($"JSON Data = { state }"); return true; } },
             };
