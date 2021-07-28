@@ -4,31 +4,67 @@ using System.Threading;
 using System.Threading.Tasks;
 
 /// <summary>
-/// Wrapper for <see cref="System.Collections.Generic.ConcurrentQueue"/> that provides await
-/// functionality for dequeue. Represents a thread-safe first in-first out (FIFO) collection.
+/// Wrapper for <see cref="ConcurrentQueue{T}"/> that provides await functionality for dequeue.
+/// Represents a thread-safe first in-first out (FIFO) collection.
 /// </summary>
 /// <typeparam name="T">Datatype that is stored in the queue.</typeparam>
 /// <seealso cref="ConcurrentQueue{T}"/>
 public class AwaitableConcurrentQueue<T> : ConcurrentQueue<T>
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="AwaitableConcurrentQueue{T}"/> class.
+    /// Create an unbounded <see cref="AwaitableConcurrentQueue{T}"/>.
     /// </summary>
     /// <seealso cref="ConcurrentQueue{T}.ConcurrentQueue"/>
-    public AwaitableConcurrentQueue() : base() {}
+    public AwaitableConcurrentQueue() : base() { }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="AwaitableConcurrentQueue{T}"/> class that
-    /// contains elements copied from the specified collection.
+    /// Create a bounded <see cref="AwaitableConcurrentQueue{T}"/> that when full, blocks until
+    /// there is space in the queue.
+    /// </summary>
+    /// <param name="maxQueueCount"> Max number of elements to have in the queue. Minimum of 1.
+    /// </param>
+    /// <seealso cref="ConcurrentQueue{T}.ConcurrentQueue"/>
+    public AwaitableConcurrentQueue(int maxQueueCount) : base()
+    {
+        if (maxQueueCount > 1)
+        {
+            _maxCount = maxQueueCount;
+        }
+    }
+
+    /// <summary>
+    /// Create an unbounded <see cref="AwaitableConcurrentQueue{T}"/> that contains elements copied
+    /// from the specified collection.
     /// </summary>
     /// <param name="collection">The collection of elements to initialise the queue with.</param>
     /// <seealso cref="ConcurrentQueue{T}.ConcurrentQueue(IEnumerable{T})"/>
     public AwaitableConcurrentQueue(IEnumerable<T> collection) : base(collection) { }
 
     /// <summary>
+    /// Create a bounded <see cref="AwaitableConcurrentQueue{T}"/> that contains elements copied
+    /// from the specified collection. When full, it blocks until there is space available.
+    /// </summary>
+    /// <param name="collection">The collection of elements to initialise the queue with.</param>
+    /// <param name="maxQueueCount">Max number of elements to have in the queue. Minimum of 1.
+    /// </param>
+    /// <seealso cref="ConcurrentQueue{T}.ConcurrentQueue(IEnumerable{T})"/>
+    public AwaitableConcurrentQueue(IEnumerable<T> collection, int maxQueueCount) : base(collection)
+    {
+        if (maxQueueCount > 1)
+        {
+            _maxCount = maxQueueCount;
+        }
+    }
+
+    /// <summary>
     /// Event that is signaled whenever data is available to be read in the queue.
     /// </summary>
     public readonly AutoResetEvent DataAvailable = new AutoResetEvent(false);
+
+    /// <summary>
+    /// Maximum number of elements to keep in the queue.
+    /// </summary>
+    private readonly int _maxCount = 0;
 
     /// <summary>
     /// The bool representing whether the queue has been closed. After closing, no more
@@ -50,7 +86,7 @@ public class AwaitableConcurrentQueue<T> : ConcurrentQueue<T>
     }
 
     /// <summary>
-    /// Adds an object to the end of the AwaitableConcurrentQueue<T> if the queue is not closed.
+    /// Adds an object to the end of the <see cref="AwaitableConcurrentQueue{T}"/> if the queue is not closed.
     /// </summary>
     /// <param name="item">The object to add to the end of the
     /// <see cref="AwaitableConcurrentQueue{T}"/>. The value can be a null reference (Nothing in
@@ -61,6 +97,17 @@ public class AwaitableConcurrentQueue<T> : ConcurrentQueue<T>
     {
         if (_closed) {
             return false;
+        }
+
+        // if a limit is set and reached
+        if (_maxCount > 0 && _maxCount >= Count)
+        {
+            SpinWait waiter = new SpinWait();
+            // spin until space opens up
+            while (_maxCount >= Count)
+            {
+                waiter.SpinOnce();
+            }
         }
 
         base.Enqueue(item);
