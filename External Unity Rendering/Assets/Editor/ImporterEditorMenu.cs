@@ -24,14 +24,14 @@ namespace ExternalUnityRendering.UnityEditor
                 }
             }
 
-            if (FindObjectOfType<ImportScene>() == null)
+            if (FindObjectOfType<Importer>() == null)
             {
                 GameObject importerParent = new GameObject()
                 {
                     name = "Importer-" + GUID.Generate()
                 };
 
-                importerParent.AddComponent<ImportScene>();
+                importerParent.AddComponent<Importer>();
             }
 
         }

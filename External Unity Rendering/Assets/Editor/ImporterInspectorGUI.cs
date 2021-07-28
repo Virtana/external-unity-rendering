@@ -6,7 +6,7 @@ namespace ExternalUnityRendering.UnityEditor
     /// <summary>
     /// Class allowing quick imports + renders of scenes from the editor.
     /// </summary>
-    [CustomEditor(typeof(ImportScene))]
+    [CustomEditor(typeof(Importer))]
     class ImporterInspectorGUI : Editor
     {
         /// <summary>
@@ -40,7 +40,7 @@ namespace ExternalUnityRendering.UnityEditor
                     _renderFolder, "");
             }
 
-            ImportScene currentImporter = target as ImportScene;
+            Importer currentImporter = target as Importer;
             if (GUILayout.Button("Import Now"))
             {
                 PathManagement.DirectoryManager render = new PathManagement.DirectoryManager(_renderFolder);

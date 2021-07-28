@@ -17,7 +17,7 @@ namespace ExternalUnityRendering
     /// <summary>
     /// Component that manages importing a scene and rendering images.
     /// </summary>
-    public class ImportScene : MonoBehaviour
+    public class Importer : MonoBehaviour
     {
 #if UNITY_EDITOR
         /// <summary>
@@ -72,7 +72,6 @@ namespace ExternalUnityRendering
 
             Debug.Log("Beginning Import.");
 
-            // TODO add objects to this list based on if they are new in importer.
             List<GameObject> importObjects = new List<GameObject>();
             Scene currentScene = SceneManager.GetActiveScene();
             currentScene.GetRootGameObjects(importObjects);

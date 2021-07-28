@@ -28,7 +28,7 @@ namespace ExternalUnityRendering
 
         private void Start()
         {
-            ImportScene importer = FindObjectOfType<ImportScene>();
+            Importer importer = FindObjectOfType<Importer>();
             if (importer == null)
             {
                 GameObject obj = new GameObject
@@ -36,7 +36,7 @@ namespace ExternalUnityRendering
                     name = "SceneStateImporter"
                 };
 
-                importer = obj.AddComponent<ImportScene>();
+                importer = obj.AddComponent<Importer>();
             }
 
             Server receiver = new Server(Arguments.ReceiverPort, Arguments.ReceiverIpAddress);
