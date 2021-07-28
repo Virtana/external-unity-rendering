@@ -14,10 +14,12 @@ param (
     [string] $Interface
 )
 
-if (!(Test-Path -LiteralPath $RenderPath -PathType Container)) {
-    New-Item -Path $RenderPath -ItemType Directory
+if ($RenderPath) {
+    if (!(Test-Path -LiteralPath $RenderPath -PathType Container)) {
+        New-Item -Path $RenderPath -ItemType Directory
+    }
+    $RenderPath = Resolve-Path -Path $RenderPath | Select-Object -ExpandProperty Path
 }
-$RenderPath = Resolve-Path -Path $RenderPath | Select-Object -ExpandProperty Path
 
 [System.Diagnostics.Process]$renderer = New-Object System.Diagnostics.Process
 $renderer.StartInfo.FileName = $ExecutablePath
@@ -34,7 +36,7 @@ if ($Interface)
 }
 
 if ($RenderPath) {
-    $exporter.StartInfo.Arguments += " --renderPath `"$RenderPath`""
+    $renderer.StartInfo.Arguments += " --renderPath `"$RenderPath`""
 }
 
 Write-Verbose "Launching ${ExecutablePath} as Renderer with the arguments: $($renderer.StartInfo.Arguments)"
