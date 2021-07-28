@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -122,7 +121,7 @@ namespace ExternalUnityRendering.TcpIp
             Socket handler;
             bool successfulReceipt = false;
             byte[] cache = new byte[1024];
-            ArraySegment<byte> segmentCache = new ArraySegment<byte>(new byte[1024]);
+            ArraySegment<byte> segmentCache = new ArraySegment<byte>(cache);
 
             using (MemoryStream ms = new MemoryStream())
             while (true)
@@ -140,7 +139,14 @@ namespace ExternalUnityRendering.TcpIp
                         await ms.WriteAsync(cache, 0, bytesReceived);
                     } while (!(handler.Poll(1, SelectMode.SelectRead) && handler.Available == 0));
 
-                    Debug.Log($"Read {totalBytesReceived} bytes from {handler.RemoteEndPoint} at {DateTime.Now}.");
+                    if (totalBytesReceived == 0)
+                    {
+                        Debug.Log("Empty string received.");
+                        continue;
+                    }
+
+                    Debug.Log($"Read {totalBytesReceived} bytes from {handler.RemoteEndPoint} at " +
+                        $"{DateTime.Now}.");
                     successfulReceipt = true;
                 }
                 catch (SocketException se)
