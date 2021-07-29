@@ -221,7 +221,7 @@ namespace ExternalUnityRendering.TcpIp
         /// Add a string to the queue of data to be sent.
         /// </summary>
         /// <param name="data">String to be sent.</param>
-        /// <returns>Wheter the data was successfully enqueued.</returns>
+        /// <returns>Whether the data was successfully enqueued.</returns>
         public bool Send(string data)
         {
             return _messageQueue.Enqueue(data);

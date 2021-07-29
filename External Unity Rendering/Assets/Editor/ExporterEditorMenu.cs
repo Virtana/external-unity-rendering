@@ -19,6 +19,7 @@ namespace ExternalUnityRendering.UnityEditor
         /// <summary>
         /// Number of times that the exporter will run.
         /// </summary>
+
         private int _exportCount = 10;
 
         /// <summary>
@@ -36,8 +37,14 @@ namespace ExternalUnityRendering.UnityEditor
         /// </summary>
         private string _exportFolder = null;
 
+        /// <summary>
+        /// Port to send the scene states to.
+        /// </summary>
         private int _serverPort = 11000;
 
+        /// <summary>
+        /// IP address to send scene states to.
+        /// </summary>
         private string _serverIpAddress = "localhost";
 
         /// <summary>
@@ -56,13 +63,69 @@ namespace ExternalUnityRendering.UnityEditor
         private Vector2 _scrollPosition = Vector2.zero;
 
         /// <summary>
+        /// Whether to send the closing signal after finished exporting. Does not affect cancelled
+        /// export loops.
+        /// </summary>
+        private bool _sendClosingMsg = false;
+
+        /// <summary>
+        /// The loop that manages the exporting.
+        /// </summary>
+        private EditorCoroutine _exportLoop = null;
+
+        #region GUI Labels
+        private const string _exportCountLabel = "Number of Exports to perform: ";
+        private const string _exportDelayLabel = "Delay between exports: ";
+        private const string _exportOptionsExplanationLabel = "Export Options: ";
+        private const string _exportOptionsExplanation = "None: Attempt to serialize but do " +
+            "nothing with the data.\nTransmit: Attempt to transmit over TCP/IP.\nWriteToFile: " +
+            "Write to file in a specified folder (or the persistent data path).\nLog: Write to " +
+            "the console.";
+        private const string _exportOptionsLabel = "How to export Scene State: ";
+        private const string _ipAddressLabel = "Server IP address: ";
+        private const string _portLabel = "Server Port: ";
+        private const string _sendClosingMsgLabel = "Send closing message: ";
+        private const string _outputResLabel = "Renderer Output Resolution: ";
+        #endregion
+
+        /// <summary>
         /// Create an <see cref="ExporterEditorMenu"/> and show it.
         /// </summary>
         [MenuItem("Scene State Exporter/Menu")]
         static void Init()
         {
-            ExporterEditorMenu window = GetWindow<ExporterEditorMenu>();
-            window.Show();
+            GetWindow<ExporterEditorMenu>().Show();
+        }
+
+        private void OnEnable()
+        {
+            AssemblyReloadEvents.beforeAssemblyReload += ReloadVariables;
+        }
+
+        private void OnDisable()
+        {
+            AssemblyReloadEvents.beforeAssemblyReload -= ReloadVariables;
+        }
+
+        /// <summary>
+        /// Refresh all of the editor variables.
+        /// </summary>
+        private void ReloadVariables()
+        {
+            minSize =
+                new Vector2(EditorStyles.label.CalcSize(new GUIContent(_exportCountLabel)).x * 2,
+                minSize.y);
+            _exportCount = 10;
+            _exportDelay = 1000;
+            _exportActions = Exporter.PostExportAction.Nothing;
+            _exportFolder = null;
+            _serverPort = 11000;
+            _serverIpAddress = "localhost";
+            _renderFolder = System.IO.Path.GetFullPath("../");
+            _renderResolution = new Vector2Int(1920, 1080);
+            _scrollPosition = Vector2.zero;
+            _sendClosingMsg = false;
+            _exportLoop = null;
         }
 
         /// <summary>
@@ -70,64 +133,42 @@ namespace ExternalUnityRendering.UnityEditor
         /// </summary>
         private void OnGUI()
         {
-            GUIStyle style = EditorStyles.label;
+            // HACK using largest label to size all labels
+            EditorGUIUtility.labelWidth = Mathf.Max(EditorStyles.label.CalcSize(
+                new GUIContent(_exportCountLabel)).x, 0.25f * position.width);
             EditorStyles.boldLabel.alignment = TextAnchor.MiddleCenter;
             _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition);
 
-            EditorGUILayout.LabelField("Exporter Settings",
-                EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Exporter Settings", EditorStyles.boldLabel);
 
             #region Time Settings
-            GUIContent label = new GUIContent("Number of Exports to perform: ");
-            EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-            _exportCount = EditorGUILayout.IntSlider(label, _exportCount, 1, 100);
-            label = new GUIContent("Delay between exports: ");
-            EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-            _exportDelay = EditorGUILayout.IntSlider(label, _exportDelay, 100, 10000);
+            _exportCount = EditorGUILayout.IntSlider(_exportCountLabel, _exportCount, 1, 100);
+            _exportDelay = EditorGUILayout.IntSlider(_exportDelayLabel, _exportDelay, 100, 10000);
+            EditorGUILayout.Space();
             #endregion
 
             #region Export Options
-            GUIContent optionLabel = new GUIContent("Export Options: ");
-            GUIContent optionListLabel =
-                new GUIContent("None : Attempt to serialize but do nothing with the data.\n" +
-                "Transmit: Attempt to transmit over TCP/IP.\n" +
-                "WriteToFile: Write to file in a specified folder (or the persistent data path)." +
-                "\nLog: Write to the console.");
-
-            EditorGUIUtility.labelWidth = style.CalcSize(optionLabel).x;
-            EditorGUILayout.LabelField(optionLabel, optionListLabel,
+            EditorGUILayout.LabelField(_exportOptionsExplanationLabel, _exportOptionsExplanation,
                 EditorStyles.wordWrappedLabel);
-
-            label = new GUIContent("How to export Scene State: ");
-            EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-            _exportActions = (Exporter.PostExportAction)
-                EditorGUILayout.EnumFlagsField(label, _exportActions);
-
-            if (_exportActions.HasFlag(Exporter.PostExportAction.WriteToFile))
+            _exportActions = (Exporter.PostExportAction)EditorGUILayout.EnumFlagsField(
+                _exportOptionsLabel, _exportActions);
+            if (_exportActions.HasFlag(Exporter.PostExportAction.WriteToFile) && GUILayout.Button("Select Export folder"))
             {
-                if (GUILayout.Button("Select Export folder"))
-                {
-                    _exportFolder = EditorUtility.OpenFolderPanel(
-                        "Select the folder to export the scene state to.", _exportFolder, "");
-                }
+                _exportFolder = EditorUtility.OpenFolderPanel(
+                    "Select the folder to export the scene state to.", _exportFolder, "");
             }
             if (_exportActions.HasFlag(Exporter.PostExportAction.Transmit))
             {
-                label = new GUIContent("Server/Renderer IP address: ");
-                EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-                _serverIpAddress = EditorGUILayout.TextField(label, _serverIpAddress);
-
-                label = new GUIContent("Server/Renderer Port: ");
-                EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-                int providedPort = EditorGUILayout.IntField(label, _serverPort);
+                _serverIpAddress = EditorGUILayout.TextField(_ipAddressLabel, _serverIpAddress);
+                int providedPort = EditorGUILayout.IntField(_portLabel, _serverPort);
                 if (1023 < providedPort && providedPort < 65535)
                 {
                     _serverPort = providedPort;
                 }
+                _sendClosingMsg = EditorGUILayout.Toggle(_sendClosingMsgLabel, _sendClosingMsg);
             }
-            #endregion
-
             EditorGUILayout.Space();
+            #endregion
 
             #region Renderer Settings
             EditorGUILayout.LabelField("External Renderer Settings", EditorStyles.boldLabel);
@@ -135,18 +176,15 @@ namespace ExternalUnityRendering.UnityEditor
             if (GUILayout.Button("Select Render Instance Output Folder"))
             {
                 _renderFolder = EditorUtility.OpenFolderPanel(
-                    "Select the folder to export the final renders to.", _renderFolder, "");
+                    "Select the folder to export the final renders to.", _renderFolder, "Renders");
             }
 
-            label = new GUIContent("Renderer Output Resolution: ");
-            EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-            _renderResolution =
-                EditorGUILayout.Vector2IntField(label, _renderResolution);
+            _renderResolution = EditorGUILayout.Vector2IntField(_outputResLabel, _renderResolution);
+            EditorGUILayout.Space();
             #endregion
 
-
+            #region Validate Options and Begin exporter
             GUILayout.FlexibleSpace();
-            EditorGUILayout.Space();
 
             if (GUILayout.Button("Begin exporting."))
             {
@@ -239,12 +277,12 @@ namespace ExternalUnityRendering.UnityEditor
                     _exportLoop = this.StartCoroutine(ExportLoop());
                 }
             }
+            #endregion
+
             EditorGUILayout.EndScrollView();
         }
 
-        private EditorCoroutine _exportLoop = null;
-
-        IEnumerator ExportLoop()
+        private IEnumerator ExportLoop()
         {
             Exporter exporter = FindObjectOfType<Exporter>();
             if (exporter == null)
@@ -252,13 +290,19 @@ namespace ExternalUnityRendering.UnityEditor
                 exporter = new GameObject().AddComponent<Exporter>();
             }
 
+            exporter.Sender = new TcpIp.Client(_serverPort, _serverIpAddress);
+
             float delaySeconds = _exportDelay / 1000;
             int progressID = Progress.Start("Exporting...", $"Exporting {_exportCount} scenes " +
                 $"with a delay of {_exportDelay} ms and performing {_exportActions}",
-                Progress.Options.Synchronous);
+                Progress.Options.Synchronous | Progress.Options.Sticky);
 
             Progress.RegisterCancelCallback(progressID, () =>
             {
+                if (_sendClosingMsg)
+                {
+                    Debug.LogWarning("Cancelled export loop. Will not send closing message.");
+                }
                 EditorCoroutineUtility.StopCoroutine(_exportLoop);
                 return true;
             });
@@ -267,15 +311,22 @@ namespace ExternalUnityRendering.UnityEditor
             {
                 if (!Application.isPlaying)
                 {
-                    Progress.Finish(progressID, Progress.Status.Canceled);
+                    Progress.Cancel(progressID);
                     yield break;
                 }
                 Progress.Report(progressID, (float)i / _exportCount,
-                    $"Exported {i + 1} scene states so far.");
+                    $"Exported {i} scene states so far.");
                 exporter.ExportCurrentScene(_exportActions, _renderResolution, _renderFolder);
                 yield return new EditorWaitForSeconds(delaySeconds);
             }
-            Progress.Finish(progressID, Progress.Status.Succeeded);
+
+            if (_sendClosingMsg)
+            {
+                System.Threading.Tasks.Task close = exporter.Sender.CloseAsync();
+                yield return new WaitUntil(() => close.IsCompleted); // non blocking wait for close
+            }
+
+            Progress.Finish(progressID);
         }
     }
 }
