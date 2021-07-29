@@ -94,7 +94,7 @@ Usage:
 
 `Usage: <path‑to‑the‑renderer‑executable> render [options]`
 
-| Bash Options | Argument | Description |
+| Options | Argument | Description |
 |--------------|----------|-------------|
 | `‑t` or `‑‑transmit` | `‑` | Whether to launch renderer and transmit scene states from physics instance. |
 | `‑r` or `‑‑renderPath` | `<path‑to‑render‑output>` | The path to where renders are to be made. |
@@ -106,7 +106,7 @@ The physics instance can be run as follows:
 
 `Usage: <path‑to‑physics‑executable> export [options]`
 
-| Bash Options | Argument | Description |
+| Options | Argument | Description |
 |--------------|----------|-------------|
 | `‑t` or `‑‑transmit` | `‑` | Whether to launch renderer and transmit scene states from physics instance. |
 | `‑‑logExport` | `‑` | Whether the physics instance should print the serialized state to the console/log. |
