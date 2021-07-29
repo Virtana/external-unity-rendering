@@ -109,12 +109,7 @@ namespace ExternalUnityRendering
                 // Minify the json for transmitting
                 {PostExportAction.Transmit, (state) =>
                     {
-                        if (Sender == null)
-                        {
-                            Debug.LogWarning("Creating default sender on [::1]:11000.");
-                            Sender = new Client(11000, "localhost");
-                        }
-                        return Sender.Send(JToken.Parse(state).ToString(Formatting.None));
+                        return Sender?.Send(JToken.Parse(state).ToString(Formatting.None)) ?? false;
                     }
                 },
                 {PostExportAction.WriteToFile, (state) =>

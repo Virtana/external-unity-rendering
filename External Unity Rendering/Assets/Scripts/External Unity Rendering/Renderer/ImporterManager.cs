@@ -68,7 +68,7 @@ namespace ExternalUnityRendering
                 return continueImporting;
             });
 
-            Debug.Log($"Saved a total of {importCount - 2} scenes to disk. (false positives occur due to open and close signal).");
+            Debug.Log($"Saved a total of {importCount - 1} scenes to disk. (false positive occurs due to close signal).");
 
             RenderTexture.active = null;
             Application.Quit(0);
