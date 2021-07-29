@@ -18,17 +18,11 @@ namespace ExternalUnityRendering.Serialization
         /// An empty serialized scene with <see cref="ContinueImporting"/> set to false.
         /// </summary>
         [JsonIgnore]
-        public static string ClosingMessage
-        {
-            get
-            {
-                EURScene closingMessage = new EURScene
+        public static readonly string ClosingMessage = 
+            JsonConvert.SerializeObject(new EURScene
                 {
                     ContinueImporting = false
-                };
-                return JsonConvert.SerializeObject(closingMessage);
-            }
-        }
+                });
 
         /// <summary>
         /// Struct that represents settings for a <see cref="CameraUtilites.CustomCamera"/>
