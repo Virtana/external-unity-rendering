@@ -139,5 +139,16 @@ namespace ExternalUnityRendering.PathManagement
         public DirectoryManager(DirectoryManager directory, string directoryName,
             bool createNew = false)
             : this(System.IO.Path.Combine(directory.Path, directoryName), createNew) { }
+
+        /// <summary>
+        /// Create a subdirectory in <paramref name="parentDirectory"/> named
+        /// <paramref name="directoryName"/>.
+        /// </summary>
+        /// <param name="parentDirectory">The main directory in which to create the subfolder.</param>
+        /// <param name="directoryName">The name of the subdirectory.</param>
+        /// <param name="createNew">Whether the folder should be unique.</param>
+        public DirectoryManager(string parentDirectory, string directoryName,
+            bool createNew = false)
+            : this(System.IO.Path.Combine(parentDirectory, directoryName), createNew) { }
     }
 }
