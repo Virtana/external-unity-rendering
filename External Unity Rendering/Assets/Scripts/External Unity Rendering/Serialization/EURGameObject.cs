@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+
 using UnityEngine;
+
 using Newtonsoft.Json;
 
 namespace ExternalUnityRendering.Serialization

@@ -1,5 +1,7 @@
 ﻿using System;
+
 using UnityEngine;
+
 using Newtonsoft.Json;
 
 namespace ExternalUnityRendering.Serialization

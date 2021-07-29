@@ -1,4 +1,5 @@
 ﻿using System;
+
 using Newtonsoft.Json;
 using Newtonsoft.Json.UnityConverters;
 using Newtonsoft.Json.UnityConverters.Math;

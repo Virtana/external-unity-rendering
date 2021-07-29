@@ -1,7 +1,10 @@
 using System.Linq;
 using System.Net;
+
 using CommandLine;
+
 using ExternalUnityRendering.PathManagement;
+
 using UnityEngine;
 
 namespace ExternalUnityRendering
