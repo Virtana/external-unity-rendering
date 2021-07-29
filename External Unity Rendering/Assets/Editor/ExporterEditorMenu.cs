@@ -415,7 +415,7 @@ namespace ExternalUnityRendering.UnityEditor
             }
 
                 export.ExportCurrentScene(_exportType, _rendererOutputResolution,
-                    _rendererOutputFolder, true);
+                    _rendererOutputFolder);
 
                 // should do nothing if customcameras empty
                 foreach (CustomCamera cam in customCameras)
