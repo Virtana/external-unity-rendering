@@ -14,17 +14,14 @@ namespace ExternalUnityRendering.TestingCode
 
         IEnumerator ExportLoop()
         {
-            Collider[] colliders =
+            Rigidbody[] rigidbodies =
                 FindObjectsOfType<Collider>()
                 .Where((collider) =>
                 {
                     return collider.gameObject.activeInHierarchy
                     && !collider.gameObject.TryGetComponent(out MeshCollider _);
-                }).ToArray();
-
-            while (Application.isPlaying)
-            {
-                foreach (Collider collider in colliders)
+                })
+                .Select((collider) =>
                 {
                     if (!collider.gameObject.TryGetComponent(out Rigidbody rb))
                     {
@@ -34,6 +31,14 @@ namespace ExternalUnityRendering.TestingCode
                     rb.mass = 10;
                     rb.interpolation = RigidbodyInterpolation.Interpolate;
                     rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+                    return rb;
+                })
+                .ToArray();
+
+            while (Application.isPlaying)
+            {
+                foreach (Rigidbody rb in rigidbodies)
+                {
                     rb.AddForceAtPosition(
                         new Vector3(
                             Random.Range(-20, 20),
@@ -47,7 +52,7 @@ namespace ExternalUnityRendering.TestingCode
                         ForceMode.Impulse);
                 }
 
-                yield return new WaitForSecondsRealtime(0.1f);
+                yield return new WaitForSeconds(0.5f);
             }
 
         }
