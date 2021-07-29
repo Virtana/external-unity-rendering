@@ -5,7 +5,6 @@ using System.Text;
 
 using ExternalUnityRendering.PathManagement;
 
-using Unity.EditorCoroutines;
 using Unity.EditorCoroutines.Editor;
 using UnityEditor;
 using UnityEngine;
@@ -25,12 +24,12 @@ namespace ExternalUnityRendering.UnityEditor
         /// <summary>
         /// The difference in unity time between two exported states.
         /// </summary>
-        private int _millisecondsDelay = 1000;
+        private int _exportDelay = 1000;
 
         /// <summary>
         /// The radius for the explosion
         /// </summary>
-        private Exporter.PostExportAction _exportType = Exporter.PostExportAction.Nothing;
+        private Exporter.PostExportAction _exportActions = Exporter.PostExportAction.Nothing;
 
         /// <summary>
         /// The path where scene states (json) will be saved if the write to file option is chosen.
@@ -42,11 +41,6 @@ namespace ExternalUnityRendering.UnityEditor
         private string _serverIpAddress = "localhost";
 
         /// <summary>
-        /// The resolution of all of the rendered images by the exporter.
-        /// </summary>
-        private Vector2Int _renderResolution = new Vector2Int(1920, 1080);
-
-        /// <summary>
         /// The path where the external rendering instance should render its images to.
         /// </summary>
         private string _renderFolder = System.IO.Path.GetFullPath("../");
@@ -54,7 +48,7 @@ namespace ExternalUnityRendering.UnityEditor
         /// <summary>
         /// The resolution of all the rendered images by the external renderer.
         /// </summary>
-        private Vector2Int _rendererOutputResolution = new Vector2Int(1920, 1080);
+        private Vector2Int _renderResolution = new Vector2Int(1920, 1080);
 
         /// <summary>
         /// Scroll position for the current GUI Position.
@@ -89,7 +83,7 @@ namespace ExternalUnityRendering.UnityEditor
             _exportCount = EditorGUILayout.IntSlider(label, _exportCount, 1, 100);
             label = new GUIContent("Delay between exports: ");
             EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-            _millisecondsDelay = EditorGUILayout.IntSlider(label, _millisecondsDelay, 100, 10000);
+            _exportDelay = EditorGUILayout.IntSlider(label, _exportDelay, 100, 10000);
             #endregion
 
             #region Export Options
@@ -106,10 +100,10 @@ namespace ExternalUnityRendering.UnityEditor
 
             label = new GUIContent("How to export Scene State: ");
             EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-            _exportType = (Exporter.PostExportAction)
-                EditorGUILayout.EnumFlagsField(label, _exportType);
+            _exportActions = (Exporter.PostExportAction)
+                EditorGUILayout.EnumFlagsField(label, _exportActions);
 
-            if (_exportType.HasFlag(Exporter.PostExportAction.WriteToFile))
+            if (_exportActions.HasFlag(Exporter.PostExportAction.WriteToFile))
             {
                 if (GUILayout.Button("Select Export folder"))
                 {
@@ -117,7 +111,7 @@ namespace ExternalUnityRendering.UnityEditor
                         "Select the folder to export the scene state to.", _exportFolder, "");
                 }
             }
-            if (_exportType.HasFlag(Exporter.PostExportAction.Transmit))
+            if (_exportActions.HasFlag(Exporter.PostExportAction.Transmit))
             {
                 label = new GUIContent("Server/Renderer IP address: ");
                 EditorGUIUtility.labelWidth = style.CalcSize(label).x;
@@ -146,8 +140,8 @@ namespace ExternalUnityRendering.UnityEditor
 
             label = new GUIContent("Renderer Output Resolution: ");
             EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-            _rendererOutputResolution =
-                EditorGUILayout.Vector2IntField(label, _rendererOutputResolution);
+            _renderResolution =
+                EditorGUILayout.Vector2IntField(label, _renderResolution);
             #endregion
 
 
@@ -170,7 +164,7 @@ namespace ExternalUnityRendering.UnityEditor
                 }
 
                 DirectoryManager exportFolder = new DirectoryManager(_exportFolder);
-                if (_exportType.HasFlag(Exporter.PostExportAction.WriteToFile)
+                if (_exportActions.HasFlag(Exporter.PostExportAction.WriteToFile)
                     && exportFolder.Path == Application.persistentDataPath)
                 {
                     EditorUtility.DisplayDialog("Invalid Json path", "Failed to validate export " +
@@ -224,13 +218,13 @@ namespace ExternalUnityRendering.UnityEditor
 
                 StringBuilder options = new StringBuilder();
                 options.AppendLine($"Number of Exports: {_exportCount}");
-                options.AppendLine($"Delay between Exports: {_millisecondsDelay}");
-                options.AppendLine($"Scene State Export: {_exportType}");
-                if (_exportType.HasFlag(Exporter.PostExportAction.WriteToFile))
+                options.AppendLine($"Delay between Exports: {_exportDelay}");
+                options.AppendLine($"Scene State Export: {_exportActions}");
+                if (_exportActions.HasFlag(Exporter.PostExportAction.WriteToFile))
                 {
                     options.AppendLine($"Json Export Folder: {_exportFolder}");
                 }
-                if (_exportType.HasFlag(Exporter.PostExportAction.Transmit))
+                if (_exportActions.HasFlag(Exporter.PostExportAction.Transmit))
                 {
                     options.AppendLine($"Renderer/Server: {_serverIpAddress}:{_serverPort}");
                 }
@@ -242,15 +236,46 @@ namespace ExternalUnityRendering.UnityEditor
                 if (EditorUtility.DisplayDialog("Confirm your choices",
                     options.ToString(), "Yes", "No"))
                 {
-                    EditorCoroutineUtility.StartCoroutineOwnerless(ExportLoop());
+                    _exportLoop = this.StartCoroutine(ExportLoop());
                 }
             }
             EditorGUILayout.EndScrollView();
         }
 
+        private EditorCoroutine _exportLoop = null;
+
         IEnumerator ExportLoop()
         {
-            yield return null;
+            Exporter exporter = FindObjectOfType<Exporter>();
+            if (exporter == null)
+            {
+                exporter = new GameObject().AddComponent<Exporter>();
+            }
+
+            float delaySeconds = _exportDelay / 1000;
+            int progressID = Progress.Start("Exporting...", $"Exporting {_exportCount} scenes " +
+                $"with a delay of {_exportDelay} ms and performing {_exportActions}",
+                Progress.Options.Synchronous);
+
+            Progress.RegisterCancelCallback(progressID, () =>
+            {
+                EditorCoroutineUtility.StopCoroutine(_exportLoop);
+                return true;
+            });
+
+            for (int i = 0; i < _exportCount; i++)
+            {
+                if (!Application.isPlaying)
+                {
+                    Progress.Finish(progressID, Progress.Status.Canceled);
+                    yield break;
+                }
+                Progress.Report(progressID, (float)i / _exportCount,
+                    $"Exported {i + 1} scene states so far.");
+                exporter.ExportCurrentScene(_exportActions, _renderResolution, _renderFolder);
+                yield return new EditorWaitForSeconds(delaySeconds);
+            }
+            Progress.Finish(progressID, Progress.Status.Succeeded);
         }
     }
 }
