@@ -14,15 +14,29 @@ namespace ExternalUnityRendering.Serialization
     public class EURGameObject
     {
         /// <summary>
-        /// Struct representing the base parameters of the
-        /// Transfrom Component.
+        /// Struct representing the base parameters the Unity <see cref="Transform"/> Component.
         /// </summary>
         public struct TransformState
         {
+            /// <summary>
+            /// Position of the <see cref="EURGameObject"/>.
+            /// </summary>
             public Vector3 Position;
+
+            /// <summary>
+            /// Rotation of the <see cref="EURGameObject"/>.
+            /// </summary>
             public Quaternion Rotation;
+
+            /// <summary>
+            /// Scale of the <see cref="EURGameObject"/>.
+            /// </summary>
             public Vector3 Scale;
 
+            /// <summary>
+            /// Save the Position, Rotation and Scale from <paramref name="transform"/>.
+            /// </summary>
+            /// <param name="transform">Transform to save data from.</param>
             public TransformState(Transform transform)
             {
                 Position = transform.position;

@@ -4,26 +4,26 @@ using System.Threading;
 using System.Threading.Tasks;
 
 /// <summary>
-/// Wrapper for <see cref="System.Collections.Generic.ConcurrentQueue"/>.
-/// Represents a thread-safe first in-first out (FIFO) collection.
+/// Wrapper for <see cref="System.Collections.Generic.ConcurrentQueue"/> that provides await
+/// functionality for dequeue. Represents a thread-safe first in-first out (FIFO) collection.
 /// </summary>
-/// <typeparam name="T">Datatype that is stored in the Queue.</typeparam>
+/// <typeparam name="T">Datatype that is stored in the queue.</typeparam>
 /// <seealso cref="ConcurrentQueue{T}"/>
 public class AwaitableConcurrentQueue<T> : ConcurrentQueue<T>
 {
     /// <summary>
-    /// Initializes a new instance of the AwaitableConcurrentQueue<T> class.
+    /// Initializes a new instance of the <see cref="AwaitableConcurrentQueue{T}"/> class.
     /// </summary>
     /// <seealso cref="ConcurrentQueue{T}.ConcurrentQueue"/>
     public AwaitableConcurrentQueue() : base() {}
 
     /// <summary>
-    /// Initializes a new instance of the AwaitableConcurrentQueue<T> class that contains
-    /// elements copied from the specified collection.
+    /// Initializes a new instance of the <see cref="AwaitableConcurrentQueue{T}"/> class that
+    /// contains elements copied from the specified collection.
     /// </summary>
-    /// <param name="collection"></param>
+    /// <param name="collection">The collection of elements to initialise the queue with.</param>
     /// <seealso cref="ConcurrentQueue{T}.ConcurrentQueue(IEnumerable{T})"/>
-    public AwaitableConcurrentQueue(IEnumerable<T> collection ) : base(collection) { }
+    public AwaitableConcurrentQueue(IEnumerable<T> collection) : base(collection) { }
 
     /// <summary>
     /// Event that is signaled whenever data is available to be read in the queue.
@@ -31,7 +31,7 @@ public class AwaitableConcurrentQueue<T> : ConcurrentQueue<T>
     public readonly AutoResetEvent DataAvailable = new AutoResetEvent(false);
 
     /// <summary>
-    /// The bool representing whether the Queue has been closed. After closing, no more
+    /// The bool representing whether the queue has been closed. After closing, no more
     /// data can be written to the queue.
     /// </summary>
     private bool _closed = false;
@@ -50,18 +50,16 @@ public class AwaitableConcurrentQueue<T> : ConcurrentQueue<T>
     }
 
     /// <summary>
-    /// Adds an object to the end of the AwaitableConcurrentQueue<T> if the queue is not
-    /// closed.
+    /// Adds an object to the end of the AwaitableConcurrentQueue<T> if the queue is not closed.
     /// </summary>
-    /// <param name="item">The object to add to the end of the ConcurrentQueue<T>. The value
-    /// can be a null reference (Nothing in Visual Basic) for reference types.</param>
+    /// <param name="item">The object to add to the end of the
+    /// <see cref="AwaitableConcurrentQueue{T}"/>. The value can be a null reference (Nothing in
+    /// Visual Basic) for reference types.</param>
     /// <returns>true if the <paramref name="item"/> was added to end of the queue,
     /// otherwise false.</returns>
     public new bool Enqueue(T item)
     {
-        // for now do nothing if set, would be better to throw an exception
         if (_closed) {
-            //throw new Exception();
             return false;
         }
 
@@ -71,10 +69,11 @@ public class AwaitableConcurrentQueue<T> : ConcurrentQueue<T>
     }
 
     /// <summary>
-    /// Returns a Task bool, TResult that will complete when data is available to read.
+    /// Get the value at the top of the queue.
     /// </summary>
-    /// <returns>A tuple containing whether the read was successful and the read item,
-    /// or a default value if no item could be read.</returns>
+    /// <returns> A Task wrapping a tuple of <see cref="bool"/> success and <typeparamref name="T"/>
+    /// value. If success is true then value is the dequeued item. If false, it is the default value
+    /// of <typeparamref name="T"/>.</returns>
     public async Task<(bool success, T value)> DequeueAsync()
     {
         bool success;

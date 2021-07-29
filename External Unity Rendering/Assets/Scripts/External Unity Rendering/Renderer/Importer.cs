@@ -17,7 +17,7 @@ namespace ExternalUnityRendering
     /// <summary>
     /// Component that manages importing a scene and rendering images.
     /// </summary>
-    public class ImportScene : MonoBehaviour
+    public class Importer : MonoBehaviour
     {
 #if UNITY_EDITOR
         /// <summary>
@@ -61,7 +61,7 @@ namespace ExternalUnityRendering
         /// <param name="json">JSON holding data to import.</param>
         /// <param name="renderPath">The path to render the scene to. If null, reads the
         /// render path from file and uses that.</param>
-        /// <returns>Whether the receiver should continue receiving data or exit.</returns>
+        /// <returns>Whether the json specifies to stop listening for data.</returns>
         public bool ImportCurrentScene(string json, DirectoryManager renderPath = null)
         {
             if (string.IsNullOrEmpty(json))
@@ -72,7 +72,6 @@ namespace ExternalUnityRendering
 
             Debug.Log("Beginning Import.");
 
-            // TODO add objects to this list based on if they are new in importer.
             List<GameObject> importObjects = new List<GameObject>();
             Scene currentScene = SceneManager.GetActiveScene();
             currentScene.GetRootGameObjects(importObjects);
@@ -170,7 +169,7 @@ namespace ExternalUnityRendering
             }
             finally
             {
-                // unparent in case new objects get added
+                // unparent in case errors occur
                 foreach (GameObject importObject in importObjects)
                 {
                     importObject.transform.parent = null;

@@ -3,12 +3,24 @@ using UnityEngine;
 
 namespace ExternalUnityRendering
 {
-    class RendererImportManager : MonoBehaviour
+    /// <summary>
+    /// Manager for importing the Scene states in batchmode.
+    /// </summary>
+    class ImporterManager : MonoBehaviour
     {
-        private static RendererImportManager _instance = null;
+        /// <summary>
+        /// Singleton representing the current <see cref="ImporterManager"/>.
+        /// </summary>
+        private static ImporterManager _instance = null;
 
-        public RendererArguments Arguments = null;
+        /// <summary>
+        /// The <see cref="ImporterArguments"/> for this manager.
+        /// </summary>
+        public ImporterArguments Arguments = null;
 
+        /// <summary>
+        /// Check if in Editor or _instance is not this, and if true, destroy this instance.
+        /// </summary>
         private void Awake()
         {
 #if UNITY_EDITOR
@@ -26,9 +38,14 @@ namespace ExternalUnityRendering
 #pragma warning restore
         }
 
+        /// <summary>
+        /// Get the <see cref="Importer"/> currently in the scene and if it does not exist, create
+        /// it. Then start automatically listening for messages to import. Performs blocking import
+        /// and exit when complete.
+        /// </summary>
         private void Start()
         {
-            ImportScene importer = FindObjectOfType<ImportScene>();
+            Importer importer = FindObjectOfType<Importer>();
             if (importer == null)
             {
                 GameObject obj = new GameObject
@@ -36,7 +53,7 @@ namespace ExternalUnityRendering
                     name = "SceneStateImporter"
                 };
 
-                importer = obj.AddComponent<ImportScene>();
+                importer = obj.AddComponent<Importer>();
             }
 
             Server receiver = new Server(Arguments.ReceiverPort, Arguments.ReceiverIpAddress);
