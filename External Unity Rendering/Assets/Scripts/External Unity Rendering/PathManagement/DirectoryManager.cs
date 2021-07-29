@@ -10,84 +10,107 @@ namespace ExternalUnityRendering.PathManagement
     public class DirectoryManager
     {
         /// <summary>
-        /// Internal reference to the file that this object manages.
+        /// The path to the directory pointed by the <see cref="DirectoryManager"/>.
         /// </summary>
-        private DirectoryInfo _directory;
+        private string _directory = Application.persistentDataPath;
 
         /// <summary>
-        /// Whether this directory must be unique. Will automatically rename if necessary.
-        /// </summary>
-        private readonly bool _createNewDirectory = false;
-
-        /// <summary>
-        /// The path of the directory that this instance manages. It will not
-        /// assign invalid values. Defaults to the application persistent data path.
+        /// The path of the directory that this instance manages. It will not assign invalid values.
+        /// Defaults to the application persistent data path.
         /// </summary>
         public string Path
         {
             get
             {
-                return _directory.FullName;
+                return _directory;
             }
             set
             {
+                SavePath(value, false);
+            }
+        }
+
+        /// <summary>
+        /// Validate and assign <paramref name="path"/> to <see cref="_directory"/> if valid.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="createNew"></param>
+        private void SavePath(string path, bool createNew)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return;
+            }
+
+            try
+            {
+                string fullPath = System.IO.Path.GetFullPath(path);
+
+                if (File.Exists(fullPath) || (Directory.Exists(fullPath) && createNew))
+                {
+                    int i = 1;
+                    do
+                    {
+                        // rename as dir (1), dir (2) and so on and so forth
+                        fullPath = $"{System.IO.Path.GetFullPath(path)} ({i++})";
+                    } while (Directory.Exists(fullPath));
+                }
+
+                if (!Directory.Exists(fullPath))
+                {
+                    Directory.CreateDirectory(fullPath);
+                }
+
+                _directory = fullPath;
+                return;
+            }
+            catch (ArgumentException ae)
+            {
+                Debug.LogError($"The directory \"{path}\" contains invalid characters.\n{ae}");
+            }
+            catch (System.Security.SecurityException se)
+            {
+                Debug.LogError($"You do not have the permissions to access \"{path}\".\n{se}");
+            }
+            catch (PathTooLongException ptle)
+            {
+                Debug.LogError($"The path \"{ path }\" is too long.\n{ptle}");
+                // Retry with extended filename for windows
+#if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
                 try
                 {
-                    DirectoryInfo dir = new DirectoryInfo(value);
-                    if (!dir.Exists)
-                    {
-                        dir.Create();
-                    } else if (_createNewDirectory)
+                    string winPath = $@"\\?\{System.IO.Path.GetFullPath(path).Replace('/', '\\')}";
+
+                    if (File.Exists(winPath) || (Directory.Exists(winPath) && createNew))
                     {
                         int i = 1;
                         do
                         {
                             // rename as dir (1), dir (2) and so on and so forth
-                            dir = new DirectoryInfo($"{ value } ({ i++ })");
-                        } while (dir.Exists);
+                            winPath = $"{System.IO.Path.GetFullPath(path)} ({i++})";
+                        } while (Directory.Exists(winPath));
                     }
-                    _directory = dir;
-                }
-                catch (ArgumentNullException ane)
-                {
-                    Debug.LogError("Cannot set directory path to null.\n"
-                        + ane.ToString());
-                }
-                catch (ArgumentException ae)
-                {
-                    Debug.LogError($"The directory <{ value }> contains invalid "
-                        + $"characters.\n{ ae }");
-                }
-                catch (System.Security.SecurityException se)
-                {
-                    Debug.LogError("You do not have the permissions to access "
-                        + $"<{ value }>.\n{ se }");
-                }
-                catch (PathTooLongException ptle)
-                {
-                    // TODO: Implement retry with extended filename for windows
-                    Debug.LogError($"The path <{ value }> is too long.\n"
-                        + ptle.ToString());
-                }
-                catch (IOException ioe)
-                {
-                    Debug.LogError($"The directory <{ value }> could not be created.\n"
-                        + ioe.ToString());
-                }
 
-                if ((_directory == null) && value == Application.dataPath)
-                {
-                    // If this failed, big problem, but that is a unity problem
-                    Debug.LogError("Failed to reference persistent data path!");
+                    if (!Directory.Exists(winPath))
+                    {
+                        Directory.CreateDirectory(winPath);
+                    }
+                    _directory = winPath;
+                    Debug.Log($"Created folder using windows extended path syntax: {winPath}");
+                    return;
                 }
-                else if (_directory == null)
-                {
-                    // if directory failed to be assigned, then try a new one.
-                    _directory = new DirectoryInfo(Application.persistentDataPath);
-                    Debug.LogWarning(
-                        $"Defaulting to { Application.persistentDataPath}.");
-                }
+                // If failed in any way, just assign path as persistent data path.
+                catch { }
+#endif
             }
+            catch (IOException ioe)
+            {
+                Debug.LogError($"The directory \"{ path }\" could not be created.\n{ioe}");
+            }
+
+            Debug.LogWarning($"Using the {nameof(Application.persistentDataPath)}: " +
+                $"\"{Application.persistentDataPath}\"");
+            _directory = Application.persistentDataPath;
         }
 
         /// <summary>
@@ -97,15 +120,14 @@ namespace ExternalUnityRendering.PathManagement
         /// <param name="createNew">Whether the folder should be unique.</param>
         public DirectoryManager(string path, bool createNew = false)
         {
-            _createNewDirectory = createNew;
-            Path = path;
+            SavePath(path, createNew);
         }
 
+        // Empty, as _path is by default the datapath.
         /// <summary>
-        /// Create a manager for the application persistent data path
+        /// Create a manager for the application persistent data path.
         /// </summary>
-        public DirectoryManager()
-            : this(Application.persistentDataPath) { }
+        public DirectoryManager() { }
 
         /// <summary>
         /// Create a subdirectory in <paramref name="directory"/> named
