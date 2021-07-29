@@ -28,7 +28,7 @@ Run two instances of Unity in parallel. The “main” instance is responsible f
 - [Unity Editor](https://unity3d.com/get-unity/download/archive). Tested versions include: 
   - 2020.1.8f1
   - 2020.3.11f1
-  - Powershell (Windows) or Bash (GNU/Linux) (Optional for script usage)
+- Powershell (Windows) or Bash (GNU/Linux) (Optional for script usage)
 
 ## Usage
 Currently the project only runs a test scene with some random forces applied at runtime. The exporter and importer are accessible in the editor, and automatically run in a standalone build. The project can be built for Windows or Linux, and then run using command line. Scripts are provided (Powershell and Bash) which help automate this process.
