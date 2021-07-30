@@ -8,6 +8,7 @@ using ExternalUnityRendering.PathManagement;
 using Unity.EditorCoroutines.Editor;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace ExternalUnityRendering.UnityEditor
 {
@@ -16,10 +17,11 @@ namespace ExternalUnityRendering.UnityEditor
     /// </summary>
     public class ExporterEditorMenu : EditorWindow
     {
+        public Exporter SceneExporter = null;
+
         /// <summary>
         /// Number of times that the exporter will run.
         /// </summary>
-
         private int _exportCount = 10;
 
         /// <summary>
@@ -92,7 +94,7 @@ namespace ExternalUnityRendering.UnityEditor
         /// Create an <see cref="ExporterEditorMenu"/> and show it.
         /// </summary>
         [MenuItem("Scene State Exporter/Menu")]
-        static void Init()
+        private static void Init()
         {
             GetWindow<ExporterEditorMenu>().Show();
         }
@@ -131,7 +133,7 @@ namespace ExternalUnityRendering.UnityEditor
         /// <summary>
         /// Function that is called every time the GUI needs to update. Defines the UI layout.
         /// </summary>
-        private void OnGUI()
+        public void OnGUI()
         {
             // HACK using largest label to size all labels
             EditorGUIUtility.labelWidth = Mathf.Max(EditorStyles.label.CalcSize(
@@ -274,6 +276,15 @@ namespace ExternalUnityRendering.UnityEditor
                 if (EditorUtility.DisplayDialog("Confirm your choices",
                     options.ToString(), "Yes", "No"))
                 {
+                    if (SceneExporter == null)
+                    {
+                        SceneExporter = FindObjectOfType<Exporter>();
+                        if (SceneExporter == null)
+                        {
+                            SceneExporter = new GameObject().AddComponent<Exporter>();
+                        }
+                    }
+
                     _exportLoop = this.StartCoroutine(ExportLoop());
                 }
             }
@@ -282,15 +293,9 @@ namespace ExternalUnityRendering.UnityEditor
             EditorGUILayout.EndScrollView();
         }
 
-        private IEnumerator ExportLoop()
+        public IEnumerator ExportLoop()
         {
-            Exporter exporter = FindObjectOfType<Exporter>();
-            if (exporter == null)
-            {
-                exporter = new GameObject().AddComponent<Exporter>();
-            }
-
-            exporter.Sender = new TcpIp.Client(_serverPort, _serverIpAddress);
+            SceneExporter.Sender = new TcpIp.Client(_serverPort, _serverIpAddress);
 
             float delaySeconds = _exportDelay / 1000;
             int progressID = Progress.Start("Exporting...", $"Exporting {_exportCount} scenes " +
@@ -316,17 +321,34 @@ namespace ExternalUnityRendering.UnityEditor
                 }
                 Progress.Report(progressID, (float)i / _exportCount,
                     $"Exported {i} scene states so far.");
-                exporter.ExportCurrentScene(_exportActions, _renderResolution, _renderFolder);
+                SceneExporter.ExportCurrentScene(_exportActions, _renderResolution, _renderFolder);
                 yield return new EditorWaitForSeconds(delaySeconds);
             }
 
+            Progress.Report(progressID, 1f, $"Exported {_exportCount} scene states so far.");
             if (_sendClosingMsg)
             {
-                System.Threading.Tasks.Task close = exporter.Sender.CloseAsync();
+                System.Threading.Tasks.Task close = SceneExporter.Sender.CloseAsync();
                 yield return new WaitUntil(() => close.IsCompleted); // non blocking wait for close
             }
 
             Progress.Finish(progressID);
+        }
+    }
+
+    [CustomEditor(typeof(Exporter))]
+    public class ExporterInspectorMenu : Editor
+    {
+        private ExporterEditorMenu editorMenu;
+        public override VisualElement CreateInspectorGUI()
+        {
+            editorMenu = EditorWindow.GetWindow<ExporterEditorMenu>();
+            return base.CreateInspectorGUI();
+        }
+        public override void OnInspectorGUI()
+        {
+            editorMenu.SceneExporter = target as Exporter;
+            editorMenu.OnGUI();
         }
     }
 }
