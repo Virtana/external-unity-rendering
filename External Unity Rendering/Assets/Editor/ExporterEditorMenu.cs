@@ -88,12 +88,13 @@ namespace ExternalUnityRendering.UnityEditor
         private const string _portLabel = "Server Port: ";
         private const string _sendClosingMsgLabel = "Send closing message: ";
         private const string _outputResLabel = "Renderer Output Resolution: ";
+        private const string _renderPathLabel = "Select the folder to export the final renders to.";
         #endregion
 
         /// <summary>
         /// Create an <see cref="ExporterEditorMenu"/> and show it.
         /// </summary>
-        [MenuItem("Scene State Exporter/Menu")]
+        [MenuItem("External Rendering/Exporter Menu")]
         private static void Init()
         {
             GetWindow<ExporterEditorMenu>().Show();
@@ -101,6 +102,7 @@ namespace ExternalUnityRendering.UnityEditor
 
         private void OnEnable()
         {
+            titleContent = new GUIContent("Launch Exporter");
             AssemblyReloadEvents.beforeAssemblyReload += ReloadVariables;
         }
 
@@ -177,8 +179,8 @@ namespace ExternalUnityRendering.UnityEditor
 
             if (GUILayout.Button("Select Render Instance Output Folder"))
             {
-                _renderFolder = EditorUtility.OpenFolderPanel(
-                    "Select the folder to export the final renders to.", _renderFolder, "Renders");
+                _renderFolder = EditorUtility.OpenFolderPanel(_renderPathLabel, _renderFolder,
+                    "Renders");
             }
 
             _renderResolution = EditorGUILayout.Vector2IntField(_outputResLabel, _renderResolution);
