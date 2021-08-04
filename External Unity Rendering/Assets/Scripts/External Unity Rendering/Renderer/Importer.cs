@@ -19,17 +19,26 @@ namespace ExternalUnityRendering
     /// </summary>
     public class Importer : MonoBehaviour
     {
-#if UNITY_EDITOR
+        private static Importer s_instance = null;
         /// <summary>
-        /// Initialise a receiver if in editor
+        /// Initialise a receiver.
         /// </summary>
         private void Awake()
         {
-            Debug.LogWarning("Improperly implemented automatic setup for editor");
+            if (s_instance != null && s_instance != this)
+            {
+                Debug.LogError($"Cannot have more than one {nameof(Importer)} in the scene.");
+                Destroy(this);
+                return;
+            }
+            s_instance = this;
+
+#if UNITY_EDITOR
+            Debug.LogWarning("Improperly implemented automatic setup for editor.");
             new Server(11000, "localhost").ProcessCallbackAsync((state) => ImportCurrentScene(state));
             Debug.Log("Awaiting Messages?");
-        }
 #endif
+        }
 
         /// <summary>
         /// Import data from a file.

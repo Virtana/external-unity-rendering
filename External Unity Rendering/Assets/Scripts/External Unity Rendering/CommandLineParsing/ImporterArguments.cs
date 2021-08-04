@@ -1,6 +1,8 @@
 ﻿using System.Linq;
 using System.Net;
+
 using CommandLine;
+
 using ExternalUnityRendering.PathManagement;
 
 namespace ExternalUnityRendering

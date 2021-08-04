@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+
 using UnityEngine;
 
 namespace ExternalUnityRendering
@@ -8,7 +9,7 @@ namespace ExternalUnityRendering
         /// <summary>
         /// The singleton representing the current <see cref="ExporterManager"/>.
         /// </summary>
-        private static ExporterManager _instance = null;
+        private static ExporterManager s_instance = null;
 
         /// <summary>
         /// The <see cref="ExporterArguments"/> for this manager.
@@ -27,14 +28,14 @@ namespace ExternalUnityRendering
             return;
 #endif
 #pragma warning disable CS0162 // unreachable code warning when UNITY_EDITOR is set
-            if (_instance != null && _instance != this)
+            if (s_instance != null && s_instance != this)
             {
                 Debug.LogError($"Cannot have multiple instances of {nameof(ExporterManager)}");
                 Destroy(this);
                 return;
             }
 
-            _instance = this;
+            s_instance = this;
 #pragma warning restore
         }
 
@@ -65,7 +66,7 @@ namespace ExternalUnityRendering
         /// <param name="exporter">The exporter to export the current scene with.</param>
         /// <returns>IEnumerator to use for <see cref="MonoBehaviour.StartCoroutine(IEnumerator)"/>.
         /// </returns>
-        IEnumerator ExportLoop(Exporter exporter)
+        private IEnumerator ExportLoop(Exporter exporter)
         {
             exporter.ExportFolder = Arguments.JsonPath;
             float delaySeconds = Arguments.MillisecondsDelay / 1000f;
@@ -84,11 +85,11 @@ namespace ExternalUnityRendering
                 Debug.Log("Emptied queue and sending closing message.");
                 if (Application.isBatchMode)
                 {
-                    exporter.Sender.FinishTransmissionsAndClose();
+                    exporter.Sender.Close();
                 }
                 else
                 {
-                    yield return new WaitUntil(exporter.Sender.IsDone);
+                    yield return new WaitUntil(() => exporter.Sender.IsDone);
                 }
             }
 
@@ -112,10 +113,10 @@ namespace ExternalUnityRendering
             Exporter exporter = FindObjectOfType<Exporter>();
             if (exporter != null
                 && Arguments.ExportActions.HasFlag(Exporter.PostExportAction.Transmit)
-                && !exporter.Sender.IsDone())
+                && !exporter.Sender.IsDone)
             {
                 Debug.Log("Waiting for exporter to close.");
-                exporter.Sender.FinishTransmissionsAndClose();
+                exporter.Sender.Close();
             }
         }
     }

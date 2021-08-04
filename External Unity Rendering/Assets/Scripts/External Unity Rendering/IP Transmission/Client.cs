@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+
 using ExternalUnityRendering.Serialization;
+
 using UnityEngine;
 
 namespace ExternalUnityRendering.TcpIp
@@ -29,6 +30,18 @@ namespace ExternalUnityRendering.TcpIp
             new ManualResetEventSlim(false);
 
         /// <summary>
+        /// Get whether all the messages have been sent.
+        /// </summary>
+        /// <returns>Whether all the messages have been sent.</returns>
+        public bool IsDone
+        {
+            get
+            {
+                return _completedTransmission.IsSet;
+            }
+        }
+
+        /// <summary>
         /// Helper function to split a string into chunks of bytes.
         /// </summary>
         /// <param name="data">The string to be converted.</param>
@@ -49,56 +62,17 @@ namespace ExternalUnityRendering.TcpIp
         }
 
         /// <summary>
-        /// Create a client to manage sending data to a server over a socket.
-        /// </summary>
-        /// <param name="port">The port to send data to.</param>
-        /// <param name="ipString">The IP address to send data to.</param>
-        /// <param name="maxRetries">The maximum number of times to retry sending data
-        /// after the connection has been refused.</param>
-        public Client(int port, string ipAddr,
-            int maxRetries = 3, int chunkSize = 50)
-        {
-            try
-            {
-                IPAddress ipAddress = null;
-                if (ipAddr == "localhost")
-                {
-                    ipAddress = IPAddress.Loopback;
-                }
-                else
-                {
-                    ipAddress = IPAddress.Parse(ipAddr);
-                }
-                IPEndPoint remoteEndPoint = new IPEndPoint(ipAddress, port);
-
-                Task.Run(() => InitializeSender(ipAddress, remoteEndPoint, maxRetries, chunkSize));
-            }
-            catch (SocketException se)
-            {
-                Debug.LogError("An error occured while trying to initialise the socket. " +
-                    $"The error code is {se.SocketErrorCode}.\n{se}");
-            }
-            catch (ArgumentException ae)
-            {
-                Debug.LogError("An error occurred while trying to resolve the host. " +
-                    $"\n{ae}");
-            }
-        }
-
-        /// <summary>
         /// Read messages from the queue and transmit them to <paramref name="remoteEndPoint"/>.
         /// </summary>
-        /// <param name="ipAddress">The IP address to send data to.</param>
         /// <param name="remoteEndPoint">The remote endpoint to send data to.</param>
         /// <param name="maxAttempts">The max number of attempts to retry connection after being
         /// rejected. </param>
         /// <param name="chunkSize">The size of each chunk of data to send.</param>
-        private async void InitializeSender(IPAddress ipAddress, IPEndPoint remoteEndPoint,
-            int maxAttempts, int chunkSize)
+        private async void SendAsync(IPEndPoint remoteEndPoint, int maxAttempts, int chunkSize)
         {
             Debug.Log("Opening message queue.");
 
-            using (Socket pinger = new Socket(ipAddress.AddressFamily, SocketType.Stream,
+            using (Socket pinger = new Socket(remoteEndPoint.AddressFamily, SocketType.Stream,
                     ProtocolType.Tcp))
             {
                 while (!pinger.Connected)
@@ -112,12 +86,15 @@ namespace ExternalUnityRendering.TcpIp
                     {
                         if (se.ErrorCode != 10050 && se.ErrorCode != 10061)
                         {
-                            Debug.LogError($"While waiting for server to come online, received: {se.SocketErrorCode} {se.ErrorCode}");
+                            Debug.LogError($"While waiting for server to come online, received: " +
+                                $"{se.SocketErrorCode} {se.ErrorCode}");
                             Application.Quit(1);
                         }
                     }
                 }
             }
+
+            Debug.Log($"Connected to {remoteEndPoint} at {DateTime.Now}");
 
             while (_messageQueue.QueueComplete)
             {
@@ -125,18 +102,19 @@ namespace ExternalUnityRendering.TcpIp
 
                 if (!readSuccess)
                 {
-                    Debug.Log("Failed to read from queue");
+                    Debug.Log("Failed to read from queue.");
                     continue;
                 }
-                using (Socket sender = new Socket(ipAddress.AddressFamily, SocketType.Stream,
+                using (Socket sender = new Socket(remoteEndPoint.AddressFamily, SocketType.Stream,
                     ProtocolType.Tcp))
                 {
-                    int connectionAttempts = 0;
-                    while (connectionAttempts < maxAttempts)
+                    bool connectSuccess = false;
+                    for (int tries = 0; tries < maxAttempts; tries++)
                     {
                         try
                         {
                             await sender.ConnectAsync(remoteEndPoint);
+                            connectSuccess = true;
                             break;
                         }
                         catch (SocketException se)
@@ -145,43 +123,39 @@ namespace ExternalUnityRendering.TcpIp
                                 $"Error: {se.SocketErrorCode}. " +
                                 $"Error Code: {se.ErrorCode}.");
 
-                            if ((se.ErrorCode != 10061
-                                && se.ErrorCode != 10050
+                            if (se.ErrorCode != 10061 && se.ErrorCode != 10050
                                 && se.ErrorCode != 10057)
-                                || maxAttempts == connectionAttempts)
                             {
                                 // if error is not connection refused or has run out of attempts
                                 Debug.LogError("Aborting...");
-
-                                // try queueing again?
-                                connectionAttempts = maxAttempts;
                                 break;
                             }
 
                             // add polling
-                            Debug.Log($"Tried {++connectionAttempts}/{maxAttempts} times. Retrying...");
+                            Debug.Log($"Tried {tries + 1}/{maxAttempts} times. " +
+                                "Retrying...");
                             await Task.Delay(100);
                             continue;
                         }
                         catch (ObjectDisposedException ode)
                         {
-                            Debug.LogError($"The sender socket has been closed.\n{ode}\nAborting...");
+                            Debug.LogError($"The sender socket has been closed.\n{ode}\n" +
+                                "Aborting...");
                         }
                         catch (System.Security.SecurityException se)
                         {
-                            Debug.LogError("A caller higher in the call stack does not have permission " +
-                                $"for the requested operation.\n{se}");
+                            Debug.LogError("A caller higher in the call stack does not have " +
+                                $"permission for the requested operation.\n{se}");
                         }
                         catch (InvalidOperationException ioe)
                         {
-                            Debug.LogError("The socket has been placed in a listening state by calling " +
-                                $"Listen(Int32).\n{ioe}");
+                            Debug.LogError("The socket has been placed in a listening state by " +
+                                $"calling Listen(Int32).\n{ioe}");
                         }
-                        connectionAttempts = maxAttempts;
                         break;
                     }
 
-                    if (maxAttempts == connectionAttempts)
+                    if (!connectSuccess)
                     {
                         Debug.LogError("Failed to connect. Discarding data.");
                         continue;
@@ -208,38 +182,75 @@ namespace ExternalUnityRendering.TcpIp
         }
 
         /// <summary>
+        /// Create a client to manage sending data to a server over a socket.
+        /// </summary>
+        /// <param name="port">The port to send data to.</param>
+        /// <param name="ipString">The IP address to send data to.</param>
+        /// <param name="maxRetries">The maximum number of times to retry sending data
+        /// after the connection has been refused.</param>
+        public Client(int port, string ipAddr, int maxRetries = 3, int chunkSize = 1024)
+        {
+            try
+            {
+                IPAddress ipAddress = null;
+                if (ipAddr == "localhost")
+                {
+                    ipAddress = IPAddress.Loopback;
+                }
+                else
+                {
+                    ipAddress = IPAddress.Parse(ipAddr);
+                }
+                IPEndPoint remoteEndPoint = new IPEndPoint(ipAddress, port);
+
+                Task.Run(() => SendAsync(remoteEndPoint, maxRetries, chunkSize));
+            }
+            catch (SocketException se)
+            {
+                Debug.LogError("An error occured while trying to initialise the socket. " +
+                    $"The error code is {se.SocketErrorCode}.\n{se}");
+            }
+            catch (ArgumentException ae)
+            {
+                Debug.LogError("An error occurred while trying to resolve the host. " +
+                    $"\n{ae}");
+            }
+        }
+
+        /// <summary>
         /// Add a string to the queue of data to be sent.
         /// </summary>
         /// <param name="data">String to be sent.</param>
         /// <returns>Wheter the data was successfully enqueued.</returns>
-        public bool QueueSend(string data)
+        public bool Send(string data)
         {
             return _messageQueue.Enqueue(data);
         }
 
         /// <summary>
-        /// Wait for all messages to finish sending .
+        /// Wait for all messages to finish sending.
         /// </summary>
-        public void FinishTransmissionsAndClose()
+        public void Close()
         {
             Debug.Log("Sending closing message.");
-            string text_file = Newtonsoft.Json.JsonConvert.SerializeObject(new EURScene()
-                        {
-                            ContinueImporting = false
-                        });
-            _messageQueue.Enqueue(text_file);
+            _messageQueue.Enqueue(EURScene.ClosingMessage);
             _messageQueue.Close();
-            _completedTransmission.Wait();
             Debug.Log("Closed message queue. When queue is empty, the program will terminate.");
+            _completedTransmission.Wait();
         }
 
         /// <summary>
-        /// Get whether all the messages have been sent.
+        /// Wait for all messages to finish sending.
         /// </summary>
-        /// <returns>Whether all the messages have been sent.</returns>
-        public bool IsDone()
+        /// <returns>A <see cref="Task"/> that resolves when all the data has finished sending.
+        /// </returns>
+        public async Task CloseAsync()
         {
-            return _completedTransmission.IsSet;
+            Debug.Log("Sending closing message.");
+            _messageQueue.Enqueue(EURScene.ClosingMessage);
+            _messageQueue.Close();
+            Debug.Log("Closed message queue. When queue is empty, the program will terminate.");
+            await Task.Run(_completedTransmission.Wait);
         }
     }
 }

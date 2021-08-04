@@ -1,6 +1,8 @@
-﻿using ExternalUnityRendering.PathManagement;
-using System;
+﻿using System;
 using System.IO;
+
+using ExternalUnityRendering.PathManagement;
+
 using UnityEngine;
 
 namespace ExternalUnityRendering.CameraUtilites

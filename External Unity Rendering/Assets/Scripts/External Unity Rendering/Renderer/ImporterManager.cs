@@ -1,4 +1,5 @@
 ﻿using ExternalUnityRendering.TcpIp;
+
 using UnityEngine;
 
 namespace ExternalUnityRendering
@@ -11,7 +12,7 @@ namespace ExternalUnityRendering
         /// <summary>
         /// Singleton representing the current <see cref="ImporterManager"/>.
         /// </summary>
-        private static ImporterManager _instance = null;
+        private static ImporterManager s_instance = null;
 
         /// <summary>
         /// The <see cref="ImporterArguments"/> for this manager.
@@ -28,13 +29,13 @@ namespace ExternalUnityRendering
             return;
 #endif
 #pragma warning disable CS0162 // unreachable code warning when UNITY_EDITOR is set
-            if (_instance != null && _instance != this)
+            if (s_instance != null && s_instance != this)
             {
                 Debug.LogError("Cannot have multiple instances of RendererImportManager.");
                 Destroy(this);
                 return;
             }
-            _instance = this;
+            s_instance = this;
 #pragma warning restore
         }
 

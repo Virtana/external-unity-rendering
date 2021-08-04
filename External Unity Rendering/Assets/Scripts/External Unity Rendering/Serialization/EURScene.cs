@@ -1,5 +1,7 @@
 ﻿using System;
+
 using UnityEngine;
+
 using Newtonsoft.Json;
 
 namespace ExternalUnityRendering.Serialization
@@ -12,6 +14,16 @@ namespace ExternalUnityRendering.Serialization
     [JsonConverter(typeof(EURSceneConverter))]
     public class EURScene
     {
+        /// <summary>
+        /// An empty serialized scene with <see cref="ContinueImporting"/> set to false.
+        /// </summary>
+        [JsonIgnore]
+        public static readonly string ClosingMessage = 
+            JsonConvert.SerializeObject(new EURScene
+                {
+                    ContinueImporting = false
+                });
+
         /// <summary>
         /// Struct that represents settings for a <see cref="CameraUtilites.CustomCamera"/>
         /// </summary>
