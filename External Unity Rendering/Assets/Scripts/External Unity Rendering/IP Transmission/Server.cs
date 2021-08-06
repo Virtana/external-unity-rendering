@@ -166,7 +166,7 @@ namespace ExternalUnityRendering.TcpIp
         /// </summary>
         /// <param name="dataReceivedCallback">Function to pass the received data. Returns whether
         /// to keep processing or stop.</param>
-        public async void ProcessCallbackAsync(Func<string, bool> dataReceivedCallback)
+        public async Task ProcessCallbackAsync(Func<string, bool> dataReceivedCallback)
         {
             bool continueReading = true;
 

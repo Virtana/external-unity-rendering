@@ -1,10 +1,14 @@
-﻿using ExternalUnityRendering.CameraUtilites;
-using ExternalUnityRendering.PathManagement;
-using System.Collections.Generic;
+﻿using System.Collections;
+using System.Linq;
+using System.Net;
 using System.Text;
-using System.Threading.Tasks;
+
+using ExternalUnityRendering.PathManagement;
+
+using Unity.EditorCoroutines.Editor;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace ExternalUnityRendering.UnityEditor
 {
@@ -13,6 +17,8 @@ namespace ExternalUnityRendering.UnityEditor
     /// </summary>
     public class ExporterEditorMenu : EditorWindow
     {
+        public Exporter SceneExporter = null;
+
         /// <summary>
         /// Number of times that the exporter will run.
         /// </summary>
@@ -21,211 +27,170 @@ namespace ExternalUnityRendering.UnityEditor
         /// <summary>
         /// The difference in unity time between two exported states.
         /// </summary>
-        private int _millisecondsDelay = 1000;
+        private int _exportDelay = 1000;
 
         /// <summary>
         /// The radius for the explosion
         /// </summary>
-        private Exporter.PostExportAction _exportType = Exporter.PostExportAction.Nothing;
+        private Exporter.PostExportAction _exportActions = Exporter.PostExportAction.Nothing;
 
         /// <summary>
-        /// The path where scene states (json) will be saved if the write to file
-        /// option is chosen.
+        /// The path where scene states (json) will be saved if the write to file option is chosen.
         /// </summary>
-        private string _exportFolder = System.IO.Path.GetFullPath("../");
+        private string _exportFolder = null;
 
         /// <summary>
-        /// Whether to use an explosion (true) or randomly applied force (false).
+        /// Port to send the scene states to.
         /// </summary>
-        private bool _useExplosion = true;
+        private int _serverPort = 11000;
 
         /// <summary>
-        /// The point in worldspace coordinates where the explosive force emanates from.
+        /// IP address to send scene states to.
         /// </summary>
-        private Vector3 _explosionOrigin = Vector3.zero;
-
-        /// <summary>
-        /// The radius of the explosion. Outside of this radius, the explosion has no
-        /// effect.
-        /// </summary>
-        private float _explosionRadius = 10;
-
-        /// <summary>
-        /// The force of the explosion.
-        /// </summary>
-        private float _explosionForce = 1;
-
-        /// <summary>
-        /// A modifier to the y-axis position of the source of the explosion. Used to
-        /// offset the source of the explosion to give the effect of lifting objects.
-        /// </summary>
-        private float _explosionUpwardsModifier = 10;
-
-        /// <summary>
-        /// The type of random force to apply to the objects in the sceme.
-        /// </summary>
-        private ForceMode _forceType = ForceMode.Impulse;
-
-        /// <summary>
-        /// Each component of the directional force will be a random value
-        /// between these two limits.
-        /// </summary>
-        private Vector2 _minMaxForce = new Vector2(-10, 10);
-
-        /// <summary>
-        /// Whether the exporter should render images. Meant for testing only.
-        /// </summary>
-        private bool _exportTestRenders = false;
-
-        /// <summary>
-        /// The path where exporter images would be rendered to.
-        /// </summary>
-        private string _renderFolder = System.IO.Path.GetFullPath("../");
-
-        /// <summary>
-        /// The resolution of all of the rendered images by the exporter.
-        /// </summary>
-        private Vector2Int _renderResolution = new Vector2Int(1920, 1080);
+        private string _serverIpAddress = "localhost";
 
         /// <summary>
         /// The path where the external rendering instance should render its images to.
         /// </summary>
-        private string _rendererOutputFolder = System.IO.Path.GetFullPath("../");
+        private string _renderFolder = System.IO.Path.GetFullPath("../");
 
         /// <summary>
         /// The resolution of all the rendered images by the external renderer.
         /// </summary>
-        private Vector2Int _rendererOutputResolution = new Vector2Int(1920, 1080);
+        private Vector2Int _renderResolution = new Vector2Int(1920, 1080);
 
         /// <summary>
-        /// Initiator for the window to appear.
+        /// Scroll position for the current GUI Position.
         /// </summary>
-        [MenuItem("Exporter Testing/Menu")]
-        static void Init()
+        private Vector2 _scrollPosition = Vector2.zero;
+
+        /// <summary>
+        /// Whether to send the closing signal after finished exporting. Does not affect cancelled
+        /// export loops.
+        /// </summary>
+        private bool _sendClosingMsg = false;
+
+        /// <summary>
+        /// The loop that manages the exporting.
+        /// </summary>
+        private EditorCoroutine _exportLoop = null;
+
+        #region GUI Labels
+        private const string _exportCountLabel = "Number of Exports to perform: ";
+        private const string _exportDelayLabel = "Delay between exports: ";
+        private const string _exportOptionsExplanationLabel = "Export Options: ";
+        private const string _exportOptionsExplanation = "None: Attempt to serialize but do " +
+            "nothing with the data.\nTransmit: Attempt to transmit over TCP/IP.\nWriteToFile: " +
+            "Write to file in a specified folder (or the persistent data path).\nLog: Write to " +
+            "the console.";
+        private const string _exportOptionsLabel = "How to export Scene State: ";
+        private const string _ipAddressLabel = "Server IP address: ";
+        private const string _portLabel = "Server Port: ";
+        private const string _sendClosingMsgLabel = "Send closing message: ";
+        private const string _outputResLabel = "Renderer Output Resolution: ";
+        private const string _renderPathLabel = "Select the folder to export the final renders to.";
+        #endregion
+
+        /// <summary>
+        /// Create an <see cref="ExporterEditorMenu"/> and show it.
+        /// </summary>
+        [MenuItem("External Rendering/Exporter Menu")]
+        private static void Init()
         {
-            ExporterEditorMenu window = GetWindow<ExporterEditorMenu>();
-            window.Show();
+            GetWindow<ExporterEditorMenu>().Show();
+        }
+
+        private void OnEnable()
+        {
+            titleContent = new GUIContent("Launch Exporter");
+            AssemblyReloadEvents.beforeAssemblyReload += ReloadVariables;
+        }
+
+        private void OnDisable()
+        {
+            AssemblyReloadEvents.beforeAssemblyReload -= ReloadVariables;
+        }
+
+        /// <summary>
+        /// Refresh all of the editor variables.
+        /// </summary>
+        private void ReloadVariables()
+        {
+            minSize =
+                new Vector2(EditorStyles.label.CalcSize(new GUIContent(_exportCountLabel)).x * 2,
+                minSize.y);
+            _exportCount = 10;
+            _exportDelay = 1000;
+            _exportActions = Exporter.PostExportAction.Nothing;
+            _exportFolder = null;
+            _serverPort = 11000;
+            _serverIpAddress = "localhost";
+            _renderFolder = System.IO.Path.GetFullPath("../");
+            _renderResolution = new Vector2Int(1920, 1080);
+            _scrollPosition = Vector2.zero;
+            _sendClosingMsg = false;
+            _exportLoop = null;
         }
 
         /// <summary>
         /// Function that is called every time the GUI needs to update. Defines the UI layout.
         /// </summary>
-        private void OnGUI()
+        public void OnGUI()
         {
-            // TODO make scrollable between top label and button
-            // HACK manually resizing each element
-
-            // Get/set some values needed for the GUI
-            GUIStyle style = EditorStyles.label;
+            // HACK using largest label to size all labels
+            EditorGUIUtility.labelWidth = Mathf.Max(EditorStyles.label.CalcSize(
+                new GUIContent(_exportCountLabel)).x, 0.25f * position.width);
             EditorStyles.boldLabel.alignment = TextAnchor.MiddleCenter;
+            _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition);
 
-            EditorGUILayout.LabelField("Configure the following before exporting.",
-                EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Exporter Settings", EditorStyles.boldLabel);
+
+            #region Time Settings
+            _exportCount = EditorGUILayout.IntSlider(_exportCountLabel, _exportCount, 1, 100);
+            _exportDelay = EditorGUILayout.IntSlider(_exportDelayLabel, _exportDelay, 100, 10000);
             EditorGUILayout.Space();
+            #endregion
 
-            EditorGUILayout.LabelField("Exporter & Testing Settings",
-                EditorStyles.boldLabel);
-
-            GUIContent label = new GUIContent("Number of Exports to perform: ");
-            EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-            _exportCount = EditorGUILayout.IntSlider(label, _exportCount, 1, 10000);
-            label = new GUIContent("Delay between exports: ");
-            EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-            _millisecondsDelay = EditorGUILayout.IntSlider(label, _millisecondsDelay, 10, 10000);
-
-            GUIContent optionLabel = new GUIContent("Export Options: ");
-            GUIContent optionListLabel =
-                new GUIContent("None : Attempt to serialize but do nothing with the data.\n" +
-                "Transmit: Attempt to transmit over TCP/IP.\n" +
-                "WriteToFile: Write to file in a specified folder (or the persistent data path).\n" +
-                "Log: Write to the console.");
-
-            EditorGUIUtility.labelWidth = style.CalcSize(optionLabel).x;
-            EditorGUILayout.LabelField(optionLabel, optionListLabel,
+            #region Export Options
+            EditorGUILayout.LabelField(_exportOptionsExplanationLabel, _exportOptionsExplanation,
                 EditorStyles.wordWrappedLabel);
-
-            label = new GUIContent("How to export Scene State: ");
-            EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-            _exportType = (Exporter.PostExportAction)
-                EditorGUILayout.EnumFlagsField(label, _exportType);
-
-            if ((_exportType & Exporter.PostExportAction.WriteToFile)
-                == Exporter.PostExportAction.WriteToFile)
+            _exportActions = (Exporter.PostExportAction)EditorGUILayout.EnumFlagsField(
+                _exportOptionsLabel, _exportActions);
+            if (_exportActions.HasFlag(Exporter.PostExportAction.WriteToFile) && GUILayout.Button("Select Export folder"))
             {
-                if (GUILayout.Button("Select Export folder"))
+                _exportFolder = EditorUtility.OpenFolderPanel(
+                    "Select the folder to export the scene state to.", _exportFolder, "");
+            }
+            if (_exportActions.HasFlag(Exporter.PostExportAction.Transmit))
+            {
+                _serverIpAddress = EditorGUILayout.TextField(_ipAddressLabel, _serverIpAddress);
+                int providedPort = EditorGUILayout.IntField(_portLabel, _serverPort);
+                if (1023 < providedPort && providedPort < 65535)
                 {
-                    _exportFolder = EditorUtility.OpenFolderPanel(
-                        "Select the folder to export the scene state to.", _exportFolder, "");
+                    _serverPort = providedPort;
                 }
+                _sendClosingMsg = EditorGUILayout.Toggle(_sendClosingMsgLabel, _sendClosingMsg);
             }
-
             EditorGUILayout.Space();
+            #endregion
 
-            _useExplosion = EditorGUILayout.BeginToggleGroup("Use Explosion", _useExplosion);
-            label = new GUIContent("Explosion Source: ");
-            EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-            _explosionOrigin = EditorGUILayout.Vector3Field(label, _explosionOrigin);
-            label = new GUIContent("Explosion Radius: ");
-            EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-            _explosionRadius = EditorGUILayout.Slider(label, _explosionRadius, 5, 100);
-            label = new GUIContent("Explosive Force: ");
-            EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-            _explosionForce = EditorGUILayout.Slider(label, _explosionForce, 10, 500);
-            label = new GUIContent("Upwards Force Modifier: ");
-            EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-            _explosionUpwardsModifier =
-                EditorGUILayout.Slider(label, _explosionUpwardsModifier, 10, 500);
-            EditorGUILayout.EndToggleGroup();
-
-            EditorGUILayout.Space();
-
-            _useExplosion = !EditorGUILayout.BeginToggleGroup("Use Random Force", !_useExplosion);
-            label = new GUIContent("Force Type: ");
-            EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-            _forceType = (ForceMode)EditorGUILayout.EnumPopup(label, _forceType);
-
-            label = new GUIContent("Random Force Limits: ");
-            EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-            GUIContent limits =
-                new GUIContent($"Min: {_minMaxForce.x:.0} Max: {_minMaxForce.y:.0}");
-            EditorGUILayout.LabelField(label, limits);
-
-            EditorGUILayout.MinMaxSlider(ref _minMaxForce.x, ref _minMaxForce.y, -100, 100);
-            EditorGUILayout.EndToggleGroup();
-
-            EditorGUILayout.Space();
-
-            _exportTestRenders =
-                EditorGUILayout.BeginToggleGroup("Export Renders", _exportTestRenders);
-            if (GUILayout.Button("Select Render Folder"))
-            {
-                _renderFolder = EditorUtility.OpenFolderPanel(
-                    "Select the folder to export the renders to.", _renderFolder, "");
-            }
-
-            label = new GUIContent("Render Resolution: ");
-            EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-            _renderResolution = EditorGUILayout.Vector2IntField(label, _renderResolution);
-            EditorGUILayout.EndToggleGroup();
-
-            EditorGUILayout.Space();
-
+            #region Renderer Settings
             EditorGUILayout.LabelField("External Renderer Settings", EditorStyles.boldLabel);
 
             if (GUILayout.Button("Select Render Instance Output Folder"))
             {
-                _rendererOutputFolder = EditorUtility.OpenFolderPanel(
-                    "Select the folder to export the final renders to.", _rendererOutputFolder, "");
+                _renderFolder = EditorUtility.OpenFolderPanel(_renderPathLabel, _renderFolder,
+                    "Renders");
             }
 
-            label = new GUIContent("Renderer Output Resolution: ");
-            EditorGUIUtility.labelWidth = style.CalcSize(label).x;
-            _rendererOutputResolution =
-                EditorGUILayout.Vector2IntField(label, _rendererOutputResolution);
+            _renderResolution = EditorGUILayout.Vector2IntField(_outputResLabel, _renderResolution);
+            EditorGUILayout.Space();
+            #endregion
 
+            #region Validate Options and Begin exporter
             GUILayout.FlexibleSpace();
 
-            if (GUILayout.Button("Explode and begin exporting."))
+            if (GUILayout.Button("Begin exporting."))
             {
                 if (!EditorApplication.isPlaying)
                 {
@@ -234,68 +199,76 @@ namespace ExternalUnityRendering.UnityEditor
                         "started manually before export.", "OK");
                     return;
                 }
-                // validate options and trigger explode
-                // also have confirm dialog showing the options
 
                 if (string.IsNullOrEmpty(_exportFolder))
                 {
-                    _exportFolder = System.IO.Directory.GetCurrentDirectory();
+                    _exportFolder = Application.persistentDataPath;
                 }
 
                 DirectoryManager exportFolder = new DirectoryManager(_exportFolder);
-                if (((_exportType & Exporter.PostExportAction.WriteToFile)
-                    == Exporter.PostExportAction.WriteToFile)
+                if (_exportActions.HasFlag(Exporter.PostExportAction.WriteToFile)
                     && exportFolder.Path == Application.persistentDataPath)
                 {
-                    Debug.Log("Failed to get access to the export folder.");
+                    EditorUtility.DisplayDialog("Invalid Json path", "Failed to validate export " +
+                        "json directory.", "OK");
                     return;
                 }
 
-                DirectoryManager renderFolder = new DirectoryManager(_renderFolder);
-                if (_exportTestRenders && renderFolder.Path == Application.persistentDataPath)
+                DirectoryManager renderOutputFolder = new DirectoryManager(_renderFolder);
+                if (renderOutputFolder.Path == Application.persistentDataPath)
                 {
-                    Debug.Log("Failed to get access to the render folder.");
+                    EditorUtility.DisplayDialog("Invalid render path", "Failed to get access to " +
+                        "the render folder.", "OK");
                     return;
                 }
 
-                DirectoryManager renderOutputFolder = new DirectoryManager(_rendererOutputFolder);
-                if (_exportTestRenders && renderOutputFolder.Path == Application.persistentDataPath)
-                {
-                    Debug.Log("Failed to get access to the renderer ouput folder.");
-                    return;
-                }
+                IPAddress serverIP;
 
-                StringBuilder options = new StringBuilder();
-                options.AppendLine("Number of Exports: " + _exportCount);
-                options.AppendLine("Delay between Exports: " + _millisecondsDelay);
-                options.AppendLine("Scene State Export: " + _exportType);
-                if ((_exportType & Exporter.PostExportAction.WriteToFile)
-                    == Exporter.PostExportAction.WriteToFile)
+                if (_serverIpAddress.ToLowerInvariant() == "localhost"
+                    || string.IsNullOrWhiteSpace(_serverIpAddress) || _serverIpAddress == "::1"
+                    || _serverIpAddress == "[::1]")
                 {
-                    options.AppendLine("Export Folder: " + _exportFolder);
-                }
-
-                if (_useExplosion)
-                {
-                    options.AppendLine("Explosion Source: " + _explosionOrigin);
-                    options.AppendLine("Explosion Radius: " + _explosionRadius);
-                    options.AppendLine("Explosive Force: " + _explosionForce);
-                    options.AppendLine("Explosive Force Upwards Modifier: "
-                        + _explosionUpwardsModifier);
+                    serverIP = IPAddress.Loopback;
                 }
                 else
                 {
-                    options.AppendLine("Force Type: " + _forceType);
-                    options.AppendLine("Force Limits:\n\tMin:" +
-                        $"{_minMaxForce.x}\n\tMax: {_minMaxForce.y}");
+                    try
+                    {
+                        if (!(_serverIpAddress.Count((c) => c == '.') == 3
+                            || _serverIpAddress.Count((c) => c == ':') > 2))
+                        {
+                            throw new System.FormatException("An invalid IP address was specified");
+                        }
+                        serverIP = IPAddress.Parse(_serverIpAddress);
+                    }
+                    catch (System.FormatException)
+                    {
+                        EditorUtility.DisplayDialog("Invalid IP Address.", "Could not parse IP " +
+                            $"Address \"{_serverIpAddress}\". Please ensure that this is a valid " +
+                            "IP address.", "OK");
+                        return;
+                    }
+
+                    if (!IPAddress.IsLoopback(serverIP) && !EditorUtility.DisplayDialog(
+                        "Non-loopback IP Address.", $"The IP address provided {serverIP} is not " +
+                        $"a loopback IP address. The render path {_renderFolder} may not be " +
+                        "valid for the location. Do you wish to continue?", "Yes", "No"))
+                    {
+                        return;
+                    }
                 }
 
-                options.AppendLine("Test Render Images: " + _exportTestRenders);
-                if (_exportTestRenders)
+                StringBuilder options = new StringBuilder();
+                options.AppendLine($"Number of Exports: {_exportCount}");
+                options.AppendLine($"Delay between Exports: {_exportDelay}");
+                options.AppendLine($"Scene State Export: {_exportActions}");
+                if (_exportActions.HasFlag(Exporter.PostExportAction.WriteToFile))
                 {
-                    options.AppendLine("Test Render Folder: " + _renderFolder);
-                    options.AppendLine("Test Render Resolution: " +
-                        $"{_renderResolution.x}x{_renderResolution.y}");
+                    options.AppendLine($"Json Export Folder: {_exportFolder}");
+                }
+                if (_exportActions.HasFlag(Exporter.PostExportAction.Transmit))
+                {
+                    options.AppendLine($"Renderer/Server: {_serverIpAddress}:{_serverPort}");
                 }
 
                 options.AppendLine("Renderer Output Folder: " + _renderFolder);
@@ -305,131 +278,79 @@ namespace ExternalUnityRendering.UnityEditor
                 if (EditorUtility.DisplayDialog("Confirm your choices",
                     options.ToString(), "Yes", "No"))
                 {
-                    ExplodeAndRecord();
+                    if (SceneExporter == null)
+                    {
+                        SceneExporter = FindObjectOfType<Exporter>();
+                        if (SceneExporter == null)
+                        {
+                            SceneExporter = new GameObject().AddComponent<Exporter>();
+                        }
+                    }
+
+                    _exportLoop = this.StartCoroutine(ExportLoop());
                 }
             }
+            #endregion
+
+            EditorGUILayout.EndScrollView();
         }
 
-        /// <summary>
-        /// Create an exportScene object if none exists, apply the chosen force
-        /// (explosion or normal), and export the scene a chosen number of times
-        /// at a specified interval.
-        /// </summary>
-        private async void ExplodeAndRecord()
+        public IEnumerator ExportLoop()
         {
-            // Grab the exporter if it exists
-            Exporter export = FindObjectOfType<Exporter>();
-            if (export == null)
+            SceneExporter.Sender = new TcpIp.Client(_serverPort, _serverIpAddress);
+
+            float delaySeconds = _exportDelay / 1000;
+            int progressID = Progress.Start("Exporting...", $"Exporting {_exportCount} scenes " +
+                $"with a delay of {_exportDelay} ms and performing {_exportActions}",
+                Progress.Options.Synchronous | Progress.Options.Sticky);
+
+            Progress.RegisterCancelCallback(progressID, () =>
             {
-                GameObject gameObject = new GameObject
+                if (_sendClosingMsg)
                 {
-                    name = "Exporter-" + GUID.Generate()
-                };
-                export = gameObject.AddComponent<Exporter>();
+                    Debug.LogWarning("Cancelled export loop. Will not send closing message.");
+                }
+                EditorCoroutineUtility.StopCoroutine(_exportLoop);
+                return true;
+            });
+
+            for (int i = 0; i < _exportCount; i++)
+            {
+                if (!Application.isPlaying)
+                {
+                    Progress.Cancel(progressID);
+                    yield break;
+                }
+                Progress.Report(progressID, (float)i / _exportCount,
+                    $"Exported {i} scene states so far.");
+                SceneExporter.ExportCurrentScene(_exportActions, _renderResolution, _renderFolder);
+                yield return new EditorWaitForSeconds(delaySeconds);
             }
 
-            // All folders should be valid if being used.
-            export.ExportFolder = _exportFolder;
-
-            Camera[] cameras = FindObjectsOfType<Camera>();
-
-            if (cameras.Length == 0)
+            Progress.Report(progressID, 1f, $"Exported {_exportCount} scene states so far.");
+            if (_sendClosingMsg)
             {
-                // If cam is empty, then no cameras were found.
-                Debug.LogError("Missing Camera! Importer cannot render from this.");
-                return;
+                System.Threading.Tasks.Task close = SceneExporter.Sender.CloseAsync();
+                yield return new WaitUntil(() => close.IsCompleted); // non blocking wait for close
             }
 
-            List<CustomCamera> customCameras = new List<CustomCamera>();
+            Progress.Finish(progressID);
+        }
+    }
 
-            if (_exportTestRenders)
-            {
-                foreach (Camera camera in cameras)
-                {
-                    // add custom cameras if they don't already have and save them
-                    if (!camera.TryGetComponent(out CustomCamera customCamera))
-                    {
-                        customCamera = camera.gameObject.AddComponent<CustomCamera>();
-                    }
-                    customCamera.RenderPath = _renderFolder;
-                    customCameras.Add(customCamera);
-                }
-            }
-
-            Collider[] colliders;
-
-            // Keep running while not done and editor is running
-            for (int i = 0; i < _exportCount && EditorApplication.isPlaying; i++)
-            {
-            if (_useExplosion)
-            {
-                // Using overlap sphere to avoid excess calculation. Explosion has
-                // extremely little effect outside of the radius, so this will cut
-                // the unnecessary calculations.
-                colliders = Physics.OverlapSphere(_explosionOrigin, _explosionRadius);
-            }
-            else
-            {
-                colliders = FindObjectsOfType<Collider>();
-            }
-
-            foreach (Collider hit in colliders)
-            {
-                // addforce etc has no effect on inactive GameObjects
-                if (!hit.gameObject.activeInHierarchy)
-                {
-                    continue;
-                }
-
-                // Handle non-convex mesh collider with non-kinematic rigidbody error
-                if (hit.gameObject.TryGetComponent(out MeshCollider _))
-                {
-                    // meshcolliders are used with items that should be static
-                    // in this test so skip for now otherwise assign out meshcollider
-                    // and set mesh.convex to true
-                    continue;
-                }
-
-                if (!hit.gameObject.TryGetComponent(out Rigidbody rb))
-                {
-                    rb = hit.gameObject.AddComponent<Rigidbody>();
-                }
-
-                rb.mass = 10;
-                rb.interpolation = RigidbodyInterpolation.Interpolate;
-                rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
-
-                if (_useExplosion)
-                {
-                    rb.AddExplosionForce(_explosionForce, _explosionOrigin,
-                        _explosionRadius, _explosionUpwardsModifier, ForceMode.Impulse);
-                }
-                else
-                {
-                    rb.AddForce(new Vector3(
-                            Random.Range(_minMaxForce.x, _minMaxForce.y),
-                            Random.Range(_minMaxForce.x, _minMaxForce.y),
-                            Random.Range(_minMaxForce.x, _minMaxForce.y)),
-                        _forceType);
-                }
-            }
-
-                export.ExportCurrentScene(_exportType, _rendererOutputResolution,
-                    _rendererOutputFolder);
-
-                // should do nothing if customcameras empty
-                foreach (CustomCamera cam in customCameras)
-                {
-                    cam.RenderImage(System.DateTime.Now, _renderResolution);
-                }
-
-                // _millisecondsDelay is the amount of time that the physics system will
-                // calculate for in between renders. Rendering is a blocking task that "freezes"
-                // unity time, so this does not represent the real time between two exports.
-                await Task.Delay(_millisecondsDelay);
-            }
-
-            Debug.Log("Finished Export Loop.");
+    [CustomEditor(typeof(Exporter))]
+    public class ExporterInspectorMenu : Editor
+    {
+        private ExporterEditorMenu editorMenu;
+        public override VisualElement CreateInspectorGUI()
+        {
+            editorMenu = EditorWindow.GetWindow<ExporterEditorMenu>();
+            return base.CreateInspectorGUI();
+        }
+        public override void OnInspectorGUI()
+        {
+            editorMenu.SceneExporter = target as Exporter;
+            editorMenu.OnGUI();
         }
     }
 }

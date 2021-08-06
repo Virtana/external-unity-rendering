@@ -108,7 +108,10 @@ namespace ExternalUnityRendering
             {
                 // Minify the json for transmitting
                 {PostExportAction.Transmit, (state) =>
-                    Sender.Send(JToken.Parse(state).ToString(Formatting.None)) },
+                    {
+                        return Sender?.Send(JToken.Parse(state).ToString(Formatting.None)) ?? false;
+                    }
+                },
                 {PostExportAction.WriteToFile, (state) =>
                     WriteStateToFile(state) },
                 {PostExportAction.Log, (state) =>
@@ -128,18 +131,6 @@ namespace ExternalUnityRendering
             _serializer.Converters.Add(new EURGameObjectConverter());
             _serializer.Converters.Add(new EURSceneConverter());
             _serializer.Formatting = Formatting.Indented;
-        }
-
-        /// <summary>
-        /// Late initialization of the Exporter.
-        /// </summary>
-        private void Start()
-        {
-            if (Sender == null)
-            {
-                Debug.LogWarning("Creating default sender on [::1]:11000.");
-                Sender = new Client(11000, "localhost");
-            }
         }
 
         /// <summary>
