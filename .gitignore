@@ -1,3 +1,7 @@
+# Custom ignore
+# Ignore all logs
+*.log
+
 
 # Created by https://www.toptal.com/developers/gitignore/api/unity
 # Edit at https://www.toptal.com/developers/gitignore?templates=unity
@@ -76,6 +80,3 @@ InitTestScene*.unity
 .editorconfig
 
 # End of https://www.toptal.com/developers/gitignore/api/unity
-
-# Ignore all logs
-*.log

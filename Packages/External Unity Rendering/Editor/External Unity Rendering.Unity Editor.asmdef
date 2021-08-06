@@ -1,0 +1,13 @@
+{
+    "name": "ExternalUnityRendering.UnityEditor",
+    "references": [
+        "Unity.EditorCoroutines.Editor",
+        "UnityEngine.UIElements",
+        "ExternalUnityRendering"
+    ],
+    "excludePlatforms": [],
+    "overrideReferences": true,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "noEngineReferences": false
+}

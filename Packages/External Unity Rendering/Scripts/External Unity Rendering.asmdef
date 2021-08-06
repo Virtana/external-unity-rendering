@@ -1,0 +1,21 @@
+{
+    "name": "ExternalUnityRendering",
+    "references": [
+        "UnityEngine.SceneManagement",
+        "CommandLine",
+        "Newtonsoft.Json",
+        "Newtonsoft.Json.Converters",
+        "Newtonsoft.Json.Linq",
+        "Newtonsoft.Json.Serialization",
+        "Newtonsoft.Json.UnityConverters",
+        "Newtonsoft.Json.UnityConverters.Math"
+    ],
+    "excludePlatforms": [],
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "Newtonsoft.Json.dll",
+        "CommandLine.dll"
+    ],
+    "autoReferenced": false,
+    "noEngineReferences": false
+}

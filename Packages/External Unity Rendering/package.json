@@ -1,0 +1,16 @@
+{
+    "name": "com.virtana.externalunityrendering",
+    "version": "0.1.0",
+    "description": "Performing image rendering/saving in a second instance of Unity, allowing the first instance to be unblocked.",
+    "displayName": "External Unity Rendering",
+    "unity": "2020.1",
+    "author": {
+        "name": "Aidan Pinard",
+        "email": "aidan@virtanatech.com"
+    },
+    "dependencies": {
+        "com.unity.nuget.newtonsoft-json": "2.0.1-preview.1",
+        "com.unity.editorcoroutines": "1.0.0",
+        "jillejr.newtonsoft.json-for-unity.converters": "1.1.1"
+    }
+}
