@@ -10,30 +10,25 @@ Run two instances of Unity in parallel. The “main” instance is responsible f
 - Setting up a communication channel to transfer scene state between two Unity instances (possibly using TCP/IP) (See [Milestone 3](#milestone-3--implement-this-method-to-transfer-scenes-between-unity-instances)).
 - Rendering and saving to disk an image via one instance, that reflects the physical state of a scene from another instance (See [Milestone 4](#milestone-4--render-an-image-from-one-unity-instance-using-another-instance)).
 
-## Progress
-
-1. [X] [Milestone 1](#milestone-1--make-a-custom-camera-in-unity) : Make a custom camera.
-2. [X] [Milestone 2](#milestone-2--identify-method-for-describing-scene-state) : Identify options for saving/communicating scene state.
-3. [X] [Milestone 3](#milestone-3--implement-this-method-to-transfer-scenes-between-unity-instances) : Implement the chosen option.  
-    1. [X] [Milestone 3a](#milestone-3a--save-a-scene-to-a-file) : Save the scene to file.
-    2. [X] [Milestone 3b](#milestone-3b--from-a-saved-file-successfully-load-a-scene-in-unity) : Load the saved file in Unity.
-    3. [X] [Milestone 3c](#milestone-3c--compare-the-scenes) : Compare the original scene to the loaded scene
-    4. [X] [Milestone 3d](#milestone-3d--send-a-scene-from-one-instance-to-another) : Programmatically communicate the scene.
-4. [X] [Milestone 4](#milestone-4--render-an-image-from-one-unity-instance-using-another-instance) : Using the communication method developed in Milestone 3, use the camera from Milestone 1 to render an image.
-5. [X] [Milestone 5](#milestone-5--merge-unity-projects) : Merge Unity projects.
-6. [X] [Milestone 6](#milestone-6--automate-the-process) : Automate the process.
-7. [ ] [Milestone 7](#milestone-7--upgrade-the-design) : Upgrade the design.
-
 ## Prerequisites
+
 - [Unity Editor](https://unity3d.com/get-unity/download/archive). Tested versions include: 
   - 2020.1.8f1
   - 2020.3.11f1
-- Powershell (Windows) or Bash (GNU/Linux) (Optional for script usage)
+- Newtonsoft.Json. This package has the same requirements to Newtonsoft.Json as the following package. (See their readme.)
+- [Newtonsoft.Json for Unity Converters](https://github.com/jilleJr/Newtonsoft.Json-for-Unity.Converters). The package will fail to install if this package is not installed beforehand.
+- Powershell (Windows) or Bash (GNU/Linux) (for script usage)
+
+## Installation (Currently in progress)
+
+There is currently no release for the project, as it is still in a very early state, but the package can be added by cloning the repo and copying `<repo-root>/Packages/External Unity Rendering` to `<project-root>/Packages/External Unity Rendering`.
 
 ## Usage
-Currently the project only runs a test scene with some random forces applied at runtime. The exporter and importer are accessible in the editor, and automatically run in a standalone build. The project can be built for Windows or Linux, and then run using command line. Scripts are provided (Powershell and Bash) which help automate this process.
+
+Add the package to your project, build the project, and run the build. See below for how to run the built project in renderer or exporter mode. There is also an editor menu for exporting without building the entire project.
 
 ### Using the scripts
+
 #### The Build Script
 
 `Usage: ./build.sh [options]` or `.\build.ps1 [options]`
@@ -102,6 +97,7 @@ Usage:
 | `‑i` or `‑‑interface` | `<interface‑to‑listen‑on>` | The interface on which the renderer should listen on. Defaults to localhost. |
 
 #### Running the Main Instance
+
 The physics instance can be run as follows:
 
 `Usage: <path‑to‑physics‑executable> export [options]`
@@ -126,6 +122,28 @@ The instances can be used with other unity standalone arguments, but the rendere
 
 <a class="anchor" id="time-note"></a>
 `*` Time can be specified in the format `^[0-9]+(s|m)?$`, a non-negative integer, optionally followed by an s or m. An input x will be read as x milliseconds, xs as x seconds and xm as x minutes.
+
+## Progress
+
+1. [X] [Milestone 1](#milestone-1--make-a-custom-camera-in-unity) : Make a custom camera.
+2. [X] [Milestone 2](#milestone-2--identify-method-for-describing-scene-state) : Identify options for saving/communicating scene state.
+3. [X] [Milestone 3](#milestone-3--implement-this-method-to-transfer-scenes-between-unity-instances) : Implement the chosen option.  
+    1. [X] [Milestone 3a](#milestone-3a--save-a-scene-to-a-file) : Save the scene to file.
+    2. [X] [Milestone 3b](#milestone-3b--from-a-saved-file-successfully-load-a-scene-in-unity) : Load the saved file in Unity.
+    3. [X] [Milestone 3c](#milestone-3c--compare-the-scenes) : Compare the original scene to the loaded scene
+    4. [X] [Milestone 3d](#milestone-3d--send-a-scene-from-one-instance-to-another) : Programmatically communicate the scene.
+4. [X] [Milestone 4](#milestone-4--render-an-image-from-one-unity-instance-using-another-instance) : Using the communication method developed in Milestone 3, use the camera from Milestone 1 to render an image.
+5. [X] [Milestone 5](#milestone-5--merge-unity-projects) : Merge Unity projects.
+6. [X] [Milestone 6](#milestone-6--automate-the-process) : Automate the process.
+   1. [X] [Milestone 6.1](#milestone-61--merge-instances) : Merge Builds.
+   2. [X] [Milestone 6.2](#milestone-62--convert-from-project-to-unity-package) : Isolate exporter/renderer code into Unity Package.
+7. [ ] [Milestone 7](#milestone-7--upgrade-the-design) : Upgrade the design.
+   1. [ ] [Milestone 7a](#milestone-7a--container-deployment) : Container Deployment.
+   2. [ ] [Milestone 7b](#milestone-7b--multiple-renderers--render-farm) : Multiple Renderers / Render Farm.
+   3. [ ] [Milestone 7c](#milestone-7c--extending-the-serialized-states) : Extending the Serialized states.
+   4. [ ] [Milestone 7d](#milestone-7d--reduce-simulation-time) : Reduce simulation time
+   5. [ ] [Milestone 7e](#milestone-7e--more-rendering-options) : More rendering options
+   6. [ ] [Milestone 7f](#milestone-7f--better-logger) : Better Logger
 
 ## Milestones
 
@@ -170,38 +188,61 @@ This milestone involves the method implemented in Milestone 3, as well as the ca
 
 ### Milestone 5 : Merge Unity Projects
 
-Integrate the two projects into one such that the project can be built for the two configurations (physics or renderer).
+Integrate the two projects into ones such that the project can be built for the two configurations (physics or renderer).
 
 ### Milestone 6 : Automate the process
 
 The process of periodically saving the physical state of the scene and rendering/saving it externally should be made automatic. Ideally, this involves writing a bash script which, given a Linux build of the Unity project, starts and manages the process.
 
-### Milestone 6.5 : Merge instances
+### Milestone 6.1 : Merge Builds
 
 The current method of building and running involves using preprocessor definitions to build two instances, which only change what init script is run. This should be changed to a single init script, which:
 
 1. Ensures that is not being run in the editor.
-2. Parses command line arguments, checks if a renderer flag is set
+2. Parses command line arguments, checks if a renderer flag is set, and runs appropriately.
+
+### Milestone 6.2 : Isolate exporter/renderer code into Unity Package
+
+[Milestone 5](#milestone-5--merge-unity-projects) and [Milestone 6.1](#milestone-61--merge-instances) involved having a unity project with the exporter capability, but they still involve an entire unity project. This milestone reduces the project to a package, so it can be easily added to a project using the Unity Package Manager or when the project is being built from command line.
 
 ### Milestone 7 : Upgrade the design
 
-Design improvements may include (but are not limited to):
+The following Milestones include possible improvements to the EUR code.
 
-- Convert to a unity package, and change build scripts to point to a project without the renderer options, and have it build with the package.
+#### Milestone 7a : Container Deployment
 
-- Run multiple physics and renderer instances, and deploy them using either:
+Run multiple physics and renderer instances, and deploy them using either:
     - [Docker](https://www.docker.com/) + [Kubernetes](https://kubernetes.io/) or
-    - [AWS Elastic Beanstalk](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/create_deploy_docker_ecs.html)
+    - [AWS Elastic Beanstalk](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/create_deploy_docker_ecs.html) 
 
-- Extending the SceneState and ObjectState classes (which are used to store the scene info) by:
-    - Adding support for Components (only necessary components under the Mesh, Rendering and Effects categories.)
-    - Adding Components and GameObjects that don't exist.
-    - Add Handling of materials and shaders.
+####  Milestone 7b : Multiple Renderers / Render Farm
 
-- ~~Rendering on Multiple Cameras in a multithreaded manner (possibly using Jobs)~~ (According to investigations, may be impractical to properly implement, as well as slightly counters the purpose of the project.)
+This can be achieved by:
+- Setting up a script or executable to launch renderers and manage them. It will intercept the states from the single physics instance and route them to the various renderers. 
+- Adding multiple sender functionality to the physics instance. The Physics instance will accept multiple interfaces and/or ports to connect to, and will send scene states to the renderers on these ports.
 
-- Time Acceleration or using Physics.Simulate to reduce simulation time.
+Optionally this program/script can hook into their logs to determine which  renderers are completed rendering or are still rendering.
 
-- Better/More Rendering Options.
+####  Milestone 7c : Extending the Serialized states.
 
-- Better Logger.
+Functions to be added for the serialized state:
+    - Support for necessary components such as Mesh Filter, Mesh Renderer, Camera.
+    - Automatically delete or add components and gameobjects as they are specified in the state file.
+    - Handle materials and shaders.
+
+####  Milestone 7d : Reduce simulation time
+
+During batchmode, some time is wasted while the exporter waits for the delay time. This time may be reduced by reducing simulation time, possibly using a combination of tweaking `Application.targetFrameRate` (to influence `Time.deltaTime`) and `Physics.Simulate` or `Time.fixedDeltaTime` to reduce some of the time spent simulating. 
+
+####  Milestone 7e : More rendering options
+
+The renderer instance should be able to either:
+1. Read from a config file for rendering settings.
+2. Read general rendering settings from the state json.
+3. Accept commands from command line (e.g. `--render-options 'fov=120;msaa=0;clippingplanes=0.1,1500`).
+
+####  Milestone 7f : Better Logger
+
+The default unity logger using `Debug.Log` adds a lot of extra lines and unnecessary stack traces. The logs also do not allow differentiating between verbose information (such as individual camera render logs) and general logs (such as completed render batch). A custom logger would be useful with the following features:
+- Log Levels: verbose, debug, info, warning, error. Default = info.
+- Write to console and file (Need to find a way to consistently have unity write logs to console).
