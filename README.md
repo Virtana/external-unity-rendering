@@ -133,17 +133,18 @@ The instances can be used with other unity standalone arguments, but the rendere
     3. [X] [Milestone 3c](#milestone-3c--compare-the-scenes) : Compare the original scene to the loaded scene
     4. [X] [Milestone 3d](#milestone-3d--send-a-scene-from-one-instance-to-another) : Programmatically communicate the scene.
 4. [X] [Milestone 4](#milestone-4--render-an-image-from-one-unity-instance-using-another-instance) : Using the communication method developed in Milestone 3, use the camera from Milestone 1 to render an image.
-5. [X] [Milestone 5](#milestone-5--merge-unity-projects) : Merge Unity projects.
-6. [X] [Milestone 6](#milestone-6--automate-the-process) : Automate the process.
-   1. [X] [Milestone 6.1](#milestone-61--merge-instances) : Merge Builds.
-   2. [X] [Milestone 6.2](#milestone-62--convert-from-project-to-unity-package) : Isolate exporter/renderer code into Unity Package.
-7. [ ] [Milestone 7](#milestone-7--upgrade-the-design) : Upgrade the design.
-   1. [ ] [Milestone 7a](#milestone-7a--container-deployment) : Container Deployment.
-   2. [ ] [Milestone 7b](#milestone-7b--multiple-renderers--render-farm) : Multiple Renderers / Render Farm.
-   3. [ ] [Milestone 7c](#milestone-7c--extending-the-serialized-states) : Extending the Serialized states.
+5. [X] [Milestone 5](#milestone-5--merge-unity-projects) : Merge Unity projects
+6. [X] [Milestone 6](#milestone-6--automate-the-process) : Automate the process
+   1. [X] [Milestone 6.1](#milestone-61--merge-instances) : Merge Builds
+   2. [X] [Milestone 6.2](#milestone-62--convert-from-project-to-unity-package) : Isolate exporter/renderer code into Unity Package
+7. [ ] [Milestone 7](#milestone-7--upgrade-the-design) : Upgrade the design
+   1. [ ] [Milestone 7a](#milestone-7a--container-deployment) : Container Deployment
+   2. [ ] [Milestone 7b](#milestone-7b--multiple-renderers--render-farm) : Multiple Renderers / Render Farm
+   3. [ ] [Milestone 7c](#milestone-7c--extending-the-serialized-states) : Extending the Serialized states
    4. [ ] [Milestone 7d](#milestone-7d--reduce-simulation-time) : Reduce simulation time
    5. [ ] [Milestone 7e](#milestone-7e--more-rendering-options) : More rendering options
    6. [ ] [Milestone 7f](#milestone-7f--better-logger) : Better Logger
+   7. [ ] [Milestone 7g](#milestone-7g--add-tests-to-package) : Add Tests to the package
 
 ## Milestones
 
@@ -215,7 +216,7 @@ Run multiple physics and renderer instances, and deploy them using either:
     - [Docker](https://www.docker.com/) + [Kubernetes](https://kubernetes.io/) or
     - [AWS Elastic Beanstalk](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/create_deploy_docker_ecs.html) 
 
-####  Milestone 7b : Multiple Renderers / Render Farm
+#### Milestone 7b : Multiple Renderers / Render Farm
 
 This can be achieved by:
 - Setting up a script or executable to launch renderers and manage them. It will intercept the states from the single physics instance and route them to the various renderers. 
@@ -223,26 +224,30 @@ This can be achieved by:
 
 Optionally this program/script can hook into their logs to determine which  renderers are completed rendering or are still rendering.
 
-####  Milestone 7c : Extending the Serialized states.
+#### Milestone 7c : Extending the Serialized states.
 
 Functions to be added for the serialized state:
     - Support for necessary components such as Mesh Filter, Mesh Renderer, Camera.
     - Automatically delete or add components and gameobjects as they are specified in the state file.
     - Handle materials and shaders.
 
-####  Milestone 7d : Reduce simulation time
+#### Milestone 7d : Reduce simulation time
 
 During batchmode, some time is wasted while the exporter waits for the delay time. This time may be reduced by reducing simulation time, possibly using a combination of tweaking `Application.targetFrameRate` (to influence `Time.deltaTime`) and `Physics.Simulate` or `Time.fixedDeltaTime` to reduce some of the time spent simulating. 
 
-####  Milestone 7e : More rendering options
+#### Milestone 7e : More rendering options
 
 The renderer instance should be able to either:
 1. Read from a config file for rendering settings.
 2. Read general rendering settings from the state json.
 3. Accept commands from command line (e.g. `--render-options 'fov=120;msaa=0;clippingplanes=0.1,1500`).
 
-####  Milestone 7f : Better Logger
+#### Milestone 7f : Better Logger
 
 The default unity logger using `Debug.Log` adds a lot of extra lines and unnecessary stack traces. The logs also do not allow differentiating between verbose information (such as individual camera render logs) and general logs (such as completed render batch). A custom logger would be useful with the following features:
 - Log Levels: verbose, debug, info, warning, error. Default = info.
 - Write to console and file (Need to find a way to consistently have unity write logs to console).
+
+#### Milestone 7g : Add Tests to Package
+
+Adding Tests to the Package will allow more guarantees as to proper functionality of the package.
