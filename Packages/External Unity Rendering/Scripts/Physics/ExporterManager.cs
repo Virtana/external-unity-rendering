@@ -90,6 +90,7 @@ namespace ExternalUnityRendering
                 else
                 {
                     yield return new WaitUntil(() => exporter.Sender.IsDone);
+                    Debug.Log("Sent closing message.");
                 }
             }
 

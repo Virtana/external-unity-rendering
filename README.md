@@ -251,3 +251,7 @@ The default unity logger using `Debug.Log` adds a lot of extra lines and unneces
 #### Milestone 7g : Add Tests to Package
 
 Adding Tests to the Package will allow more guarantees as to proper functionality of the package.
+
+#### Milestone 7f : Export complete notification
+
+Add some sort of notification for export complete.
